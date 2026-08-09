@@ -1,5 +1,5 @@
 /**
- * world/terrain.js — the ground.
+ * world/terrain.js - the ground.
  *
  * Three things live here:
  *
@@ -8,8 +8,8 @@
  *     by the player controller and by grass placement.  Ten simplex taps,
  *     hand-unrolled, ~0.7 us a call.  No tables, no caches to invalidate.
  *
- *  2. A world-aligned quadtree clipmap.  Chunks sit on a fixed world lattice —
- *     they are NOT re-snapped to the camera — so a chunk's vertex data stays
+ *  2. A world-aligned quadtree clipmap.  Chunks sit on a fixed world lattice - 
+ *     they are NOT re-snapped to the camera - so a chunk's vertex data stays
  *     valid forever once built; walking away and back is a cache hit, not a
  *     rebuild.  LOD transitions use CDLOD-style vertex geomorphing: every
  *     vertex slides onto its parent-grid position as it approaches the level's
@@ -28,7 +28,7 @@
  *     result read as a mottled blue-green bog: two systems were both drawing
  *     the sward, and the one with no silhouette won the argument on every pixel
  *     between the blades. world/grass.js draws the meadow. What this material
- *     draws is the substrate the meadow grows out of — warm dark umber where it
+ *     draws is the substrate the meadow grows out of - warm dark umber where it
  *     is damp and shaded, dry pale grey-brown on the crusted ridges, with dead
  *     thatch, root debris and grit lying on it. Moss is a minority layer
  *     confined to hollows and shade; there is no living green in the palette at
@@ -37,19 +37,19 @@
  *     The one exception is deliberate and is the whole of LEAF 3: past the
  *     reach of the blade field there is nothing but this material, so beyond
  *     that distance the albedo converges on the colour the sward itself reads
- *     as — sampled from grass.js's own uniforms, not guessed. See
+ *     as - sampled from grass.js's own uniforms, not guessed. See
  *     `_updateMeadowPalette` and `uMeadowFade`.
  *
  *     Five scales of variation, which is the minimum an open field needs before
  *     it stops reading as a tiled plane:
- *       2 m    near detail   — grain, crumb, thatch strands, grit, petal flakes
- *       32 m   mid detail    — the same texture, quarter-turned, so the two
+ *       2 m    near detail - grain, crumb, thatch strands, grit, petal flakes
+ *       32 m   mid detail - the same texture, quarter-turned, so the two
  *                             copies can never correlate
- *       128 m  meso field    — patch-scale coverage; also domain-warps the two
+ *       128 m  meso field - patch-scale coverage; also domain-warps the two
  *                             detail lookups, which is what actually kills the
  *                             2 m repeat rather than merely disguising it
- *       1024 m macro field   — which stretches are dry, lush, mossy, mottled
- *       ~kilometre           — the damp/dry axis (`gDry`) swings the earth
+ *       1024 m macro field - which stretches are dry, lush, mossy, mottled
+ *       ~kilometre - the damp/dry axis (`gDry`) swings the earth
  *                             albedo by a factor of 3.7 in linear luminance
  *                             across the whole field, which is by far the
  *                             strongest broad drift and the one that actually
@@ -60,25 +60,25 @@
  *     ATMOSPHERICS.  If weather/atmosfx.js is present it owns aerial
  *     perspective for the whole scene and this material simply hands it the fog
  *     flag. Otherwise the fallback below integrates two exponentially
- *     stratified media — a low mist and a tall haze — analytically along the
+ *     stratified media - a low mist and a tall haze - analytically along the
  *     view ray, in linear space, AFTER lighting. Extinction is Beer-Lambert in
  *     the true optical depth, with sigma taken straight from
  *     `state.weather.fogDensity` (weather.js derives visibility = 3/sigma from
  *     the same number, which is what fixes the units). At the default 0.0022/m
- *     that is 0.6% wash at three metres and 18% at a hundred — depth cue, not
- *     a grey veil — reaching the horizon at a kilometre and a half.
+ *     that is 0.6% wash at three metres and 18% at a hundred - depth cue, not
+ *     a grey veil - reaching the horizon at a kilometre and a half.
  *
  * Budget notes for the 780M, measured rather than estimated: the selection is
  * 81 / 81 / 87 / 201 chunks at LOW / MEDIUM / HIGH / ULTRA from the spawn point
- * — 156k triangles at HIGH — of which three's per-object frustum cull typically
+ * - 156k triangles at HIGH - of which three's per-object frustum cull typically
  * submits a third, so terrain draw calls land around 30. (ULTRA's count triples
  * because range0 * 2^5 exceeds ROOT_SIZE, so every root in the 3x3 window
  * refines instead of half of them; that is a real tier cost, not a bug.) The
- * terrain casts no shadows — gentle relief gains almost nothing from
+ * terrain casts no shadows - gentle relief gains almost nothing from
  * self-shadowing and the shadow pass is the scarcest millisecond in the frame.
  * The fragment shader takes six texture fetches at most, two of which are
- * branched away beyond the detail-fade distance — which is where most of the
- * screen is — and the two macro taps hit a 64 kB texture that never leaves
+ * branched away beyond the detail-fade distance - which is where most of the
+ * screen is - and the two macro taps hit a 64 kB texture that never leaves
  * cache.
  */
 
@@ -94,8 +94,8 @@ import {
 
 const TERRAIN_SEED = 20240517;
 
-const WARP_F = 1 / 2600, WARP_A = 210;   // domain warp — stops fbm reading as round blobs
-const ENV_F = 1 / 5400;                  // relief envelope — plains between the rolling stretches
+const WARP_F = 1 / 2600, WARP_A = 210;   // domain warp - stops fbm reading as round blobs
+const ENV_F = 1 / 5400;                  // relief envelope - plains between the rolling stretches
 const BIG_F = 1 / 1450, BIG_A = 34;      // the horizon silhouette
 const BIG_F2 = BIG_F * 2.03, BIG_F3 = BIG_F * 4.1209;
 const MID_F = 1 / 265, MID_A = 4.6;      // hillside shoulders
@@ -123,7 +123,7 @@ const MORPH_START = 0.62;                // where geomorphing begins, as a fract
                                          // morphing while its finer neighbour is still crisp.
 /**
  * Texture-space origin snap, metres. EVERY tile size that reads `tp` must
- * divide this exactly, or the pattern jumps when the snap moves — 256 / 4 = 64
+ * divide this exactly, or the pattern jumps when the snap moves - 256 / 4 = 64
  * tiles and 256 / 32 = 8 tiles, both whole, so it never does.
  *
  * What it buys: the near detail UV is `tp / 4`, so at 100 km from the origin an
@@ -133,7 +133,7 @@ const MORPH_START = 0.62;                // where geomorphing begins, as a fract
  * be simply because it costs nothing and leaves three more bits of headroom;
  * the snap fires every 256 m of walking and is invisible when it does.
  *
- * Note this is NOT a fix for mip selection — the derivative is differenced from
+ * Note this is NOT a fix for mip selection - the derivative is differenced from
  * the interpolated world position, so its precision is set by the magnitude of
  * `vWorldPos`, which no snap downstream of the interpolator can change. At six
  * kilometres out that is a 0.5 mm ulp against a per-pixel ground footprint of
@@ -148,14 +148,14 @@ const UV_SNAP = 256;
 // detail map against `TERRAIN_TILE_M = 2.0` (published back on the texture as
 // `userData.tileMeters`), so changing this here silently rescales 11 mm grain
 // and 40 mm gravel by the same factor. The tile went 4 -> 2 in an earlier pass
-// as an attempt to shrink the round blobs; that was the wrong lever — shrinking
-// a tile full of domes only shrinks the domes — and the blobs were finally
+// as an attempt to shrink the round blobs; that was the wrong lever - shrinking
+// a tile full of domes only shrinks the domes - and the blobs were finally
 // removed by replacing the map's CONTENT (no inverted-F1 cones anywhere in the
 // relief) rather than its scale. 2 m is kept because it is what the feature
 // sizes are now authored against.
 const TILE_NEAR = 2;
 const TILE_MID = 32;
-const TILE_MESO = 128;      // patch scale — sampled from raw world coords, no snap needed
+const TILE_MESO = 128;      // patch scale - sampled from raw world coords, no snap needed
 const TILE_MACRO = 1024;    // region scale
 /**
  * Domain-warp amplitude for the detail lookups, metres.
@@ -170,7 +170,7 @@ const TILE_MACRO = 1024;    // region scale
  *   6.5 m  det 0.30 .. 1.81   p90 drift 0.62 tiles
  *  10.0 m  det -0.02 .. 2.29  FOLDS
  *
- * 3.4 costs at worst a third of a mip level — invisible — and slides the 4 m
+ * 3.4 costs at worst a third of a mip level - invisible - and slides the 4 m
  * lattice by a third of a tile at p90, so two patches 128 m apart are commonly
  * two thirds of a tile out of phase with each other. That is what breaks the
  * repeat. 6.5 would break it harder and visibly blur in patches; 10 tears.
@@ -186,7 +186,7 @@ const HAZE_SHARE = 0.55;
 const MIST_SHARE = 0.45;
 
 /**
- * LEAF 3 — where the ground stops being soil and starts being meadow.
+ * LEAF 3 - where the ground stops being soil and starts being meadow.
  *
  * world/grass.js draws a finite disc of blades: `uFade = (radius * 0.55,
  * radius)`, radius at most 72 m on foot, and its altitude clipmap multiplies
@@ -195,8 +195,8 @@ const MIST_SHARE = 0.45;
  * is a circle centred on the camera. From the air it is the most obvious
  * artefact in the scene.
  *
- * The blend therefore has to be finished by the time the last blade is gone —
- * `MEADOW_END_FRAC` of grass's own live reach — and in any case by
+ * The blend therefore has to be finished by the time the last blade is gone - 
+ * `MEADOW_END_FRAC` of grass's own live reach - and in any case by
  * MEADOW_MAX_END, because the window is deliberately NOT allowed to follow the
  * altitude clipmap out to 576 m. From two hundred metres up nobody resolves
  * bare earth between blades; what they see is the aggregate colour of the
@@ -249,8 +249,8 @@ const FALLBACK_SLOPE_RMS_DEG = 11;
  * estimates. Simulated at each tier from the spawn point and then walking 300 m
  * at sprint speed, the set peaks at 289 / 297 / 337 / 381 chunks. The old values
  * (200 / 250 / 300 / 320) sat below every one of them, which does not cap
- * anything — `_acquireGeometry` simply falls through to a fresh allocation when
- * the recycler finds nothing evictable — but it does make the recycler steal
+ * anything - `_acquireGeometry` simply falls through to a fresh allocation when
+ * the recycler finds nothing evictable - but it does make the recycler steal
  * geometry from chunks that are still wanted. MEDIUM did that 49 times in a
  * one-minute walk, and every steal is a full rebuild of ground that was already
  * correct. A ceiling that is genuinely above the working set costs 1-5 MB more
@@ -260,7 +260,7 @@ const FALLBACK_SLOPE_RMS_DEG = 11;
  *
  * It looks like the obvious thing to cut: it is a second tap of the macro
  * texture on every ground pixel. But look at what the `#else` branch in
- * FRAG_SURFACE actually does when it is off — `tMes = tMac` — and two things go
+ * FRAG_SURFACE actually does when it is off - `tMes = tMac` - and two things go
  * at once, not one:
  *
  *   1. The 3.4 m domain warp disappears entirely (`tp +=` lives inside
@@ -269,7 +269,7 @@ const FALLBACK_SLOPE_RMS_DEG = 11;
  *      the file that puts neighbouring patches out of phase with each other,
  *      and the file header says so.
  *   2. Every splat driver collapses onto the 1024 m region field, so there is
- *      no patch-scale variation at all — the ground's coverage is constant over
+ *      no patch-scale variation at all - the ground's coverage is constant over
  *      hundreds of metres. "Uniform ground with a rigid repeat on it" is the
  *      exact read this whole material was rewritten to remove.
  *
@@ -280,7 +280,7 @@ const FALLBACK_SLOPE_RMS_DEG = 11;
  * The cost is small and bounded, which is why the trade is wrong in the other
  * direction: terrainMacro is 128^2 RGBA = 64 kB with mips, sampled at 1/1024
  * and 1/128 of world, i.e. an almost-zero screen-space derivative and
- * anisotropy 2 — it is resident in L2 and never leaves it. One extra fetch plus
+ * anisotropy 2 - it is resident in L2 and never leaves it. One extra fetch plus
  * two madds over ~0.9 Mpix of ground at 1080p is on the order of 0.01-0.05 ms
  * on this part. LOW is still far cheaper than the tiers above it: 18 cells
  * against 32, a 55 m detail fade against 210, no puddles, no wet sheen, no
@@ -294,7 +294,7 @@ const TIERS = {
 };
 
 // ---------------------------------------------------------------------------
-// Module scratch — nothing in the hot path allocates.
+// Module scratch - nothing in the hot path allocates.
 // ---------------------------------------------------------------------------
 
 const _scratchNormal = new THREE.Vector3(0, 1, 0);
@@ -310,7 +310,7 @@ const _gDry = new THREE.Color();
 const _byPriority = (a, b) => b.priority - a.priority;   // descending, so pop() is the nearest
 
 // ---------------------------------------------------------------------------
-// Tileable procedural noise — used only to bake textures.
+// Tileable procedural noise - used only to bake textures.
 //
 // core/math.js owns the simplex and worley the world is built from, but neither
 // can be made to wrap, and a ground texture that does not tile seamlessly is
@@ -323,7 +323,7 @@ const _byPriority = (a, b) => b.priority - a.priority;   // descending, so pop()
  * actually return exactly uniform on [0, 0.5): the final `* 1274126177` is a
  * float64 multiply, so the product's top bits never survive the ToInt32 and the
  * sign bit is always clear. Measured over 200k samples the distribution is
- * flat, correct and half-scale — min 0.00000, max 0.50000, mean 0.2500, decile
+ * flat, correct and half-scale - min 0.00000, max 0.50000, mean 0.2500, decile
  * counts 20/20/20/20/20/0/0/0/0/0.
  *
  * That file is shared and not ours to edit, so the correction lives here, where
@@ -332,12 +332,12 @@ const _byPriority = (a, b) => b.priority - a.priority;   // descending, so pop()
  * determinism.
  *
  * This is not cosmetic. Unscaled, an fbm over these lattices came out with mean
- * 0.23 and sd 0.05 instead of 0.5 and 0.10 — a field with a fifth of its
+ * 0.23 and sd 0.05 instead of 0.5 and 0.10 - a field with a fifth of its
  * intended dynamic range, which is why the macro coverage masks below produced
  * near-uniform ground with no patchiness at all no matter how the splat weights
  * were tuned. And in the Worley lattice it confined every feature point to the
  * lower-left quarter of its cell, which is a regular grid wearing a noise
- * function's name — the "regularly spaced blobs" look, exactly.
+ * function's name - the "regularly spaced blobs" look, exactly.
  */
 const HASH_SCALE = 2;
 const phash2 = (x, y) => hash2(x, y) * HASH_SCALE;
@@ -377,7 +377,7 @@ function pfbm(s, t, k, octaves, seed, gain = 0.5) {
  *
  * Not `1 - pworley()`. Inverted F1 is a radial cone centred on every feature
  * point, so it produces one identical round dome per lattice cell however hard
- * the points are jittered — bubble wrap, and the exact thing the user is
+ * the points are jittered - bubble wrap, and the exact thing the user is
  * looking at when they call the ground "moor-like". Soil crumb is a mosaic of
  * flat-ish fragments at slightly different heights separated by thin voids, and
  * that is what these two channels are. The cone is not computed at all.
@@ -431,8 +431,8 @@ const FIBRE_SHEAR = [0, 1, -1, 2];
  * No noise field produces a strand: fbm gives blobs, Worley gives cells, and an
  * anisotropic field gives an axis-aligned corduroy that is instantly readable
  * as synthetic. What DOES produce strands is an anisotropic field seen through
- * an integer shear — the level sets of a field that varies fast across and slow
- * along become long thin curves at slope -n — and integer shears are the only
+ * an integer shear - the level sets of a field that varies fast across and slow
+ * along become long thin curves at slope -n - and integer shears are the only
  * ones that preserve periodicity, so the tile still wraps exactly. Four of them
  * at four different slopes cross into a mat.
  *
@@ -450,7 +450,7 @@ function pfibre(s, t, kAlong, kAcross, seed) {
   return clamp01(sum * 0.62);
 }
 
-/** RMS central-difference gradient of a wrapping field — used to solve for slope. */
+/** RMS central-difference gradient of a wrapping field - used to solve for slope. */
 function gradRMSWrap(field, size) {
   let acc = 0;
   for (let y = 0; y < size; y++) {
@@ -477,7 +477,7 @@ function highpassWrap(field, size, radius, keep = 0.0) {
  *
  * Not decoration. `terrainHeightBlend` admits a layer only if it comes within
  * `sharpness` of the leader, so a channel's spread IS how decisively it competes
- * — and a raw `pfbm` over this lattice measures mean 0.46, sd 0.098, which is a
+ * - and a raw `pfbm` over this lattice measures mean 0.46, sd 0.098, which is a
  * fifth of the dynamic range the splat weights above were tuned against. Hand
  * gains and biases were how that was patched before, and they are wrong the
  * moment an octave count or a seed changes: measured, the four macro channels
@@ -498,7 +498,7 @@ function retargetWrap(field, mean, sd) {
   return field;
 }
 
-/** Wrapping separable box blur — turns a height field into cavity AO. */
+/** Wrapping separable box blur - turns a height field into cavity AO. */
 function blurWrap(src, dst, size, radius) {
   const tmp = new Float32Array(size * size);
   const inv = 1 / (radius * 2 + 1);
@@ -569,7 +569,7 @@ uniform vec4 uTiling;          // 1/tile: x near, y mid, z macro, w meso
 uniform vec2 uDetailFade;
 uniform vec2 uDetailWarp;      // x warp amplitude in metres, y meso lookup offset
 uniform vec2 uHeightBand;      // x centre altitude, y 1/half relief range
-// Earth, damp and dry. There is no green in this pair on purpose — see the
+// Earth, damp and dry. There is no green in this pair on purpose - see the
 // file header. tDetail.r is the bare-soil structure channel.
 uniform vec3 uColEarth;
 uniform vec3 uColEarthDry;
@@ -583,7 +583,7 @@ uniform vec3 uColPetal;
 uniform vec3 uColMeadow;
 uniform vec3 uColMeadowDry;
 uniform vec2 uMeadowFade;      // x blend start, y blend end, metres
-uniform vec3 uTintCool;        // linear multipliers, not colours — see _buildUniforms
+uniform vec3 uTintCool;        // linear multipliers, not colours - see _buildUniforms
 uniform vec3 uTintWarm;
 uniform vec4 uLayerRough;
 uniform float uNormalScale;
@@ -643,8 +643,8 @@ float gCav = vCavity;
 float gAlt = clamp( ( vWorldPos.y - uHeightBand.x ) * uHeightBand.y, -1.0, 1.0 );
 
 // The two low-frequency fields read RAW world coordinates. Six kilometres out
-// that is a UV of 5.9 and 47 respectively — a thousand times the headroom the
-// 2 m detail tile has — so they need no origin snap, and skipping it is not
+// that is a UV of 5.9 and 47 respectively - a thousand times the headroom the
+// 2 m detail tile has - so they need no origin snap, and skipping it is not
 // merely cheaper: no snap means no constraint that the macro tile divide it,
 // and no risk of the whole distant ground re-tinting as the snap steps.
 vec4 tMac = texture2D( tMacro, vWorldPos.xz * uTiling.z );
@@ -666,7 +666,7 @@ vec2 tp = vWorldPos.xz - uUVOrigin;
   //
   // b and a rather than r and g because r and g are the two channels driving
   // the soil/grass competition, which is the strongest visual signal in the
-  // frame — tying the warp to them would put a warp extremum on every patch
+  // frame - tying the warp to them would put a warp extremum on every patch
   // boundary and the two would rhyme. b and a still feed moss and mottle, but
   // far more weakly.
   tp += ( tMes.ba - 0.5 ) * uDetailWarp.x;
@@ -680,7 +680,7 @@ vec4 tDm = texture2D( tDetail, vec2( tp.y, -tp.x ) * uTiling.y );
 // Chunk levels that live entirely past the detail-fade distance compile the
 // near fetches, the branch and the wet-surface work away completely. Those
 // levels cover most of the screen, so this is the single biggest fill-rate
-// saving in the file — and because the first far level starts exactly where
+// saving in the file - and because the first far level starts exactly where
 // the fade has already reached zero, there is no seam between the two paths.
 #ifdef TERRAIN_FAR
   const float tFade = 0.0;
@@ -697,13 +697,13 @@ vec4 tDm = texture2D( tDetail, vec2( tp.y, -tp.x ) * uTiling.y );
 #endif
 vec4 tLay = mix( tDm, tDn, ( 0.45 + 0.35 * tMac.a ) * tFade );
 
-// Everything that exists ONLY on the near path — puddles, the grazing wet
-// sheen, and the specular they add — has to be identically zero by the distance
+// Everything that exists ONLY on the near path - puddles, the grazing wet
+// sheen, and the specular they add - has to be identically zero by the distance
 // at which the first TERRAIN_FAR chunk level starts, or there is a hard ring in
 // the rain where wet ground turns dry across one LOD seam. _makeMaterial marks
 // a level FAR when its nearest possible distance ( _ranges[level-1] ) is >=
-// uDetailFade.y, so keying these terms to tFade — which is exactly zero at
-// uDetailFade.y — is the only fade that is guaranteed continuous on every tier.
+// uDetailFade.y, so keying these terms to tFade - which is exactly zero at
+// uDetailFade.y - is the only fade that is guaranteed continuous on every tier.
 // The window this replaces ( 0.8 .. 1.6 * detailFade ) outlived the boundary by
 // 37% on MEDIUM ( first far level 108 m, fade ended 136 m ) and 34% on ULTRA
 // ( 270 m vs 336 m ); the wet sheen had no distance fade at all and simply
@@ -717,7 +717,7 @@ float tNearK = smoothstep( 0.02, 0.35, tFade );
 // between organic patchiness and uniform coverage with a gentle tint on top.
 //
 // The #else path (tMes = tMac) is a compile-only fallback and no tier selects
-// it any more — see the note on meso in TIERS. It is not "the same at one
+// it any more - see the note on meso in TIERS. It is not "the same at one
 // scale": measured over 20 m patches, the drivers' local standard deviation
 // falls from 0.077-0.121 to 0.021-0.035, i.e. the ground stops varying at all
 // on the scale a walking player can see, and the domain warp below vanishes
@@ -735,7 +735,7 @@ float kDry = tK.r, kLush = tK.g, kMoss = tK.b, kMot = tK.a;
 // does strip a grassland, and leaves every walkable slope grassed.
 float gSlopeK = smoothstep( 0.15, 0.335, gSlope );
 
-// LAYER SEMANTICS — read the file header before retuning these.
+// LAYER SEMANTICS - read the file header before retuning these.
 //   x  bare earth   (tDetail.r: grain, crumb mosaic, grit)
 //   y  dead thatch  (tDetail.g: two layers of stamped stem litter)
 //   z  moss         (tDetail.b: cushions, minority layer)
@@ -755,7 +755,7 @@ float gSlopeK = smoothstep( 0.15, 0.335, gSlope );
 // bytes (60k samples, level ground, cavity and altitude drawn from their real
 // ranges): earth 58.5% / thatch 38.2% / moss 3.3% of the surface, each visible
 // (share > 0.15) at 80% / 60% / 8% of samples. Moss being present on one sample
-// in twelve is the point — it is a hollow-and-shade layer, and the balance it
+// in twelve is the point - it is a hollow-and-shade layer, and the balance it
 // replaces had a green layer on 66% of the ground.
 float wEarth  = 0.55 + gSlopeK * 1.35 + kDry * 0.85 - kLush * 0.30 + max( gAlt, 0.0 ) * 0.24;
 float wThatch = 0.42 + kLush * 0.70 - gSlopeK * 0.55 + max( gCav, 0.0 ) * 0.18 - kDry * 0.14;
@@ -774,14 +774,14 @@ float pDrift = smoothstep( 0.15, -0.35, gCav ) * smoothstep( uPetalLitter.z * 9.
 // tLay.a is deliberately NOT a factor here: it is this layer's HEIGHT field in
 // terrainHeightBlend below, and folding it into the weight as well applied the
 // same sparse blob mask twice, which put the product just under the blend's
-// admission threshold everywhere — measured peak petal coverage 0.3%, i.e.
+// admission threshold everywhere - measured peak petal coverage 0.3%, i.e.
 // uColPetal and the whole fourth splat channel were dead weight. Applied once,
 // in the height slot where it belongs, and scaled so a full-litter flake comes
 // out level with the earth/thatch leader while the gaps between flakes stay
 // well under it. That calibration depends on the A channel peaking near 0.7 and
 // essentially never reaching 1.0; both bakes are measured against it (0.741 in
 // the local fallback, 0.687 in the map core/textures.js ships), and a mask that
-// did reach 1.0 would hand petals 100% of the ground under the canopy — the
+// did reach 1.0 would hand petals 100% of the ground under the canopy - the
 // flat pink decal this layer exists to avoid.
 float wPetal = uPetalLitter.w * ( pNear + 0.45 * pDrift )
              * ( 0.42 + 0.92 * kMot ) * ( 1.0 - smoothstep( 0.13, 0.32, gSlope ) ) * 1.5;
@@ -794,14 +794,14 @@ vec4 tB = terrainHeightBlend( max( vec4( wEarth, wThatch, wMoss, wPetal ), 0.0 )
 // axis real earth actually varies along: damp umber in the shade of the sward
 // and in every dip, pale grey-brown where sun and wind have crusted it. It is
 // also a factor of 3.7 in linear luminance between the two ends, which makes it
-// by far the strongest broad tonal drift on the ground — and broad tonal drift
+// by far the strongest broad tonal drift on the ground - and broad tonal drift
 // is what hides a 2 m detail tile across a kilometre of field.
 //
 // Four independent causes, so no one of them can stamp a pattern: the macro
 // dryness field, regional altitude (ridges shed, valleys hold), local cavity,
 // and the tree's own shade, which keeps the ground under a canopy damp all day.
-// The canopy term is gated on uPetalLitter.w — which update() zeroes when there
-// is no tree in the scene — so a treeless world does not get an unexplained
+// The canopy term is gated on uPetalLitter.w - which update() zeroes when there
+// is no tree in the scene - so a treeless world does not get an unexplained
 // damp patch at the origin. The gate saturates at 1 for every real litter value
 // (the range is 0.34 .. 0.72), so it is a presence test, not a modulation.
 float gDry = clamp( kDry * 0.90 + max( gAlt, 0.0 ) * 0.40
@@ -830,7 +830,7 @@ tAlb = mix( tAlb, cMeadow, gMead );
 
 // Micro value from the detail texture, weighted toward the near copy where it
 // still exists. Applied AFTER the meadow mix so the far field keeps the mid-tap
-// texture instead of going flat — a kilometre of one colour is its own tell.
+// texture instead of going flat - a kilometre of one colour is its own tell.
 //
 // Widened from +/-20% to +/-27%. This is the only place clods, grit and root
 // debris get VALUE contrast rather than merely hue, and the ground needs more
@@ -887,7 +887,7 @@ tRough = mix( tRough, 0.035, tPud );
 // range under a low sun, which is the one shot rain is actually for.
 tRough = min( 1.0, tRough + 0.13 * ( 1.0 - tFade ) * ( 1.0 - 0.45 * uWetness ) );
 
-// Tangent frame straight from the geometric normal — this saves a tangent
+// Tangent frame straight from the geometric normal - this saves a tangent
 // attribute on every vertex in the world, and the terrain never comes within
 // sixty degrees of vertical so crossing against +Z cannot degenerate.
 //
@@ -902,7 +902,7 @@ vec3 tT = normalize( cross( gGeoN, vec3( 0.0, 0.0, 1.0 ) ) );
 vec3 tBt = cross( tT, gGeoN );
 vec3 tMapN = tNA.xyz * 2.0 - 1.0;
 // Water fills the micro-relief long before it pools: rain flattens the surface
-// visibly earlier than it puddles it. The meso term is free variety — one madd
+// visibly earlier than it puddles it. The meso term is free variety - one madd
 // buys relief that is coarse and stony in some patches and soft and matted in
 // others, at the one scale the near detail texture cannot vary over.
 tMapN.xy *= uNormalScale * tFade * ( 0.65 + 0.72 * kMot )
@@ -920,7 +920,7 @@ vec3 gNrm = normalize( tT * tMapN.x + tBt * tMapN.y + gGeoN * max( tMapN.z, 0.05
 float gAO = mix( 1.0, tNA.a, 0.75 * tFade );
 gAO *= mix( 1.0, 0.80, smoothstep( 0.0, -0.45, gCav ) );
 
-// Cloud shadows — the single strongest realism cue on open ground, because it
+// Cloud shadows - the single strongest realism cue on open ground, because it
 // is the only thing in the frame that proves the sky is a volume and not a
 // backdrop. Two transmittances come out of here: one for the sun, one for the
 // sky, because a cloud overhead dims the ambient too, just far more softly.
@@ -967,7 +967,7 @@ float gCloudSky = 1.0;
   }
 #endif
 
-// View vector, shared by both grazing-angle terms — one normalize between them,
+// View vector, shared by both grazing-angle terms - one normalize between them,
 // and the whole block compiles out on tiers that have neither.
 float gPuddleFresnel = 0.0;
 float gWetSheen = 0.0;
@@ -979,11 +979,11 @@ float gWetSheen = 0.0;
   #endif
   #ifdef TERRAIN_WET_SHEEN
     // A wet field is not a mirror, but it does go glossy at grazing angles long
-    // before it puddles — the thin film on every blade and clod turns the whole
+    // before it puddles - the thin film on every blade and clod turns the whole
     // surface into one weak fresnel. Fifth power, unlike the puddle's fourth,
     // so it stays confined to the true grazing band and never lifts the ground
     // you are standing on. tNearK because this term does not exist on the far
-    // path at all — without it the sheen ended in a hard ring at the first far
+    // path at all - without it the sheen ended in a hard ring at the first far
     // level, at full strength, exactly when it is raining.
     gWetSheen = uWetness * ( 1.0 - tPud ) * tNdV * ( tNdV * tNdV ) * ( tNdV * tNdV ) * 0.55 * tNearK;
   #endif
@@ -994,7 +994,7 @@ diffuseColor.rgb *= tAlb;
 
 /**
  * Fallback aerial perspective. Only compiled when weather/atmosfx.js is absent
- * or declines to adopt the material — when it is present it owns the whole
+ * or declines to adopt the material - when it is present it owns the whole
  * scene's atmosphere and this is dead code, which is the correct outcome: one
  * model, one set of numbers, no two systems disagreeing about the same air.
  */
@@ -1002,7 +1002,7 @@ const FRAG_AERIAL_PARS = /* glsl */`
 // uGround*, not uAerial*: weather/atmosfx.js publishes uAerialHaze and
 // uAerialMist with the same shape but different semantics in .w, and its
 // injectUniforms() only fills entries that are still undefined. Sharing a name
-// would have let our values silently drive its shader on this one material —
+// would have let our values silently drive its shader on this one material - 
 // the kind of collision that shows up as "the terrain's fog looks slightly
 // wrong" and takes an afternoon to find.
 uniform vec4 uGroundHaze;      // x sigma  y 1/scale height  z base altitude  w unused
@@ -1023,7 +1023,7 @@ uniform vec2 uFarFade;
  * Written as that difference of endpoint densities rather than the algebraically
  * equal sigma*d*(1-e^-x)/x, because in float the second form underflows
  * sigma*d to zero and overflows (1-e^-x)/x as soon as the camera climbs a few
- * scale heights — which is precisely what flight mode does. This form is
+ * scale heights - which is precisely what flight mode does. This form is
  * bounded everywhere and degrades to its own first-order series for a level
  * ray, where the division is singular. Same derivation weather/atmosfx.js uses,
  * deliberately: the two must agree wherever they overlap.
@@ -1046,7 +1046,7 @@ const FRAG_AERIAL = /* glsl */`
   float aD = max( length( aV ), 1e-3 );
   aV /= aD;
 
-  // Two media. The tall haze is the real aerial perspective — it is what
+  // Two media. The tall haze is the real aerial perspective - it is what
   // dissolves the treeline into the sky over a kilometre. The low mist is what
   // sits in the grass at dawn and is gone by the time you look up.
   float odHaze = terrainOpticalDepth( uGroundHaze.x, uGroundHaze.y, uGroundHaze.z,
@@ -1064,7 +1064,7 @@ const FRAG_AERIAL = /* glsl */`
     // extinction coefficient at all, so it could not be reconciled with the
     // visibility weather.js publishes and the falloff had no physical shape to
     // check against. With sigma = 0.0022/m this is 0.6% at three metres, 18% at
-    // a hundred, 91% at 1.2 km — near field untouched, horizon dissolved.
+    // a hundred, 91% at 1.2 km - near field untouched, horizon dissolved.
     float aExt = 1.0 - exp( - od );
     // The outermost ring of chunks must never meet the sky as a visible edge.
     // At any sane sigma the term above has saturated long before this engages;
@@ -1088,8 +1088,8 @@ const FRAG_AERIAL = /* glsl */`
     // taking the zenith's tint all the way down to your boots.
     vec3 aIn = ( odHaze * aSky + odMist * uMistColor ) / max( od, 1e-4 );
 
-    // Applied here — injected after <opaque_fragment>, before
-    // <tonemapping_fragment> — so it mixes finished linear radiance toward a
+    // Applied here - injected after <opaque_fragment>, before
+    // <tonemapping_fragment> - so it mixes finished linear radiance toward a
     // physical sky radiance. Any earlier and it would flatten the albedo before
     // the lights ever saw it, which is what turns a scene monochrome.
     gl_FragColor.rgb = mix( gl_FragColor.rgb, aIn, aExt );
@@ -1105,7 +1105,7 @@ export class Terrain {
     this.state = ctx.state;
 
     // Hand the shared TextureFactory the live quality object. main.js builds it
-    // as `new TextureFactory({ renderer })` — no state, no quality, no bus — and
+    // as `new TextureFactory({ renderer })` - no state, no quality, no bus - and
     // it is not a member of ctx.systems, so nothing else ever tells it what tier
     // the QualityManager settled on one line earlier. Left alone it pins itself
     // to its 'high' default and bakes HIGH-sized maps on every tier: measured
@@ -1116,7 +1116,7 @@ export class Terrain {
     // earliest hook that is guaranteed to precede all of them: main.js runs all
     // seventeen constructors before the first init(), and no constructor bakes.
     // The call is idempotent, never overrides an explicitly-configured source,
-    // and is a no-op once anything has been baked — see `useLiveQuality`.
+    // and is a no-op once anything has been baked - see `useLiveQuality`.
     ctx.textures?.useLiveQuality?.({ state: ctx.state, quality: ctx.quality });
 
     this.noise = createNoise(TERRAIN_SEED);
@@ -1140,7 +1140,7 @@ export class Terrain {
     this._geoPool = [];
     /**
      * Meshes are pooled for the same reason geometries are. A chunk build is a
-     * hot-path event — streaming while walking runs several a frame — and
+     * hot-path event - streaming while walking runs several a frame - and
      * `new THREE.Mesh()` is not one allocation but about a dozen: position,
      * scale, quaternion, rotation, up, matrix, matrixWorld, modelViewMatrix,
      * normalMatrix, layers, userData. Recycling the wrapper costs one `set` and
@@ -1177,7 +1177,7 @@ export class Terrain {
 
     this._uniforms = null;
     this._tex = { detail: null, normalAO: null, macro: null, cloud: null };
-    /** Only the textures we baked ourselves — see _texture(). */
+    /** Only the textures we baked ourselves - see _texture(). */
     this._ownedTex = [];
     this._cloudMap = null;
     this._cloudMatrix = null;
@@ -1210,12 +1210,12 @@ export class Terrain {
   }
 
   // =========================================================================
-  // LEAF 1 — analytic heightfield
+  // LEAF 1 - analytic heightfield
   // =========================================================================
 
   /**
    * Raw field before the clearing is flattened. Exactly ten simplex taps, all
-   * unrolled — the fbm helpers cost ~35% in closure and loop overhead at this
+   * unrolled - the fbm helpers cost ~35% in closure and loop overhead at this
    * call rate. Writes `this._mid` with the large-scale trend.
    */
   _sample(x, z) {
@@ -1274,7 +1274,7 @@ export class Terrain {
   /**
    * Surface normal by central difference. Four height evaluations; epsilon is
    * deliberately wider than the micro octave so walking does not jitter.
-   * `out` is optional — omit it and you get a shared scratch vector back, so do
+   * `out` is optional - omit it and you get a shared scratch vector back, so do
    * not hold on to the result across another call.
    */
   getNormal(x, z, out) {
@@ -1304,7 +1304,7 @@ export class Terrain {
   }
 
   /**
-   * Batch height fill over an axis-aligned grid — for systems that need
+   * Batch height fill over an axis-aligned grid - for systems that need
    * thousands of samples at once (grass chunk baking) and would rather not pay
    * the per-call overhead. `out` must hold count*count floats; it is returned.
    */
@@ -1318,12 +1318,12 @@ export class Terrain {
   }
 
   // =========================================================================
-  // LEAF 3 (bake) — procedural textures
+  // LEAF 3 (bake) - procedural textures
   // =========================================================================
 
   /**
    * Textures come from the shared TextureFactory when there is one, and it owns
-   * their lifetime. When there is not — or it refuses — we bake locally and then
+   * their lifetime. When there is not - or it refuses - we bake locally and then
    * we own them, so they are recorded here and freed in dispose(). Without the
    * record, an HMR cycle or a quality rebuild leaked four 256 kB textures every
    * time, because dispose() assumed the factory always held them.
@@ -1355,7 +1355,7 @@ export class Terrain {
   /**
    * Feature-size helper for the fallback bakes. Every frequency below is
    * authored as a physical size in millimetres over TILE_NEAR, so "12 mm grain"
-   * stays 12 mm if the resolution or the tile ever changes — getting that wrong
+   * stays 12 mm if the resolution or the tile ever changes - getting that wrong
    * by a factor of five is how procedural ground ends up with 330 mm soil clods.
    * Capped at ~3.2 texels a cell: past that the base mip aliases against its own
    * lattice and the ground sparkles.
@@ -1374,8 +1374,8 @@ export class Terrain {
    * It is still written properly, because "only reachable when something else
    * broke" is not a licence to ship the bug this project spent a day on. The
    * version this replaces built 52% of its micro-relief out of inverted-F1
-   * Worley — a radial cone per feature point, i.e. one identical round dome per
-   * lattice cell — and drove its cavity AO from the same field, which put a
+   * Worley - a radial cone per feature point, i.e. one identical round dome per
+   * lattice cell - and drove its cavity AO from the same field, which put a
    * bright disc on the top of every dome. That is the regular carpet of pale
    * blobs in the captures, and shrinking the tile only shrinks the blobs.
    *
@@ -1391,7 +1391,7 @@ export class Terrain {
     const inv = 1 / size;
     const cells = this._cellsFor(size);
     // Octave ladders double, so a two-octave field at base k reaches 2k and that
-    // is what has to stay under the Nyquist cap — hence the mid and coarse bases
+    // is what has to stay under the Nyquist cap - hence the mid and coarse bases
     // sit well below the fine one rather than above it.
     const kFine = cells(11);
     const kMid = Math.max(3, Math.round(kFine * 0.46));
@@ -1430,17 +1430,17 @@ export class Terrain {
         const fib = pfibre(s, t, kFibLen, kFibWide, 401);
         const fibF = pfibre(s, t, kFibLen2, kFibWide, 409);
 
-        // R — bare earth: grain, the fragment mosaic, and the voids between.
+        // R - bare earth: grain, the fragment mosaic, and the voids between.
         chR[i] = 0.5
           + (gF - 0.5) * 0.26 + (gM - 0.5) * 0.22 + (gC - 0.5) * 0.20
           + (cC.id - 0.5) * 0.46 * crumbK + (cF.id - 0.5) * 0.26 * crumbK
           - cC.wall * 0.34 - cF.wall * 0.24
           - fib * 0.12;
 
-        // G — dead thatch: two crossed strand layers lying in their mat.
+        // G - dead thatch: two crossed strand layers lying in their mat.
         chG[i] = 0.34 + mat * 0.15 + fib * 0.50 + fibF * 0.30 + (gF - 0.5) * 0.16;
 
-        // B — moss: soft cushions where the mat is thick, dominated within each
+        // B - moss: soft cushions where the mat is thick, dominated within each
         // cushion by a fine crumb so it never reads as a tray of cobbles.
         const cush = pfbm(s, t, kMoss, 2, 63, 0.55);
         const patch = pfbm(s, t, cells(160), 3, 67, 0.55);
@@ -1448,7 +1448,7 @@ export class Terrain {
           + (pvalue(s * kMossGrain, t * kMossGrain, kMossGrain, 65) - 0.5) * 0.24
           + (gF - 0.5) * 0.10;
 
-        // A — fallen petals. A sparse mask, so it is NOT high-passed and NOT
+        // A - fallen petals. A sparse mask, so it is NOT high-passed and NOT
         // recentred on 0.5: doing either lifts its empty background into the
         // splat blend and lays a flat pink wash under the canopy.
         //
@@ -1462,7 +1462,7 @@ export class Terrain {
         // in drifts rather than as a mask fading in and out across each one. The
         // peak is held near 0.74 to match the distribution core/textures.js
         // produces, which is what terrain's litter weight of 1.5 is calibrated
-        // against — a mask that reaches 1.0 turns the ground under the canopy
+        // against - a mask that reaches 1.0 turns the ground under the canopy
         // into a solid pink decal.
         const drift = pfbm(s, t, cells(220), 3, 71, 0.58);
         pcell(s, t, kPetal, 101, cP);
@@ -1499,7 +1499,7 @@ export class Terrain {
    * Two things here are not negotiable and were both wrong before. First, no
    * cones: the height stack is grain, flat fragments and narrow voids, so the
    * relief has no repeating silhouette. Second, the amplitude is SOLVED rather
-   * than dialled — `normal` shows the gradient, so a hand-picked strength drifts
+   * than dialled - `normal` shows the gradient, so a hand-picked strength drifts
    * every time a field is added and drifts again with resolution. Inverting
    * `slope = atan(k * gradientRMS)` makes the surface land on the same RMS slope
    * whatever the stack contains, which is the whole fix for "strong round bumps
@@ -1533,7 +1533,7 @@ export class Terrain {
         // Amplitudes are "how steep", not "how big": the RMS gradient of a
         // band-limited layer goes as amplitude over wavelength, so the coarse
         // layers need more amplitude than intuition suggests merely to survive
-        // the division by their own wavelength. Fine grain still leads — real
+        // the division by their own wavelength. Fine grain still leads - real
         // earth is dominated by it at centimetre scale.
         h[i] = 0.5
           + (pvalue(s * kFine, t * kFine, kFine, 211) - 0.5) * 0.22
@@ -1565,7 +1565,7 @@ export class Terrain {
         d[o + 2] = Math.round((1 / len * 0.5 + 0.5) * 255);
         // Cavity AO belongs in the creases between crumbs and nowhere else, so
         // it is driven mostly by the narrowed wall masks and only partly by the
-        // local dip. Its mean sits near 1 with thin dark lines — the version
+        // local dip. Its mean sits near 1 with thin dark lines - the version
         // this replaces had half the tile lit, which is what made the domes pale.
         const dip = clamp01((blurred[i] - h[i]) * 2.6);
         const occ = clamp01(dip * 0.60 + wallF[i] * 0.58 + wallC[i] * 0.46);
@@ -1577,7 +1577,7 @@ export class Terrain {
 
   /**
    * FALLBACK kilometre-scale variation: R dryness, G lushness, B moss affinity,
-   * A mottle. Same standing as the two bakes above — core/textures.js owns the
+   * A mottle. Same standing as the two bakes above - core/textures.js owns the
    * map that ships.
    *
    * Two constraints, and they pull against each other:
@@ -1587,8 +1587,8 @@ export class Terrain {
    *     decisively earth, thatch and moss take turns. A raw `pfbm` has sd 0.10,
    *     which produced near-uniform ground no matter how the weights were tuned.
    *     The gains below put the four channels on the same distribution
-   *     core/textures.js measures for the map it ships — R 0.46/0.20, G
-   *     0.51/0.20, B 0.46/0.19, A 0.50/0.145 — so the weights land in the same
+   *     core/textures.js measures for the map it ships - R 0.46/0.20, G
+   *     0.51/0.20, B 0.46/0.19, A 0.50/0.145 - so the weights land in the same
    *     place either way.
    *  2. GRADIENT of B and A, which is a separate constraint and the easy one to
    *     break: the shader domain-warps its near detail lookup by
@@ -1652,7 +1652,7 @@ export class Terrain {
         const wy = (pfbm(s, t, 3, 3, 547) - 0.5) * 0.20;
         // Four octaves from base 4, not five: at 128 texels the fifth lands at
         // 64 cells, i.e. two texels a cell, which is under Nyquist for the base
-        // mip — it contributes sparkle and nothing else, and costs a full pass.
+        // mip - it contributes sparkle and nothing else, and costs a full pass.
         d[o] = Math.round(clamp01((pfbm(s + wx, t + wy, 4, 4, 577, 0.55) - 0.30) * 1.9) * 255);
         d[o + 1] = Math.round(clamp01(pfbm(s, t, 9, 3, 601, 0.5) * 1.2 - 0.1) * 255);
         d[o + 2] = Math.round(clamp01(pfbm(s, t, 6, 3, 631, 0.5)) * 255);
@@ -1663,7 +1663,7 @@ export class Terrain {
   }
 
   // =========================================================================
-  // LEAF 3 — material
+  // LEAF 3 - material
   // =========================================================================
 
   _buildUniforms() {
@@ -1691,11 +1691,11 @@ export class Terrain {
       // Authored in sRGB and converted to linear by three's colour management.
       //
       // THE EARTH PALETTE. Weighted through the splat these average to sRGB
-      // (0.37, 0.33, 0.26) before lighting — a mid-dark warm brown with r/b of
+      // (0.37, 0.33, 0.26) before lighting - a mid-dark warm brown with r/b of
       // 1.4. The palette this replaces averaged (0.42, 0.42, 0.33): lighter than
       // the grass standing on it, and neutral to slightly cool, which is exactly
-      // the "mottled blue-green bog" read. Every value here is desaturated —
-      // the brief is quiet and melancholy, not a ploughed field in a postcard —
+      // the "mottled blue-green bog" read. Every value here is desaturated - 
+      // the brief is quiet and melancholy, not a ploughed field in a postcard - 
       // but the hue is unmistakably earth and it is darker than the sward.
       //
       // Damp umber. This is the base note of the whole ground: it is what shows
@@ -1708,7 +1708,7 @@ export class Terrain {
       // Dead thatch, shaded and matted.
       uColThatch: { value: new THREE.Color('#6b5a38') },
       // Sun-bleached straw. The one genuinely light value in the palette, and
-      // it is a minority of a minority — it needs to be there, because a meadow
+      // it is a minority of a minority - it needs to be there, because a meadow
       // floor with no pale litter in it looks wet.
       uColThatchDry: { value: new THREE.Color('#9c8757') },
       // Moss: the only green, deliberately dark and desaturated, and confined by
@@ -1739,7 +1739,7 @@ export class Terrain {
       // slope from 14 degrees to 11 (core/textures.js TERRAIN_SLOPE_RMS_DEG).
       // The two multiply: 14 x 0.85 = 11.9 effective degrees of micro-relief
       // became 11 x 0.62 = 6.8. What is left is grain and the thin voids between
-      // crumbs — soil texture — instead of centimetre-scale shading that made
+      // crumbs - soil texture - instead of centimetre-scale shading that made
       // the ground read as a moulded surface.
       uNormalScale: { value: 0.62 },
       uWetness: { value: 0 },
@@ -1841,7 +1841,7 @@ export class Terrain {
           reflectedLight.directDiffuse *= gCloudSun;
           reflectedLight.directSpecular *= gCloudSun;
           #ifndef TERRAIN_FAR
-            // With no env map, water has nothing to mirror — so hand it the sky
+            // With no env map, water has nothing to mirror - so hand it the sky
             // colour directly. That is most of what sells wet ground.
             reflectedLight.indirectSpecular +=
               uSkyColor * ( gPuddleFresnel * 0.85 + gWetSheen ) * gCloudSky;
@@ -1855,7 +1855,7 @@ export class Terrain {
     };
 
     // three's own cache key covers `defines` and `fog`, which between them
-    // already separate every variant this file emits — but only by coincidence,
+    // already separate every variant this file emits - but only by coincidence,
     // since `useAerial` happens to equal `!mat.fog`. Stating the two decisions
     // explicitly means a future variant that is NOT covered by a define cannot
     // silently collide with a program compiled before a rebuild. Set before
@@ -1882,7 +1882,7 @@ export class Terrain {
   }
 
   // =========================================================================
-  // LEAF 2 — chunked clipmap
+  // LEAF 2 - chunked clipmap
   // =========================================================================
 
   _configure() {
@@ -1959,7 +1959,7 @@ export class Terrain {
    * Chunk geometry always comes from the pool; only its attribute contents
    * change, which turns a streaming build into a bufferSubData instead of a
    * fresh 30 kB allocation. Past the tier's ceiling we take the geometry back
-   * off the least recently drawn chunk rather than growing the heap — that
+   * off the least recently drawn chunk rather than growing the heap - that
    * ceiling is the difference between smooth streaming and a GC hitch every
    * few seconds while walking.
    */
@@ -2213,14 +2213,14 @@ export class Terrain {
         const ch = node.children || this._children(node);
         for (let i = 0; i < 4; i++) {
           if (ch[i].ready === 0) this._enqueue(ch[i], d * 4);
-          // A prefetched chunk that is already built is still WANTED — it is
+          // A prefetched chunk that is already built is still WANTED - it is
           // the whole point of prefetching. This line was missing, so a
           // prefetched chunk's lastUsed froze the moment it finished building,
           // _prune evicted it a few seconds later, and the prefetch branch
           // immediately re-queued it because ready had gone back to 0. The
           // result was a permanent build treadmill: measured over ten seconds
           // with the camera STATIONARY, 34 chunk rebuilds a second at HIGH and
-          // 32 at LOW — roughly 1.2 MB/s of pointless vertex-buffer traffic and
+          // 32 at LOW - roughly 1.2 MB/s of pointless vertex-buffer traffic and
           // a chunk build inside the frame budget on almost every frame, on the
           // tier that has the least room for it.
           else ch[i].lastUsed = this._frame;
@@ -2282,7 +2282,7 @@ export class Terrain {
       if (built > 0 && performance.now() - t0 + this._chunkMs > budgetMs) break;
       const node = q.pop();
       if (node.ready === 2) continue;
-      // Nothing has asked for this in two and a half seconds — the camera moved
+      // Nothing has asked for this in two and a half seconds - the camera moved
       // on. Drop it rather than spend the budget on ground nobody wants.
       if (node.lastUsed < stale) { node.ready = 0; continue; }
       const s = performance.now();
@@ -2343,7 +2343,7 @@ export class Terrain {
   async init() {
     this._configure();
 
-    // Measure the real vertical extent instead of guessing it — these bounds
+    // Measure the real vertical extent instead of guessing it - these bounds
     // decide the LOD distance of every chunk before it is built.
     let lo = Infinity, hi = -Infinity;
     for (let i = 0; i < 1600; i++) {
@@ -2414,7 +2414,7 @@ export class Terrain {
    *
    * DETAIL / NORMAL-AO, capped at 8. ULTRA asks for 16, and 16 is 16 texel
    * fetches per tap on the two RGBA maps that every ground fragment inside the
-   * detail fade reads — on a tier that already targets 30 fps and whose fade
+   * detail fade reads - on a tier that already targets 30 fps and whose fade
    * runs out to 210 m. core/textures.js caps its own at 8 for exactly this
    * reason ("the 780M pays real bandwidth beyond that for no visible win") and
    * that reasoning is right; 8 is still full quality at grazing incidence on a
@@ -2424,7 +2424,7 @@ export class Terrain {
    * world coordinates at 1/1024 and 1/128, so its screen-space derivative is
    * minute and an anisotropic tap fetches sixteen texels to return the one it
    * already had. HIGH was running it at 4 and ULTRA at 8, on a fetch taken by
-   * every ground pixel on screen near AND far — the one fetch that is never
+   * every ground pixel on screen near AND far - the one fetch that is never
    * branched away. 2 keeps the meso tap from smearing at the horizon (which is
    * the real reason it is not 1) and drops the rest.
    */
@@ -2442,12 +2442,12 @@ export class Terrain {
   }
 
   /**
-   * LEAF 3 — build the far-field meadow colour out of world/grass.js's own
+   * LEAF 3 - build the far-field meadow colour out of world/grass.js's own
    * blade palette instead of guessing one.
    *
    * grass.js authors `uColBase` / `uColTip` / `uColDry` as sRGB hex, and three's
    * colour management has already decoded them to LINEAR working space by the
-   * time they sit in the uniform — which is exactly where a weighted average of
+   * time they sit in the uniform - which is exactly where a weighted average of
    * radiances belongs, so the three are combined as they are and written back
    * with `setRGB`, which also writes working space and performs no conversion.
    * Doing this in sRGB bytes would darken the mix by several percent and, worse,
@@ -2486,7 +2486,7 @@ export class Terrain {
   /**
    * The blend window, from grass.js's live fade. Read every frame because its
    * altitude clipmap rewrites `uFade` as the player climbs, and clamped because
-   * the window must NOT follow that out to 576 m — see MEADOW_MAX_END.
+   * the window must NOT follow that out to 576 m - see MEADOW_MAX_END.
    */
   _meadowReach() {
     const gu = this._grass && this._grass.material && this._grass.material.uniforms;
@@ -2498,14 +2498,14 @@ export class Terrain {
   /**
    * Devtools probe: `SAKURA.systems.terrain.meadowReport()`.
    *
-   * LEAF 3 has the same failure mode as the cloud shadow map — it is wired by
+   * LEAF 3 has the same failure mode as the cloud shadow map - it is wired by
    * duck typing off world/grass.js, it degrades to a plausible-looking fallback
    * if a property name drifts, and the symptom (a brown ring around the camera,
    * visible only from the air) is one nobody goes looking for. So the wiring
    * states itself.
    *
    * `sampled` false means the blade palette was NOT read from grass.js and the
-   * hard-coded fallback is in use — a retune over there would then silently
+   * hard-coded fallback is in use - a retune over there would then silently
    * reopen the ring. `endsBeforeBlades` must be true: the earth -> meadow blend
    * has to be finished by the time the last blade is drawn, never after it.
    */
@@ -2541,7 +2541,7 @@ export class Terrain {
 
     // AtmosFX owns the scene's aerial perspective if it offers a way in. When it
     // does, three's fog flag goes back on and our own FRAG_AERIAL is not
-    // compiled at all — two atmospheres over one ground is the classic way to
+    // compiled at all - two atmospheres over one ground is the classic way to
     // end up with a scene that is washed out at arm's length.
     const external = !!(fx && (typeof fx.applyToMaterial === 'function'
       || typeof fx.registerMaterial === 'function'));
@@ -2562,7 +2562,7 @@ export class Terrain {
    * placeholder.
    *
    * Called every frame, not once in link(), because clouds.js reallocates its
-   * render target whenever the quality tier changes — holding the reference
+   * render target whenever the quality tier changes - holding the reference
    * from link() means silently sampling a disposed texture from then on. The
    * uniform value is swapped in place; only a change in PRESENCE alters a
    * define, and that is the only case that returns true.
@@ -2605,8 +2605,8 @@ export class Terrain {
    * "Plausible" is precisely why nobody notices for a month.
    *
    * So the absence is stated rather than assumed. Three frames of grace would be
-   * a race — sky/clouds.js allocates its target in init() and re-allocates it on
-   * every quality change — so this waits three seconds of frames before it says
+   * a race - sky/clouds.js allocates its target in init() and re-allocates it on
+   * every quality change - so this waits three seconds of frames before it says
    * anything, and says it once.
    */
   _checkCloudShadow() {
@@ -2740,7 +2740,7 @@ export class Terrain {
     // sigma is a genuine per-metre extinction coefficient: weather.js derives
     // its own `visibility = 3 / fogDensity` (Koschmieder, 5% contrast) from the
     // same number, which is what pins the units down. We deliberately do NOT
-    // read scene.fog.density instead — a FogExp2 density is a different
+    // read scene.fog.density instead - a FogExp2 density is a different
     // quantity that enters the exponent squared, and treating one as the other
     // is exactly how a scene ends up washed out three metres from the camera.
     // Its COLOUR is still honoured below so ground and sky agree on the horizon.
@@ -2773,8 +2773,8 @@ export class Terrain {
     u.uFogZenith.value.copy(state.sky.zenithColor)
       .multiplyScalar(state.sky.ambientIntensity)
       .lerp(_col, 0.30 + 0.55 * murk);
-    // Ground mist is brighter than the haze above it — it is a dense scatterer
-    // sitting directly under the sky's whole hemisphere — and it warms toward
+    // Ground mist is brighter than the haze above it - it is a dense scatterer
+    // sitting directly under the sky's whole hemisphere - and it warms toward
     // the sun far more readily.
     _col2.copy(_col).multiplyScalar(1.06).lerp(sun.color, 0.10 * sun.visibility);
     u.uMistColor.value.copy(_col2);
@@ -2808,7 +2808,7 @@ export class Terrain {
     this._checkCloudShadow();
 
     const c = state.clouds;
-    // A cast shadow seen through thick air has less contrast left — but the
+    // A cast shadow seen through thick air has less contrast left - but the
     // aerial term already removes most of that per pixel, so this stays gentle
     // (0.84 at partly-cloudy) rather than the 0.6 it used to be, which was
     // quietly halving the best lighting cue in the scene at the exact weather
@@ -2824,7 +2824,7 @@ export class Terrain {
       // clouds.js raymarches real transmittance and already folds in its own
       // shadowStrength and low-sun fade, so multiplying by sun.visibility again
       // here would darken the ground twice for the same reason. z carries the
-      // map's reference altitude — the ground height it was rendered at, which
+      // map's reference altitude - the ground height it was rendered at, which
       // is this same field, so the two cannot drift apart.
       cp.set(murkFade, cp.y, state.player.groundHeight, cp.w);
       u.uCloudSky.value = 0.34 * murkFade * clamp01(broken * 1.2);
@@ -2836,7 +2836,7 @@ export class Terrain {
     }
 
     const wind = state.wind;
-    // Drift is wrapped into [0,1) — one whole tile of tCloud — so the offset
+    // Drift is wrapped into [0,1) - one whole tile of tCloud - so the offset
     // stays seamless and never loses float precision as elapsed time grows.
     const drift = state.time.elapsed * c.speed * wind.strength * 0.0022;
     u.uCloudDrift.value.set(
@@ -2857,7 +2857,7 @@ export class Terrain {
       litter.z = Math.max(4, tree.canopyRadius || 12);
       // petalBoost runs 0.60 (rain) .. 9.00 (petalStorm) in weather.js, so a
       // linear 0.22/unit mapping pinned the amount at 1.0 for the whole of a
-      // petal storm — and at 1.0 the height blend hands petals 100% of the
+      // petal storm - and at 1.0 the height blend hands petals 100% of the
       // ground under the canopy, which is the flat pink decal this layer exists
       // to avoid. Compressed and capped so the dial stays monotone across the
       // whole range: rain 0.51 -> 19% coverage at the canopy centre, the calm

@@ -1,5 +1,5 @@
 /**
- * tree/sakura.js — the hero asset: one veteran Prunus x yedoensis at the origin.
+ * tree/sakura.js - the hero asset: one veteran Prunus x yedoensis at the origin.
  *
  * `branches.js` grows the skeleton and sweeps the wood into one welded mesh;
  * `blossoms.js` turns the twig cloud into 122 400 instanced flowers, 102 800 of
@@ -7,7 +7,7 @@
  * it on the terrain, dresses the wood in cherry bark, drives everything with a
  * physical wind model, and publishes the interface the rest of the world reads.
  *
- * WHY SEED 0x178f4d88 — the macro structure is hand-authored inside
+ * WHY SEED 0x178f4d88 - the macro structure is hand-authored inside
  * branches.js (eleven primary limbs off a short bole, grown against an explicit
  * crown envelope), but the seed still decides gnarl, bud placement and which
  * shoots survive crowding.
@@ -15,18 +15,18 @@
  * MEASURE THE TREE BEFORE YOU BELIEVE THIS BLOCK. It has been wrong twice: once
  * describing a tree that had not existed for some time, and once describing an
  * upright vase after the brief had asked three times for a broad dome. There is
- * a headless harness for exactly this — `generateSkeleton`, `collectTwigSites`
+ * a headless harness for exactly this - `generateSkeleton`, `collectTwigSites`
  * and `generateBlossomInstances` are all pure and all run under plain node with
  * no GL context. Re-measured as of the crown-envelope rebuild:
  *
  *   height        9.6 m
  *   crown         12.2 m across (the envelope; the flower cloud's 95th
- *                 percentile reaches 11.7 m) by 7.7 m of vertical extent —
+ *                 percentile reaches 11.7 m) by 7.7 m of vertical extent - 
  *                 1.58 wider than tall, widest band at 4.8 m, which is 0.38
  *                 of the way up a crown whose floor is 1.9 m
  *   crown floor   1.9 m: the skirt hangs to head height
  *   bole          0.96 m at breast height, ~2.2 m across the root buttresses
- *   branches      15 200, carrying 5 060 m of wood — 4 650 m of it flowering —
+ *   branches      15 200, carrying 5 060 m of wood - 4 650 m of it flowering - 
  *                 on 145 000 twig sites
  *   blossom       122 400 cards, 102 800 of them drawn at HIGH, 482 m² of quad
  *   coverage      71 % of the crown's own outline is opaque, measured by
@@ -47,7 +47,7 @@
  * them by 30 %. The seed is kept because it is what every capture in
  * /captures was taken with, not because it is load-bearing any more.
  *
- * WIND — the bend of the whole crown is a real second-order system (spring,
+ * WIND - the bend of the whole crown is a real second-order system (spring,
  * damper, turbulent forcing) driven by `wind.getGustAt` sampled at the canopy
  * centre. That is the same travelling-front field the grass reads, so a gust
  * crosses the field, bends the grass and reaches the tree in the right order
@@ -77,7 +77,7 @@ import { BlossomField } from './blossoms.js';
 // Tuning
 // ===========================================================================
 
-/** See the header. Do not change casually — the silhouette is the project. */
+/** See the header. Do not change casually - the silhouette is the project. */
 const TREE_SEED = 0x178f4d88;
 const BLOSSOM_SEED = 0x5a11a9;
 
@@ -86,20 +86,20 @@ const BLOSSOM_SEED = 0x5a11a9;
  *
  * 22 mm was a number that did nothing. `collectTwigSites` used to visit
  * skeleton POINTS and reject any that fell inside the pitch, so it could never
- * place sites closer than `LEVELS[].segLen` — 92 mm apart on depth-3 wood, four
+ * place sites closer than `LEVELS[].segLen` - 92 mm apart on depth-3 wood, four
  * times what was being asked for. The parameter has only been live since
  * branches.js started interpolating along the segments.
  *
  * 34 mm is a real choice, and it is set by the flower rather than by the mesh:
  * a card is about 68 mm across, so sites at 34 mm overlap by half and the wood
  * is clothed continuously instead of in beads. This is the dial that buys
- * canopy coverage EFFICIENTLY — a site is a new place, whereas the cluster
+ * canopy coverage EFFICIENTLY - a site is a new place, whereas the cluster
  * multiplier only stacks more flowers on the places that already have them,
  * where the cards fall on top of each other and buy nothing.
  *
  * Note what it now means. With 3 600 m of flowering wood the walk produces
  * 136 500 sites and blossoms.js accepts fewer than one umbel per site, so the
- * pitch is no longer "where a flower goes" — it is the resolution at which the
+ * pitch is no longer "where a flower goes" - it is the resolution at which the
  * wood is SAMPLED, and the Bernoulli acceptance inside `generateBlossomInstances`
  * turns that into a stochastic scatter along the twig. Coarsening it to 50 mm
  * would save about 60 ms of build time and visibly quantise the flowers onto a
@@ -110,8 +110,8 @@ const TWIG_SPACING = 0.034;
 const TWIG_MAX_RADIUS = 0.048;
 
 /**
- * Crown fundamental. A 11 m broadleaf sways at roughly 0.35–0.45 Hz; 2.5 rad/s
- * is 0.40 Hz. Damping ratio for a tree in leaf is measured at 0.1–0.25 — low
+ * Crown fundamental. A 11 m broadleaf sways at roughly 0.35-0.45 Hz; 2.5 rad/s
+ * is 0.40 Hz. Damping ratio for a tree in leaf is measured at 0.1-0.25 - low
  * enough that it visibly rings after a gust passes, which is the point.
  */
 const CROWN_OMEGA = 2.45;
@@ -119,7 +119,7 @@ const CROWN_ZETA = 0.21;
 
 /**
  * Crown drag. Force goes as speed squared, but foliage streamlines as it
- * loads, so the response saturates — this is why doubling a storm's wind speed
+ * loads, so the response saturates - this is why doubling a storm's wind speed
  * moves a tree by 17% rather than 300%. The constant is fixed by requiring
  * ~1 m of crown travel at a storm's 14 m/s canopy wind, which works out at
  * 5 cm two metres up the bole: the trunk barely moves, exactly as it should.
@@ -139,8 +139,8 @@ const SWAY_FREQ = [1.05, 1.95, 3.50, 6.20];
 const SWAY_LAMBDA = [0.95, 1.7, 3.2, 6.5];
 /**
  * Amplitude in metres of travel: [still-air floor, gain per unit of drive].
- * These are the peak excursions of the most compliant point at each level —
- * branches.js normalises its sway weights to 1 there — so they can be read
+ * These are the peak excursions of the most compliant point at each level - 
+ * branches.js normalises its sway weights to 1 there - so they can be read
  * straight off a photograph rather than tuned by eye.
  */
 const SWAY_AMP = [
@@ -152,7 +152,7 @@ const SWAY_AMP = [
 
 /**
  * Distance thinning of the blossom instance count. Deliberately paired with
- * blossoms.js's alpha-cutoff relaxation window (10–65 m): that relaxation
+ * blossoms.js's alpha-cutoff relaxation window (10-65 m): that relaxation
  * gives each surviving card more coverage as the mip chain eats its silhouette,
  * and this removes cards over roughly the same span, so the canopy's total
  * projected coverage stays flat instead of swelling into a blob.
@@ -188,7 +188,7 @@ const SPAWN_SLICE = 288;
 const AMP_HIERARCHY = 0.9;
 
 // ===========================================================================
-// Module scratch — nothing in update() allocates
+// Module scratch - nothing in update() allocates
 // ===========================================================================
 
 const _camPos = new THREE.Vector3();
@@ -201,7 +201,7 @@ const _camPos = new THREE.Vector3();
  * `_storm`, `_noiseT`), and `damp(NaN, x)` is NaN forever. Those accumulators
  * become `uSakuraBend` / `uSakuraAmp` / `uSakuraTime`, and `sakuraBend` turns a
  * NaN uniform into a NaN position for every vertex of the wood mesh AND all
- * 67 000 blossom cards — so a single bad frame in `state.wind.strength` (or
+ * 67 000 blossom cards - so a single bad frame in `state.wind.strength` (or
  * gust, direction, turbulence, storminess, rainIntensity) takes the hero asset
  * off the screen permanently, until reload. Sanitising on the way in, plus the
  * accumulator guards below, closes every one of those paths.
@@ -324,7 +324,7 @@ export class SakuraTree {
     // Stand the tree up BEFORE the spawn cache is primed: `_refreshSpawn` adds
     // `root.position` to every point, so priming first published 1 530 petal
     // spawn points sitting at y = 0 instead of on the terrain. link() refreshes
-    // them and petals.js links after us, so nothing consumed the stale values —
+    // them and petals.js links after us, so nothing consumed the stale values - 
     // but getBlossomSpawnPoints() is a published interface and must not hand
     // out wrong world positions to anything that asks between init and link.
     this._placeOnTerrain();
@@ -354,7 +354,7 @@ export class SakuraTree {
       }
     }
     // A pipeline that wants occluders handed to it directly gets them; the
-    // sun-body overload of registerGodRayLight is deliberately NOT used here —
+    // sun-body overload of registerGodRayLight is deliberately NOT used here - 
     // passing a tree to it would register the canopy as a light source.
     const post = systems.post;
     if (post && typeof post.registerGodRayOccluder === 'function') {
@@ -433,7 +433,7 @@ export class SakuraTree {
    * 1x1 stand-in for a map whose bake threw.
    *
    * The per-suite try/catch above is only worth having if a missing map costs
-   * us that map and nothing else — and a NULL sampler uniform does the
+   * us that map and nothing else - and a NULL sampler uniform does the
    * opposite. three binds its empty texture, which reads (0,0,0,1), so a
    * missing ORM would drive `roughnessFactor` to the 0.045 floor and `barkAO`
    * to zero: a mirror-smooth trunk with no indirect light on it at all. A
@@ -452,7 +452,7 @@ export class SakuraTree {
   _makeBarkMaterial() {
     const t = this._textureSuite();
     this._barkTex = t;
-    // AO 1, roughness 1, metal 0, cavity 0 — every ORM-driven term becomes a
+    // AO 1, roughness 1, metal 0, cavity 0 - every ORM-driven term becomes a
     // no-op rather than a black hole.
     const ormTex = t.orm || this._neutralTex(255, 255, 0, 0);
     // Mid grey: the moss patch field lands mid-range instead of collapsing.
@@ -486,13 +486,13 @@ export class SakuraTree {
        * Multiplicative tint pushing first-year shoots toward the warm
        * mahogany-red of new cherry wood. Kept as a ratio rather than a colour
        * so it rides whatever the bark albedo is doing locally instead of
-       * flattening the twigs to one hue. Authored in linear space — it is a
+       * flattening the twigs to one hue. Authored in linear space - it is a
        * gain, not a colour, so it must not be sRGB-decoded.
        */
       uBarkYoung: { value: new THREE.Vector3(1.42, 1.12, 0.98) },
       /** x wetness, y darkening, z gloss */
       uBarkWet: { value: new THREE.Vector3(0, 0.52, 0.13) },
-      /** Grazing sky reflection — the satin sheen cherry bark actually has. */
+      /** Grazing sky reflection - the satin sheen cherry bark actually has. */
       uBarkSheen: { value: new THREE.Color(0, 0, 0) },
       uBarkSheenAmt: { value: 0.05 },
       /** Normal-map fade window in metres, for specular anti-aliasing. */
@@ -517,7 +517,7 @@ export class SakuraTree {
 
   /**
    * A depth material that bends EXACTLY the way the bark does. Without this the
-   * tree's shadow stands perfectly still while the tree thrashes — the engine's
+   * tree's shadow stands perfectly still while the tree thrashes - the engine's
    * own docs call it out, and it is instantly visible on the ground under a
    * cherry, where the shadow is most of what you are looking at.
    */
@@ -788,8 +788,8 @@ export class SakuraTree {
     u.uSakuraBend.value.set(this._bendX, this._bendZ);
 
     // --- oscillator amplitudes, one first-order filter per level -----------
-    // Turbulence and storminess shake the FAST levels hardest — a squall makes
-    // the twigs chatter long before it moves a limb — but the boost is kept
+    // Turbulence and storminess shake the FAST levels hardest - a squall makes
+    // the twigs chatter long before it moves a limb - but the boost is kept
     // small enough that the hierarchy stays strictly decreasing. A branchlet
     // travelling further than the branch carrying it is the classic failure of
     // hand-tuned tree wind, and it instantly reads as jelly.
@@ -830,7 +830,7 @@ export class SakuraTree {
     u.uBarkWet.value.set(wet, 0.52, 0.13);
 
     // The sheen is a stand-in for the missing environment reflection, so it
-    // has to be sky radiance — otherwise the trunk glows at midnight.
+    // has to be sky radiance - otherwise the trunk glows at midnight.
     const sky = state.sky;
     const amb = Math.max(fin(sky.ambientIntensity, 1), 0);
     u.uBarkSheen.value.copy(sky.horizonColor).lerp(sky.zenithColor, 0.35).multiplyScalar(amb);
@@ -847,7 +847,7 @@ export class SakuraTree {
    * Distance LOD on the blossom instance count.
    *
    * At 100 m every flower is well under a pixel, so half of them can go with no
-   * visible change — and because the instance order is a shuffle, dropping a
+   * visible change - and because the instance order is a shuffle, dropping a
    * suffix is an even thinning rather than a bald patch. What replaces the lost
    * coverage is the alpha-cutoff relaxation in blossoms.js over the same span,
    * not a size boost; the two are tuned against each other precisely so the
@@ -860,7 +860,7 @@ export class SakuraTree {
     const d = camPos.distanceTo(this.canopyCenter);
     // A non-finite camera position is one frame of someone else's bug; latching
     // it here would be permanent. `smoothstep` propagates NaN, `Math.round(NaN)`
-    // is NaN, and `geometry.instanceCount = NaN` draws nothing — and because
+    // is NaN, and `geometry.instanceCount = NaN` draws nothing - and because
     // `NaN === NaN` is false the dead-band below can never settle again, so the
     // canopy would stay gone for the rest of the session even after the camera
     // recovered. This is only reachable on the very first frame (the dead band
@@ -870,8 +870,8 @@ export class SakuraTree {
 
     const raw = b.activeCount * this._lodFraction;
     // Quantising alone is NOT enough: Math.round flips at exactly (k+0.5)Q, so
-    // a camera parked on a rounding boundary toggles a whole quantum — 512
-    // flowers — on and off every single frame, which shimmers right across the
+    // a camera parked on a rounding boundary toggles a whole quantum - 512
+    // flowers - on and off every single frame, which shimmers right across the
     // canopy. Re-quantise only once the unquantised target has drifted 0.75 of
     // a quantum from the count actually in use, giving a 1.5-quantum dead band
     // that ordinary camera jitter cannot cross.
@@ -885,7 +885,7 @@ export class SakuraTree {
     if (count === this._lastInstanceCount) return;
     this._lastInstanceCount = count;
     b.geometry.instanceCount = count;
-    // Card size is NOT boosted here — see the note on LOD_NEAR. The tier boost
+    // Card size is NOT boosted here - see the note on LOD_NEAR. The tier boost
     // set in blossoms.setQuality() stays untouched.
   }
 
@@ -903,7 +903,7 @@ export class SakuraTree {
     if (tier === this._tier) return;
     this._tier = tier;
 
-    // The wood is one welded mesh, so a tier change is a rebuild — 40–90 ms,
+    // The wood is one welded mesh, so a tier change is a rebuild - 40-90 ms,
     // once, on an explicit user action. Swapping the attribute set in place is
     // not an option: ring counts and decimation strides both change.
     const next = this._buildWoodGeometry(tier);
@@ -932,7 +932,7 @@ export class SakuraTree {
     this.skeleton = null;
     // Textures belong to the TextureFactory cache; disposing them here would
     // pull them out from under every other system that shares them. The 1x1
-    // stand-ins are the exception — we made them, so we free them.
+    // stand-ins are the exception - we made them, so we free them.
     if (this._fallbackTex) {
       for (let i = 0; i < this._fallbackTex.length; i++) this._fallbackTex[i].dispose();
       this._fallbackTex = null;
@@ -962,7 +962,7 @@ varying vec3 vBarkData;    // age, baked AO, height up the tree in metres
 
 /**
  * The bend is a POSITION field, so a finite difference along an axis is exactly
- * the rotation it applies to that axis — two extra evaluations carry the whole
+ * the rotation it applies to that axis - two extra evaluations carry the whole
  * tangent frame with the wood. Skipping this is why so many wind-animated trees
  * shade as though they were still standing upright in a gale.
  *
@@ -987,7 +987,7 @@ objectNormal = normalize( barkDN );
 
 // Per-branch tile offset. branches.js starts every branch's V coordinate at
 // zero, so without this the SAME centimetre of bark appears at the base of all
-// four hundred branches — the kind of repetition the eye picks out instantly
+// four hundred branches - the kind of repetition the eye picks out instantly
 // even when it cannot say why. The sway phases are already a stable per-branch
 // hash (constant along a branch, different for each one), so the offset is
 // free. V only: U repeats an integer number of tiles to close the seam, and
@@ -1017,7 +1017,7 @@ varying vec3 vBarkData;
 `;
 
 /**
- * One ORM fetch feeds roughness, occlusion AND the wetness mask — the bark
+ * One ORM fetch feeds roughness, occlusion AND the wetness mask - the bark
  * suite packs its cavity/wetness affinity in alpha, which three's roughnessMap
  * path throws away.
  *
@@ -1036,7 +1036,7 @@ const BARK_MAP = /* glsl */ `
 	diffuseColor *= texture2D( map, vBarkUv );
 #endif
 
-// Cherry bark is a warm, fairly DARK grey-brown with a purple-red undertone —
+// Cherry bark is a warm, fairly DARK grey-brown with a purple-red undertone - 
 // not the pale blue-grey the generated albedo alone produces, which made the
 // trunk read as weathered concrete. Applied as a gain on the sampled albedo so
 // the fissure and lenticel detail survives; the value is authored in linear
@@ -1052,7 +1052,7 @@ vec4 barkOrm = texture2D( uBarkOrm, vBarkUv );
 // the tree stops looking like a single material stretched over every diameter.
 diffuseColor.rgb *= mix( vec3( 1.0 ), uBarkYoung, vBarkData.x );
 
-// World-space normal, recovered by multiplying from the LEFT — that is the
+// World-space normal, recovered by multiplying from the LEFT - that is the
 // transpose of the view rotation, i.e. its inverse. One mat4 multiply instead
 // of carrying another varying.
 //
@@ -1080,7 +1080,7 @@ float moss = smoothstep( uMossParams.y, uMossParams.z, mRaw ) * uMossParams.x;
 moss *= 1.0 - 0.55 * barkOrm.a;
 
 vec4 mossTex = texture2D( uBarkMoss, vBarkUv * uMossParams.w );
-// The moss suite thins its own cushions out in alpha — use it, so the edges
+// The moss suite thins its own cushions out in alpha - use it, so the edges
 // dissolve into bark instead of stopping on a contour line.
 float mossK = clamp( moss * ( 0.35 + 0.85 * mossTex.a ), 0.0, 1.0 );
 diffuseColor.rgb = mix( diffuseColor.rgb, mossTex.rgb, mossK );
@@ -1101,7 +1101,7 @@ roughnessFactor = mix( roughnessFactor, uBarkWet.z, barkWet );
 
 // Specular anti-aliasing. Past a dozen metres a bark texel is smaller than a
 // pixel, and the mip chain averages the normals but NOT the BRDF lobe they
-// imply — so the lost variance has to come back as roughness or the trunk
+// imply - so the lost variance has to come back as roughness or the trunk
 // crawls with sparkle. Same window fades the normal map itself, below.
 float barkFar = smoothstep( uBarkFade.x, uBarkFade.y, length( vViewPosition ) );
 roughnessFactor = mix( roughnessFactor, min( roughnessFactor + 0.22, 1.0 ), barkFar );
@@ -1121,7 +1121,7 @@ const BARK_NORMAL_MAPS = /* glsl */ `
 const BARK_AO = /* glsl */ `
 // Two occlusion terms that measure different things: the texture's is the
 // cavity inside a fissure, the vertex one is how much wood is piled up around
-// this point — which is what actually darkens the inside of a fork.
+// this point - which is what actually darkens the inside of a fork.
 float barkAO = barkOrm.r * mix( 1.0, vBarkData.y, 0.85 );
 reflectedLight.indirectDiffuse *= barkAO;
 `;
@@ -1167,7 +1167,7 @@ function patchBarkFragment(src) {
   out = out.replace('#include <normal_fragment_maps>', BARK_NORMAL_MAPS);
   out = out.replace('#include <aomap_fragment>', BARK_AO);
   // Before opaque_fragment, which is where outgoingLight is consumed, and
-  // deliberately NOT inside lights_fragment_begin — the engine's cascaded
+  // deliberately NOT inside lights_fragment_begin - the engine's cascaded
   // shadow patch owns that chunk.
   out = out.replace('#include <opaque_fragment>', `${BARK_SHEEN}\n\t#include <opaque_fragment>`);
   return out;

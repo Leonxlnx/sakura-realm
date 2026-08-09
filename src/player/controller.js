@@ -1,5 +1,5 @@
 /**
- * player/controller.js — the body the camera is bolted to.
+ * player/controller.js - the body the camera is bolted to.
  *
  * Owns `state.player` and the transform of `ctx.camera`. Nothing else in the
  * project moves the camera; everything else reads it.
@@ -20,7 +20,7 @@
  *  2. THE PHYSICS FOLLOW THE GROUND EXACTLY; THE CAMERA DOES NOT. The feet are
  *     snapped to `terrain.getHeight()` every frame (no interpenetration, no
  *     floating), but the *ground delta* is fed into a decaying offset that the
- *     eye lags behind by — Source-style step smoothing. Slopes then read as
+ *     eye lags behind by - Source-style step smoothing. Slopes then read as
  *     weight rather than as a heightfield scrolling under a rigid pole, and
  *     because the offset is driven by the delta rather than by a smoothed
  *     height, it cannot accumulate a steady-state sink on flat ground.
@@ -30,7 +30,7 @@
  *     locked to the gait at every speed and through every acceleration. A pure
  *     sine is the giveaway of cheap bob, so the vertical curve carries a second
  *     harmonic and each footfall injects an impulse into a critically damped
- *     spring — the same spring the landing impact uses. Nothing in the camera's
+ *     spring - the same spring the landing impact uses. Nothing in the camera's
  *     vertical motion is a raw sine wave.
  *
  *  4. MODE CHANGES EASE, THEY DO NOT SNAP. `F` never teleports and never
@@ -43,7 +43,7 @@
  * ---------------------------------------------------------------------------
  * One `terrain.getHeight()` per frame is mandatory (grounding). The slope probe
  * (`getNormal`, four more samples) runs on a tier-dependent stride, and the
- * organic sway octave is dropped at LOW — so LOW costs ~2 height samples per
+ * organic sway octave is dropped at LOW - so LOW costs ~2 height samples per
  * frame against HIGH's ~5. Everything else is a handful of transcendentals.
  * No allocation anywhere in `update()`.
  */
@@ -71,7 +71,7 @@ const CROUCH_SPEED = 1.5;
  *
  *     dv/dt = accel·wish − friction·v   ⇒   v(t) = (accel/friction)·wish·(1 − e^(−friction·t))
  *
- * so the terminal speed is `wish · accel / friction` — **accel must exceed
+ * so the terminal speed is `wish · accel / friction` - **accel must exceed
  * friction or the player can never reach their own walk speed**, and the ramp
  * time is −ln(1 − friction/accel)/friction. At 7.0 against 5.6 that is 0.29 s
  * to full walk: immediate on the first frame, unhurried into the last.
@@ -133,7 +133,7 @@ const FLY_SCALE_MAX = 6.0;
 const FLY_CLEARANCE = 0.55;
 /**
  * Deceleration used to cushion a descent, m/s². The permitted descent speed at
- * clearance h is sqrt(2·FLY_BRAKE·h) — the standard braking-distance law — so
+ * clearance h is sqrt(2·FLY_BRAKE·h) - the standard braking-distance law - so
  * the approach begins exactly far enough out to arrive at the floor with zero
  * vertical speed, whether the player is drifting down at 2 m/s or diving at
  * 100. A fixed cushion band cannot do that: at any band width there is a dive
@@ -153,7 +153,7 @@ const DEFAULT_SENSITIVITY = 0.0022;
 /** Just short of straight up/down: exactly ±90° makes yaw meaningless. */
 const PITCH_LIMIT = 89.2 * DEG2RAD;
 /**
- * Look smoothing. τ = 1/λ ≈ 26 ms — under one and a half frames at 60 Hz, and
+ * Look smoothing. τ = 1/λ ≈ 26 ms - under one and a half frames at 60 Hz, and
  * well below the ~50 ms where added latency becomes perceptible. Enough to
  * absorb the frame-to-frame variance of an unsynchronised mouse, not enough to
  * feel like the camera is on a rubber band.
@@ -177,7 +177,7 @@ const BOB_PITCH = 0.30 * DEG2RAD;
 
 /**
  * Impulse magnitudes below are expressed as the PEAK DISPLACEMENT the event
- * produces (metres or radians), not as a spring velocity — see `springKick()`.
+ * produces (metres or radians), not as a spring velocity - see `springKick()`.
  * Tuning a camera in "how far does it move" is the only way these numbers stay
  * meaningful when the stiffness is changed.
  */
@@ -202,7 +202,7 @@ const LAND_MAX_IMPACT = 11.0;
 /**
  * Eye lag behind ground-height changes; τ = 71 ms. Steady state while climbing
  * is (ground rate)/λ, so the ~17° slopes this terrain actually produces park
- * the eye 4–6 cm below nominal while ascending — felt as weight, never seen.
+ * the eye 4-6 cm below nominal while ascending - felt as weight, never seen.
  */
 const STEP_SMOOTH_LAMBDA = 14.0;
 const STEP_SMOOTH_CLAMP = 0.32;
@@ -228,13 +228,13 @@ const IDLE_RATE = 0.30;
 const WIND_SWAY = 0.16 * DEG2RAD;
 
 // ---------------------------------------------------------------------------
-// Module scratch — nothing below allocates per frame.
+// Module scratch - nothing below allocates per frame.
 // ---------------------------------------------------------------------------
 
 const _euler = new THREE.Euler(0, 0, 0, 'YXZ');
 /** Cached ground normal under the player, refreshed on the probe cadence. */
 const _slopeNormal = new THREE.Vector3(0, 1, 0);
-/** Transient normal for one-off queries — must never clobber the cached one. */
+/** Transient normal for one-off queries - must never clobber the cached one. */
 const _queryNormal = new THREE.Vector3(0, 1, 0);
 
 /**
@@ -301,7 +301,7 @@ export class PlayerController {
     this._eye = this.state.player.eyeHeight;
 
     this.mode = this.state.player.mode === 'fly' ? 'fly' : 'walk';
-    /** 1 while flying, 0 while walking — the cross-fade, not the mode. */
+    /** 1 while flying, 0 while walking - the cross-fade, not the mode. */
     this._flyBlend = this.mode === 'fly' ? 1 : 0;
 
     this._grounded = false;
@@ -414,7 +414,7 @@ export class PlayerController {
     const tier = (quality && quality.tier) || this.state.quality.tier;
     // The slope probe is four extra height samples; sampling it at 15 Hz is
     // indistinguishable from 60 Hz because the terrain's finest octave has a
-    // 23 m wavelength — you cannot cross a slope change in four frames.
+    // 23 m wavelength - you cannot cross a slope change in four frames.
     this._probeStride = tier === 'low' ? 4 : tier === 'medium' ? 2 : 1;
     // 0: no noise-driven sway, no bob harmonic, no swept fly collision.
     this._detail = tier === 'low' ? 0 : tier === 'ultra' ? 2 : 1;
@@ -430,7 +430,7 @@ export class PlayerController {
   }
 
   // =========================================================================
-  // Public API — the HUD drives the player through these, never through fields
+  // Public API - the HUD drives the player through these, never through fields
   // =========================================================================
 
   get isFlying() {
@@ -534,7 +534,7 @@ export class PlayerController {
   }
 
   // =========================================================================
-  // LEAF 3 — pointer lock and input
+  // LEAF 3 - pointer lock and input
   // =========================================================================
 
   _onCanvasDown(event) {
@@ -544,7 +544,7 @@ export class PlayerController {
     if (this._lockCooldown > 0) {
       // Clicking during the browser's post-Escape lockout would otherwise do
       // nothing at all, which reads as a broken page. Remember the intent and
-      // fire it the moment the lockout expires — the document keeps its sticky
+      // fire it the moment the lockout expires - the document keeps its sticky
       // activation, so the deferred request is still allowed.
       this._lockPending = true;
       return;
@@ -555,7 +555,7 @@ export class PlayerController {
   /**
    * Chrome rate-limits `requestPointerLock` for ~1.25 s after a user-initiated
    * Escape, and rejects the returned promise. Unhandled, that surfaces as a red
-   * console error every time someone taps Escape and clicks back in — so the
+   * console error every time someone taps Escape and clicks back in - so the
    * request is made here rather than through `input.requestPointerLock()`,
    * which does not catch.
    */
@@ -578,7 +578,7 @@ export class PlayerController {
   /**
    * If lock has never once succeeded we are probably in a sandboxed iframe or a
    * browser that refuses it. Rather than leaving the world completely inert,
-   * fall back to keyboard-only movement — no look control, but the player can
+   * fall back to keyboard-only movement - no look control, but the player can
    * still walk, and nothing on screen looks broken.
    */
   _noteLockFailure() {
@@ -666,7 +666,7 @@ export class PlayerController {
   }
 
   // =========================================================================
-  // LEAF 3 — look
+  // LEAF 3 - look
   // =========================================================================
 
   _updateLook(dt) {
@@ -699,13 +699,13 @@ export class PlayerController {
   }
 
   // =========================================================================
-  // LEAF 1 — stance and walking
+  // LEAF 1 - stance and walking
   // =========================================================================
 
   _updateStance(dt, state) {
     const io = this._in;
 
-    // On foot, sprint requires forward intent — sprinting backwards is a debug
+    // On foot, sprint requires forward intent - sprinting backwards is a debug
     // camera. In flight the modifier is a plain boost in whatever direction.
     const wantSprint = io.sprint && !io.crouch && (this.mode === 'fly' || io.forward > 0.1);
     this._sprintAmount = damp(this._sprintAmount, wantSprint ? 1 : 0, 8, dt);
@@ -850,7 +850,7 @@ export class PlayerController {
     const stepDist = Math.sqrt(vel.x * vel.x + vel.z * vel.z) * dt;
 
     if (wasGrounded && stepDist > 1e-4) {
-      // Rise over run along the direction of travel — a *gradient*, not a
+      // Rise over run along the direction of travel - a *gradient*, not a
       // height. Comparing raw heights with a fixed tolerance would let the
       // player creep up a cliff at walking pace and change what is climbable
       // with the framerate; a ratio is exact at any speed and any dt, because
@@ -858,7 +858,7 @@ export class PlayerController {
       // true directional derivative as the step shrinks.
       if ((ground - this._groundY) / stepDist > MAX_SLOPE_TAN) {
         // Too steep. Project the uphill component out of the velocity so the
-        // player slides along the contour rather than sticking to the face —
+        // player slides along the contour rather than sticking to the face - 
         // catching on invisible geometry is the classic tell of a naive
         // heightfield controller.
         // A one-off query: it must not overwrite the cached slope normal, which
@@ -881,7 +881,7 @@ export class PlayerController {
         nz = pos.z + vel.z * dt;
         ground = this._sampleGround(nx, nz);
         // The contour curves, so one projection is not always enough. If the
-        // deflected move still climbs, refuse it outright — that guarantees the
+        // deflected move still climbs, refuse it outright - that guarantees the
         // player can never walk up a wall, whatever the terrain does.
         const dist2 = Math.sqrt(vel.x * vel.x + vel.z * vel.z) * dt;
         if (dist2 > 1e-4 && (ground - this._groundY) / dist2 > MAX_SLOPE_TAN) {
@@ -928,7 +928,7 @@ export class PlayerController {
     const i = Math.min(impact, LAND_MAX_IMPACT);
     springKick(this._springY, -i * LAND_DIP, SPRING_Y_OMEGA);
     // The head pitches down as the knees absorb, and rolls onto the leading
-    // foot — landing perfectly square is the tell of a camera with no body.
+    // foot - landing perfectly square is the tell of a camera with no body.
     springKick(this._springPitch, -i * LAND_PITCH, SPRING_ANG_OMEGA);
     springKick(this._springRoll, this._footSign * i * LAND_ROLL, SPRING_ANG_OMEGA);
     // The eye-lag offset is meaningless across a landing; the spring owns the
@@ -937,7 +937,7 @@ export class PlayerController {
   }
 
   // =========================================================================
-  // LEAF 2 — flight
+  // LEAF 2 - flight
   // =========================================================================
 
   _flyPhysics(dt, state) {
@@ -1032,7 +1032,7 @@ export class PlayerController {
 
     // Cushioned descent. Capping the *speed* by the room left to stop in means
     // the deceleration is spread over exactly the distance it needs and the
-    // arrival is always a settle — never a bounce off an invisible plane, and
+    // arrival is always a settle - never a bounce off an invisible plane, and
     // never a dive straight through one.
     const floorY = ground + FLY_CLEARANCE - this._eye;
     const above = pos.y - floorY;
@@ -1091,7 +1091,7 @@ export class PlayerController {
   }
 
   // =========================================================================
-  // LEAF 3 — head bob, springs, lean, FOV
+  // LEAF 3 - head bob, springs, lean, FOV
   // =========================================================================
 
   _updateCameraFeel(dt, state) {
@@ -1100,7 +1100,7 @@ export class PlayerController {
     const walkWeight = 1 - this._flyBlend;
 
     const horizSpeed = Math.sqrt(vel.x * vel.x + vel.z * vel.z);
-    // Flight cares about the full velocity — a vertical dive is still speed.
+    // Flight cares about the full velocity - a vertical dive is still speed.
     const speed3D = vel.length();
 
     // Airborne fade: the gait should die when the feet leave the ground, but
@@ -1109,7 +1109,7 @@ export class PlayerController {
 
     // -- gait ----------------------------------------------------------------
     // Stride grows with speed, so step *frequency* lands near 2.3 Hz walking
-    // and 3.3 Hz running — the real numbers for a human, and the reason this
+    // and 3.3 Hz running - the real numbers for a human, and the reason this
     // does not read as a metronome.
     const stride = clamp(STRIDE_BASE + STRIDE_PER_SPEED * horizSpeed, 0.85, 2.3) *
       lerp(1, 0.72, this._crouchAmount);
@@ -1119,7 +1119,7 @@ export class PlayerController {
       bobTarget = smoothstep(0.35, 2.2, horizSpeed) * this._airAmount * walkWeight;
       bobTarget *= lerp(1, 1.45, this._sprintAmount) * lerp(1, 0.62, this._crouchAmount);
       // Fade the gait out when the input is released even though momentum
-      // remains — the player is coasting to a halt, not still striding.
+      // remains - the player is coasting to a halt, not still striding.
       if (!io.moving) bobTarget *= 0.55;
     }
     this._bobAmount = damp(this._bobAmount, bobTarget, 6, dt);
@@ -1166,7 +1166,7 @@ export class PlayerController {
     let bobPitch = 0;
     if (amp > 1e-4) {
       const c2 = Math.cos(2 * theta);
-      // Second harmonic: the real centre-of-mass curve is not a sinusoid — it
+      // Second harmonic: the real centre-of-mass curve is not a sinusoid - it
       // falls faster than it rises. 0.18 is enough to break the pattern, and
       // the 1/1.18 keeps the peak excursion at exactly BOB_Y either way.
       const h = this._detail > 0 ? 0.18 : 0;
@@ -1181,8 +1181,8 @@ export class PlayerController {
     // -- idle life -----------------------------------------------------------
     // A perfectly static camera is the loudest "this is a program" tell there
     // is. Breathing plus a wind-driven drift keeps it alive for ~free. It has
-    // to survive into fly mode too — a motionless hover is exactly where a
-    // frozen camera gives the game away — so stillness is measured from actual
+    // to survive into fly mode too - a motionless hover is exactly where a
+    // frozen camera gives the game away - so stillness is measured from actual
     // motion rather than simply switched off with the mode.
     const stillness = 1 - clamp01(
       this._bobAmount * 2.2 * walkWeight + (this._flyBlend * speed3D) / 6
@@ -1285,7 +1285,7 @@ export class PlayerController {
     }
 
     // Keep the mouse moving the same number of world-degrees per pixel as the
-    // lens widens. tan ratio, not fov ratio — the projection is not linear.
+    // lens widens. tan ratio, not fov ratio - the projection is not linear.
     this._fovSensScale =
       Math.tan(cam.fov * 0.5 * DEG2RAD) / Math.tan(Math.max(base, 1) * 0.5 * DEG2RAD);
   }
@@ -1301,7 +1301,7 @@ export class PlayerController {
     p.position.set(this._pos.x, this._pos.y + this._eye, this._pos.z);
     p.velocity.copy(this._vel);
 
-    // Documented as the *horizontal* look direction — used for wind-relative
+    // Documented as the *horizontal* look direction - used for wind-relative
     // effects, which have no use for pitch.
     const sinY = Math.sin(this._yaw);
     const cosY = Math.cos(this._yaw);

@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Sakura Realm — stylesheet
+   Sakura Realm - stylesheet
    ==========================================================================
 
    One file, three surfaces: the loading title card (ui/loading.js), the in-world
@@ -11,7 +11,7 @@
    the two moments that deserve one, a system sans at small sizes with generous
    tracking for everything else, tabular figures wherever a number changes while
    you are looking at it. No decorative borders, no coloured status pills, no
-   drop shadows used as decoration — only as legibility insurance over a sky that
+   drop shadows used as decoration - only as legibility insurance over a sky that
    can be anywhere from near-black to near-white.
 
    PERFORMANCE
@@ -22,13 +22,13 @@
        and .hud.is-cheap (quality tier LOW) drops even that.
      · Everything that animates continuously animates transform or opacity only,
        so it stays on the compositor and never triggers layout.
-     · will-change is applied to exactly four elements — the loading bar's fill
-       and head, the time-lapse fill, and the panel sheet — because a promoted
+     · will-change is applied to exactly four elements - the loading bar's fill
+       and head, the time-lapse fill, and the panel sheet - because a promoted
        layer costs memory bandwidth. Three of the four are gone or display:none
        for almost the whole session; none of them is a full-screen surface.
 
    --------------------------------------------------------------------------
-   MARKUP CONTRACT — ui/loading.js
+   MARKUP CONTRACT - ui/loading.js
    --------------------------------------------------------------------------
    .loading[role=dialog]                     states: .is-ready .is-hiding
                                                      .is-leaving .is-failed
@@ -54,10 +54,10 @@
          p.loading__error-message
          ul.loading__error-hints > li > code
      p.loading__footnote
-   The .is-leaving fade MUST last 900ms — loading.js self-destructs on that timer.
+   The .is-leaving fade MUST last 900ms - loading.js self-destructs on that timer.
 
    --------------------------------------------------------------------------
-   MARKUP CONTRACT — ui/hud.js
+   MARKUP CONTRACT - ui/hud.js
    --------------------------------------------------------------------------
    .hud    states: .is-booting .is-hidden .is-photo .is-panel .is-cheap .is-tight
      .hud__readout
@@ -103,7 +103,7 @@
      input.slider[type=range]              custom property: --fill (0%..100%)
    .row.is-unavailable marks a control the world will refuse (a tier that will
    not run the effect, or an effect the post stack has withdrawn). It is styled
-   as "held elsewhere", never as broken — the caption says which.
+   as "held elsewhere", never as broken - the caption says which.
    ========================================================================== */
 
 /* ==========================================================================
@@ -150,7 +150,7 @@
      saturate() deliberately mild: a warm or heavily saturated glass turns the
      sky behind it into a colour cast that swings from teal at noon to orange at
      sunset, and the panel stops looking like the same object hour to hour.
-     The specular line is a single inset hairline along the top edge — the one
+     The specular line is a single inset hairline along the top edge - the one
      cue that reads as "pane of glass" rather than "translucent rectangle". */
   --glass-top: rgba(23, 27, 36, 0.72);
   --glass-bottom: rgba(8, 10, 15, 0.8);
@@ -174,11 +174,11 @@
   --font-mono: ui-monospace, 'SF Mono', 'Cascadia Mono', 'Segoe UI Mono', 'Roboto Mono', Menlo,
     Consolas, monospace;
 
-  --step--2: 0.6875rem; /* 11 — micro labels, always uppercase + tracked */
-  --step--1: 0.75rem; /*    12 — secondary text */
-  --step-0: 0.8125rem; /*   13 — body of the panel */
-  --step-1: 0.9375rem; /*   15 — row names */
-  --step-2: 1.375rem; /*    22 — the clock */
+  --step--2: 0.6875rem; /* 11 - micro labels, always uppercase + tracked */
+  --step--1: 0.75rem; /*    12 - secondary text */
+  --step-0: 0.8125rem; /*   13 - body of the panel */
+  --step-1: 0.9375rem; /*   15 - row names */
+  --step-2: 1.375rem; /*    22 - the clock */
   --step-3: clamp(1.75rem, 1.2rem + 2.4vw, 2.75rem); /* the title */
 
   --track-label: 0.16em;
@@ -187,7 +187,7 @@
   /* -- motion ---------------------------------------------------------------
      Three curves, used for three jobs and never mixed:
        --ease      general easing; slight overshoot-free settle
-       --ease-out  arrivals — a sheet or a knob coming to rest, decelerating
+       --ease-out  arrivals - a sheet or a knob coming to rest, decelerating
                    hard so the last 20% of the travel is almost free
        --ease-soft symmetrical, for a value that changes under you rather than
                    because you moved it (the gust meter, a colour shift)
@@ -254,8 +254,8 @@ canvas#viewport {
   outline: none;
 }
 
-/* The overlay plane. Transparent to the pointer by default — every interactive
-   descendant opts back in — so the canvas keeps receiving clicks for pointer
+/* The overlay plane. Transparent to the pointer by default - every interactive
+   descendant opts back in - so the canvas keeps receiving clicks for pointer
    lock even while the HUD is on screen. */
 #ui-root {
   position: fixed;
@@ -282,7 +282,7 @@ button:disabled {
 
 /* One focus treatment for the whole app: a 2px sakura ring, held off the
    control by 2px so it never touches the shape it is describing.
-   Deliberately NOT setting border-radius here — the outline follows the
+   Deliberately NOT setting border-radius here - the outline follows the
    element's own radius, and forcing 3px onto a pill-shaped switch or a round
    slider thumb squares the ring off and makes the focused state look like a
    different control from the unfocused one. */
@@ -314,7 +314,7 @@ kbd {
 
 /* No padding on this element, deliberately: it is the containing block for the
    three absolutely-positioned layers below, and an abspos child resolves
-   `inset: 0` against the PADDING box — padding here would inset the backdrop and
+   `inset: 0` against the PADDING box - padding here would inset the backdrop and
    the petal canvas by 64px. Breathing room lives on the card and the footnote. */
 .loading {
   --loading-grain: none;
@@ -333,7 +333,7 @@ kbd {
   transition: opacity 900ms var(--ease);
 }
 
-/* Stop swallowing clicks the moment hide() is called — the player may want
+/* Stop swallowing clicks the moment hide() is called - the player may want
    pointer lock while this is still fading. */
 .loading.is-hiding {
   pointer-events: none;
@@ -345,7 +345,7 @@ kbd {
 
 /* Ink field. Two soft off-centre pools rather than one centred vignette, so the
    frame does not read as a symmetrical target, plus the TPDF grain tile blended
-   in to dither the ramp — 8-bit gradients band visibly this close to black. */
+   in to dither the ramp - 8-bit gradients band visibly this close to black. */
 .loading__backdrop {
   position: absolute;
   inset: 0;
@@ -647,7 +647,7 @@ kbd {
 }
 
 /* ==========================================================================
-   4. HUD — shared behaviour
+   4. HUD - shared behaviour
    ========================================================================== */
 
 .hud {
@@ -680,7 +680,7 @@ kbd {
    pop the readout to 45%, and a frame where hideUI and the panel were both set
    would leave the "hidden" HUD visible at 45%. */
 
-/* The panel dims the readout slightly rather than hiding it — you often want to
+/* The panel dims the readout slightly rather than hiding it - you often want to
    watch the clock while you drag the clock. */
 .hud.is-panel .hud__readout,
 .hud.is-panel .hud__perf {
@@ -839,7 +839,7 @@ kbd {
 }
 
 /* The gust meter. Moves every frame, so it is a scaled element and nothing
-   else — no width animation, no box-shadow, no filter. */
+   else - no width animation, no box-shadow, no filter. */
 .wind__meter {
   position: relative;
   width: 92px;
@@ -1057,7 +1057,7 @@ kbd {
 }
 
 /* Hiding the HUD (H) and photo mode must both take the rail with them. This has
-   to live AFTER .is-on and outrank it — the §4 block is declared earlier at the
+   to live AFTER .is-on and outrank it - the §4 block is declared earlier at the
    same specificity, so putting it there would lose and leave a 2px progress bar
    burnt across the top of every photo taken during a time-lapse. Two delays,
    not three: .hud__lapse declares its own two-property transition above. */
@@ -1252,8 +1252,8 @@ kbd {
   transition-delay: 0s, 0s, 0s;
 }
 
-/* Photo mode keeps the toast — an explicit capture still deserves an
-   acknowledgement — but drops it to a whisper so it never competes with the
+/* Photo mode keeps the toast - an explicit capture still deserves an
+   acknowledgement - but drops it to a whisper so it never competes with the
    frame the viewer is composing. */
 .hud.is-photo .hud__toast {
   border-color: transparent;
@@ -1286,7 +1286,7 @@ kbd {
   box-shadow: var(--shadow-panel), var(--glass-specular);
   color: var(--paper-80);
   opacity: 0;
-  /* Enters from just off its own right edge and a hair small — the two
+  /* Enters from just off its own right edge and a hair small - the two
      together read as the sheet coming forward, not sliding sideways. */
   transform: translateX(12px) scale(0.985);
   transform-origin: 100% 22%;
@@ -1315,7 +1315,7 @@ kbd {
 
 /* Glass, but only here and only while it is open. Applied through @supports so
    a browser without it gets the flat translucent panel above rather than a
-   transparent one. LOW drops the blur entirely — see .hud.is-cheap. */
+   transparent one. LOW drops the blur entirely - see .hud.is-cheap. */
 @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
   .panel {
     background: linear-gradient(180deg, var(--glass-top) 0%, var(--glass-bottom) 100%);
@@ -1531,7 +1531,7 @@ kbd {
 }
 
 /* "Another part of the world will not honour this right now." The control goes
-   quiet, the caption stays perfectly legible — the caption is the whole point,
+   quiet, the caption stays perfectly legible - the caption is the whole point,
    because it is the thing that says why. */
 .row.is-unavailable .row__name {
   color: var(--paper-42);
@@ -1572,7 +1572,7 @@ kbd {
   flex-wrap: wrap;
 }
 
-/* Momentary actions are not a segmented control — they get the chip geometry
+/* Momentary actions are not a segmented control - they get the chip geometry
    and none of the container. The inset shadow has to go with it: an inset
    shadow still paints over a transparent background, so leaving it here would
    put a dark smudge behind every action button. */
@@ -1655,7 +1655,7 @@ kbd {
 /* -- switch ---------------------------------------------------------------- */
 
 /* The 4px padding / -4px margin pair grows the hit target to 42x26 without
-   moving anything in the layout — the visible track stays 34x18. */
+   moving anything in the layout - the visible track stays 34x18. */
 .switch {
   display: block;
   padding: 4px;
@@ -1723,7 +1723,7 @@ kbd {
   transform: translateX(14.5px);
 }
 
-/* Disabled means an owner elsewhere has withdrawn the setting — see
+/* Disabled means an owner elsewhere has withdrawn the setting - see
    .row.is-unavailable. Muted, not struck out, and the pointer says "nothing
    here" rather than "forbidden". */
 .switch:disabled {
@@ -1873,7 +1873,7 @@ kbd {
 }
 
 /* Disabled means "another system owns this right now" (the adaptive resolution
-   controller, or weather-driven wind) — not "broken", so it stays readable. */
+   controller, or weather-driven wind) - not "broken", so it stays readable. */
 .slider:disabled {
   cursor: default;
   opacity: 0.4;
@@ -1990,7 +1990,7 @@ kbd {
   }
 }
 
-/* Really short — a 500px-tall browser window, or a phone in landscape. The key
+/* Really short - a 500px-tall browser window, or a phone in landscape. The key
    list is the first thing to go: it is reference material, and the panel is
    worth more as a set of working controls than as a manual. */
 @media (max-height: 460px) {
@@ -2069,7 +2069,7 @@ kbd {
      it starts when .is-leaving is applied, and under reduced motion that timer
      is 140ms, NOT the 900ms FADE_MS it uses otherwise. Holding a 900ms fade
      here would have the element deleted at 140ms while it was still ~85%
-     opaque — a hard cut to the scene, which is the exact thing the fade exists
+     opaque - a hard cut to the scene, which is the exact thing the fade exists
      to prevent. 140ms is short enough to be a crossfade rather than motion, so
      it satisfies the preference and still matches the JS. Keep the two numbers
      in step: this value is loading.js's reduced-motion fade window. */
@@ -2086,7 +2086,7 @@ kbd {
     animation: none !important;
   }
 
-  /* Movement is the thing being opted out of, so the entrance offsets go too —
+  /* Movement is the thing being opted out of, so the entrance offsets go too - 
      with a 0.01ms transition they would otherwise be a one-frame pop rather
      than a fade. The panel keeps its fade; only the travel is dropped. */
   .loading__card,
@@ -2103,8 +2103,8 @@ kbd {
     transform: none !important;
   }
 
-  /* The knob still has to travel — it is the only thing that says which way the
-     switch is set — but it arrives in one step rather than sliding. */
+  /* The knob still has to travel - it is the only thing that says which way the
+     switch is set - but it arrives in one step rather than sliding. */
   .switch[aria-checked='true'] .switch__knob {
     transform: translateX(16px) !important;
   }

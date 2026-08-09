@@ -1,11 +1,11 @@
 /**
- * weather.js — the world's weather brain.
+ * weather.js - the world's weather brain.
  *
  * Owns `state.weather.*` and drives `state.clouds.*`. Three things live here:
  *
  *   1. A parameter blender. Every weather type is a fully specified vector of
  *      ~30 numbers; the "current weather" is always a point somewhere between
- *      two of those vectors. Nothing in this file ever snaps — a change of
+ *      two of those vectors. Nothing in this file ever snaps - a change of
  *      weather is a slow continuous walk through parameter space, and a change
  *      requested mid-walk re-anchors from wherever we currently are.
  *
@@ -40,7 +40,7 @@ import {
 // Parameter vector layout
 // ---------------------------------------------------------------------------
 // One flat Float32Array per weather preset. Indices are explicit constants so
-// the blend loop stays monomorphic — no string keys in the hot path.
+// the blend loop stays monomorphic - no string keys in the hot path.
 
 const P_COVERAGE      = 0;   // cloud coverage 0..1
 const P_DENSITY       = 1;   // cloud optical density
@@ -81,7 +81,7 @@ const P_DESAT         = 29;  // scene desaturation hint 0..1
 const PARAM_COUNT = 30;
 
 /**
- * Authored presets. These are the whole art direction of the weather system —
+ * Authored presets. These are the whole art direction of the weather system - 
  * read them as a lookbook, not as config. Values were tuned against each other
  * so the ladder from clear -> partlyCloudy -> overcast -> rain -> storm reads as
  * a single continuous worsening, and so fog / petalStorm sit off to the side as
@@ -170,7 +170,7 @@ const PRESETS = {
     cloudSpeed: 0.45, cloudAbsorption: 0.70, cloudErosion: 0.50, storminess: 0.06,
     fogDensity: 0.0180, fogTint: '#b4b9bd', fogTintWeight: 0.85, fogLuma: 0.92, fogDesat: 0.55,
     mist: 1.00, mistHeight: 95, horizonLift: 1.00,
-    // Fog cannot survive wind — calm air is part of what makes it read as fog.
+    // Fog cannot survive wind - calm air is part of what makes it read as fog.
     wind: 1.00, gustiness: 0.14, turbulence: 0.16,
     rain: 0.0, petalBoost: 0.70, lightningRate: 0.0,
     sunDim: 0.58, ambient: 1.00, turbidity: 3.0, humidity: 0.99, tempOffset: -2.8, desaturation: 0.55,
@@ -189,7 +189,7 @@ export const WEATHER_LABELS = Object.freeze({
   [WEATHER.FOG]: 'Fog',
 });
 
-/** Presentation order for HUD cycling — roughly "getting worse", fog last. */
+/** Presentation order for HUD cycling - roughly "getting worse", fog last. */
 export const WEATHER_ORDER = Object.freeze([
   WEATHER.CLEAR,
   WEATHER.PARTLY_CLOUDY,
@@ -245,14 +245,14 @@ const BLEND_LAMBDA = 3.5;
 
 /**
  * Not every parameter should cross over on the same schedule. Weather does not
- * arrive as one uniform dissolve — the gust front runs ahead of the squall line,
+ * arrive as one uniform dissolve - the gust front runs ahead of the squall line,
  * the sky darkens next, and the rain only starts once the deck is already
  * overhead. Blending all three in lockstep is the single biggest tell that a
  * weather system is a lerp between two config blocks.
  *
- * PHASE_LEAD  — wind, reaching full value at 70% of the transition.
- * PHASE_MAIN  — cloud, fog and light: the plain eased curve.
- * PHASE_LAG   — precipitation and lightning, held off until 35% in.
+ * PHASE_LEAD - wind, reaching full value at 70% of the transition.
+ * PHASE_MAIN - cloud, fog and light: the plain eased curve.
+ * PHASE_LAG - precipitation and lightning, held off until 35% in.
  */
 const PHASE_MAIN = 0;
 const PHASE_LEAD = 1;
@@ -378,7 +378,7 @@ const VALID_TYPES = new Set(Object.keys(COMPILED));
  * Smooth 24-hour-wrapping lobe: 1 at `center`, 0 at `halfWidth` hours away,
  * measured the short way around the clock. Built this way rather than from a
  * pair of smoothsteps because the naive version has a discontinuity at midnight
- * — the sky would visibly change its mind about fog as the clock rolled over.
+ * - the sky would visibly change its mind about fog as the clock rolled over.
  */
 function hourLobe(hour, center, halfWidth) {
   let dh = Math.abs(hour - center);
@@ -405,7 +405,7 @@ function timeOfDayBias(type, hour, humidity) {
       // Convective storms need a day's worth of surface heating first.
       return 0.35 + 2.1 * hourLobe(hour, 16.0, 5.5);
     case WEATHER.PETAL_STORM: {
-      // The golden hours — this event exists to be looked at.
+      // The golden hours - this event exists to be looked at.
       const morning = hourLobe(hour, 7.5, 2.6);
       const evening = hourLobe(hour, 17.0, 2.8);
       return 0.65 + 1.15 * (morning > evening ? morning : evening);
@@ -490,7 +490,7 @@ export class WeatherSystem {
     // state.wind is owned by weather/wind.js, so we publish targets rather than
     // claiming the field. link() looks for an explicit setter; if the wind
     // author did not provide one we write the base values instead, which is
-    // safe because we run before wind every frame — if wind maintains its own
+    // safe because we run before wind every frame - if wind maintains its own
     // base it simply overwrites us and the two never oscillate.
     this.windTarget = { strength: 0, gustiness: 0, turbulence: 0 };
     this._windSetter = null;
@@ -525,7 +525,7 @@ export class WeatherSystem {
 
   link(systems) {
     const wind = systems?.wind;
-    // Only an unambiguously named hook is safe to call blind — a generic name
+    // Only an unambiguously named hook is safe to call blind - a generic name
     // could belong to a method with an entirely different signature.
     if (wind && typeof wind.setWeatherWind === 'function') {
       this._windSetter = wind.setWeatherWind.bind(wind);
@@ -594,7 +594,7 @@ export class WeatherSystem {
     return true;
   }
 
-  /** Step through WEATHER_ORDER — convenient for a HUD keybind. */
+  /** Step through WEATHER_ORDER - convenient for a HUD keybind. */
   cycleWeather(direction = 1, transitionSeconds) {
     const i = WEATHER_ORDER.indexOf(this._toType);
     const n = WEATHER_ORDER.length;
@@ -624,7 +624,7 @@ export class WeatherSystem {
    * LOW must genuinely cost less, so the dials that cost other systems real
    * milliseconds all come down: fewer raindrops, far fewer airborne petals,
    * less cloud detail noise, shorter lightning flicker trains.
-   * `_petalExcess` thins the *boost* above 1, `_petalGlobal` scales everything —
+   * `_petalExcess` thins the *boost* above 1, `_petalGlobal` scales everything - 
    * both are needed, otherwise LOW would spawn more petals in the rain (where
    * the preset multiplier is below 1) than HIGH does.
    */
@@ -753,7 +753,7 @@ export class WeatherSystem {
     }
     this._lastHour = hour;
 
-    // Cloud cover flattens the diurnal swing — that is why overcast nights are mild.
+    // Cloud cover flattens the diurnal swing - that is why overcast nights are mild.
     const swing = TEMP_SWING * (1 - 0.55 * cur[P_COVERAGE]);
     const diurnal = Math.cos(((hour - TEMP_PEAK_HOUR) / 24) * TAU) * swing;
     this.temperature = TEMP_MEAN + this._dayAnomaly + cur[P_TEMP_OFFSET] + diurnal;
@@ -771,7 +771,7 @@ export class WeatherSystem {
     // should draw fewer raindrops, not make the ground less wet.
     const fall = cur[P_RAIN];
     const precipWet = fall * (1 - this.snowFraction) + fall * this.snowFraction * 0.35;
-    // Saturated air alone leaves surfaces damp with dew — fog mornings glisten.
+    // Saturated air alone leaves surfaces damp with dew - fog mornings glisten.
     const dewWet = smoothstep(0.90, 1.0, this.humidity) * 0.30;
     // Gate then saturate, rather than adding a constant to any non-zero rate.
     // A constant offset puts a step at precip == 0 that the asymptotic blend can
@@ -918,7 +918,7 @@ export class WeatherSystem {
     const px = state.player?.position?.x ?? 0;
     const pz = state.player?.position?.z ?? 0;
     const base = this._cur[P_ALTITUDE];
-    // Rare event — an allocation here costs nothing and lets listeners keep the
+    // Rare event - an allocation here costs nothing and lets listeners keep the
     // reference safely, which a shared scratch vector would not.
     const position = new Vector3(
       px + Math.sin(az) * distance,
@@ -978,7 +978,7 @@ export class WeatherSystem {
     c.storminess = clamp01(cur[P_STORMINESS]);
 
     // -- weather scalars ---------------------------------------------------
-    // These three are the canonical mirror of our internal machine — restoring
+    // These three are the canonical mirror of our internal machine - restoring
     // them each frame self-heals anything that poked state directly with a value
     // we could not interpret.
     w.type = this._committedType;
@@ -1000,7 +1000,7 @@ export class WeatherSystem {
 
     const fogDensity = Math.max(0, cur[P_FOG_DENSITY]);
     w.fogDensity = fogDensity;
-    // Koschmieder, 5% contrast threshold — a rough metres figure for anyone who
+    // Koschmieder, 5% contrast threshold - a rough metres figure for anyone who
     // wants to place a far plane or fade distant scatter.
     this.visibility = 3.0 / Math.max(fogDensity, 1e-6);
 
@@ -1018,7 +1018,7 @@ export class WeatherSystem {
       this._windSetter(this.windStrength, this.windGustiness, this.windTurbulence, d);
     } else {
       // No agreed setter: write the base values. See the note in the constructor
-      // — wind runs after us, so it wins any disagreement and nothing flickers.
+      // - wind runs after us, so it wins any disagreement and nothing flickers.
       state.wind.strength = this.windStrength;
       state.wind.gustiness = this.windGustiness;
       state.wind.turbulence = this.windTurbulence;
@@ -1070,7 +1070,7 @@ export class WeatherSystem {
     r *= luma; g *= luma; b *= luma;
 
     // Skyglow / moonlight floor. Thick cloud smothers it, so the floor scales
-    // down with coverage — a socked-in night really is pitch black.
+    // down with coverage - a socked-in night really is pitch black.
     const moonV = clamp01(state.moon?.visibility ?? 0);
     const floor = (0.0018 + 0.0095 * moonV) * (1 - 0.7 * clamp01(cur[P_COVERAGE]));
     const mc = state.moon?.color;
@@ -1080,7 +1080,7 @@ export class WeatherSystem {
       r += floor; g += floor; b += floor;
     }
 
-    // Lightning lights the air itself — the fog is the flash, more than the bolt.
+    // Lightning lights the air itself - the fog is the flash, more than the bolt.
     const flash = this.lightning;
     if (flash > 0) {
       const f = flash * 0.42;
@@ -1099,7 +1099,7 @@ export class WeatherSystem {
   /**
    * How much warmer or colder than the seasonal mean this particular day is.
    * The tails of this are the only thing that can push a pre-dawn shower below
-   * freezing, so its width sets how rare spring sleet is — roughly one morning
+   * freezing, so its width sets how rare spring sleet is - roughly one morning
    * in seven, and never more than a light sleet even then.
    */
   _rollDayAnomaly() {

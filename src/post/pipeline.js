@@ -1,5 +1,5 @@
 /**
- * post/pipeline.js — the final image.
+ * post/pipeline.js - the final image.
  *
  * `main.js` calls `post.render(dt, state)` exactly once per frame and that call
  * is the ONLY draw in the frame. Everything the player ever sees passes through
@@ -7,7 +7,7 @@
  * a render or as a photograph: the **tone curve** and the **order of operations**.
  *
  * ---------------------------------------------------------------------------
- * WHO OWNS COLOUR — read this before changing anything
+ * WHO OWNS COLOUR - read this before changing anything
  * ---------------------------------------------------------------------------
  * `core/engine.js` configures the renderer for the *standalone* case:
  * `toneMapping = ACESFilmicToneMapping`, `outputColorSpace = SRGBColorSpace`,
@@ -31,7 +31,7 @@
  *   2. **Engine's renderer settings are deliberately left alone.** They cost
  *      nothing while the composer drives (they are compiled out), and they keep
  *      the emergency `renderer.render(scene, camera)` fallback in `render()`
- *      producing a correct — if ungraded — image instead of a black screen.
+ *      producing a correct - if ungraded - image instead of a black screen.
  *   3. **`engine.autoExposure` stays ON.** The obvious move is to switch it off
  *      and read `engine.exposure`, but `Engine._updateExposure()` early-returns
  *      when it is off, which would freeze that value at 1.0 and throw the
@@ -61,7 +61,7 @@
  *   EffectPass  #2        SMAA or FXAA, then film grain + dither
  *
  * Everything except FilmGrade is optional and is *omitted from the merged
- * shader* when it is off rather than merely zeroed — see `_featureSignature`.
+ * shader* when it is off rather than merely zeroed - see `_featureSignature`.
  * A zeroed effect still costs its texture fetches and its blend every frame,
  * which is the wrong trade on the tier that has the least fill rate to spare.
  *
@@ -72,7 +72,7 @@
  * the tone curve; AA and grain are last. That is the whole contract.
  *
  * ---------------------------------------------------------------------------
- * BUDGET — AMD Radeon 780M, 1080p, ~3 ms for the whole stack
+ * BUDGET - AMD Radeon 780M, 1080p, ~3 ms for the whole stack
  * ---------------------------------------------------------------------------
  *   AO (half-res, 12 samples, 1 denoise iteration)   ~1.2 ms   HIGH+
  *   sun shafts (0.45 scale, 32 samples)              ~0.5 ms
@@ -127,7 +127,7 @@ import { N8AOPostPass } from 'n8ao';
  * frame reads [16,18,24] without the pass and [50,55,69] with it, so the pass ADDS
  * light where there is no geometry at all. Toggling gammaCorrection, autosetGamma
  * and colorMultiply changes the output by less than one LSB, so it is not a colour
- * space setting — the pass output itself is wrong in this configuration.
+ * space setting - the pass output itself is wrong in this configuration.
  *
  * Rather than ship a washed-out image for the sake of a subtle effect, AO is off.
  * The depth cues it would have provided are carried instead by the per-blade
@@ -208,7 +208,7 @@ const TIERS = {
 /** Contact-AO radius in metres. Grass blades are ~0.5 m, so this reads as the
  *  darkening where a blade meets soil rather than as a large ambient term. */
 const AO_RADIUS = 1.15;
-/** n8ao computes `finalAo = pow(ao, intensity)` — an exponent, not a gain. */
+/** n8ao computes `finalAo = pow(ao, intensity)` - an exponent, not a gain. */
 const AO_POWER = 2.6;
 /** Occluded crevices keep a little bounce light instead of going to pure black.
  *  n8ao converts this from sRGB, so author it as a screen colour. */
@@ -279,8 +279,8 @@ const dampTo = (current, target, lambda, dt) =>
 // ===========================================================================
 
 /**
- * Rec.709 luma. `luminance()` is NOT part of three's shader chunks — the effect
- * prelude only pulls in <common> and <packing> — so anything that needs it has
+ * Rec.709 luma. `luminance()` is NOT part of three's shader chunks - the effect
+ * prelude only pulls in <common> and <packing> - so anything that needs it has
  * to bring its own.
  */
 const GLSL_LUMA = `
@@ -298,7 +298,7 @@ float srIgn(const in vec2 p) {
 `;
 
 // ===========================================================================
-// FilmGradeEffect — exposure, lens vignette, ACES, grade. The heart of LEAF 2.
+// FilmGradeEffect - exposure, lens vignette, ACES, grade. The heart of LEAF 2.
 //
 // The tone curve is ACES (Stephen Hill's fit), the same matrices three r180
 // ships in <tonemapping_pars_fragment>. They are reproduced here because three
@@ -438,12 +438,12 @@ class FilmGradeEffect extends Effect {
 }
 
 // ===========================================================================
-// FilmGrainEffect — display-referred grain plus a triangular-PDF dither.
+// FilmGrainEffect - display-referred grain plus a triangular-PDF dither.
 //
 // Deliberately separate from the grade so it can be merged into the
 // ANTIALIASING pass: grain applied before SMAA is read as edge detail, smeared
 // by the blend weights and half destroyed. After AA it stays crisp, and the
-// dither rides along in exactly the right place — after the sRGB encode and
+// dither rides along in exactly the right place - after the sRGB encode and
 // immediately before the 8-bit framebuffer quantises everything.
 // ===========================================================================
 
@@ -506,7 +506,7 @@ class FilmGrainEffect extends Effect {
 }
 
 // ===========================================================================
-// CameraMotionBlurEffect — depth reprojection against the previous frame.
+// CameraMotionBlurEffect - depth reprojection against the previous frame.
 //
 // Declared DEPTH rather than CONVOLUTION even though it takes neighbouring
 // taps: CONVOLUTION would force it ahead of the chromatic aberration, and
@@ -611,13 +611,13 @@ class CameraMotionBlurEffect extends Effect {
 }
 
 // ===========================================================================
-// SunShaftsEffect — GodRaysEffect that can actually be switched off.
+// SunShaftsEffect - GodRaysEffect that can actually be switched off.
 //
 // The stock effect has no gain uniform, and `EffectPass` calls `update()` on
 // every effect it owns whether or not its blend function is SKIP. That would
 // leave a full-resolution occlusion copy, a light render and a radial blur
 // running all night. Overriding `update()` to bail at zero intensity keeps the
-// effect merged into the main pass — no extra fullscreen blend — while costing
+// effect merged into the main pass - no extra fullscreen blend - while costing
 // literally nothing whenever the sun is down, behind the player, or fully
 // socked in.
 // ===========================================================================
@@ -666,7 +666,7 @@ class SunShaftsEffect extends GodRaysEffect {
     if (this._intensity <= 1e-4) return;
     // GodRaysEffect reparents the light into its own scene and only puts it back
     // `if (parent !== null)`. Running it on a detached mesh therefore swallows
-    // celestial's sun disc permanently — it would vanish from the sky for the
+    // celestial's sun disc permanently - it would vanish from the sky for the
     // rest of the session. Cheaper to skip a frame of shafts than to lose the sun.
     const light = this.lightSource;
     if (!light || light.parent === null || !light.material) return;
@@ -675,7 +675,7 @@ class SunShaftsEffect extends GodRaysEffect {
 }
 
 // ===========================================================================
-// GatedBloomEffect — the same trick for bloom's luminance + mipmap chain.
+// GatedBloomEffect - the same trick for bloom's luminance + mipmap chain.
 // ===========================================================================
 
 class GatedBloomEffect extends BloomEffect {
@@ -793,8 +793,8 @@ export class PostPipeline {
   }
 
   /**
-   * CONTRACTS §6. Called by sky/celestial.js — and defensively by
-   * weather/atmosfx.js — with the mesh that stands in for the sun.
+   * CONTRACTS §6. Called by sky/celestial.js - and defensively by
+   * weather/atmosfx.js - with the mesh that stands in for the sun.
    * @param {import('three').Object3D} object3D
    */
   registerGodRayLight(object3D) {
@@ -819,7 +819,7 @@ export class PostPipeline {
    * ui/hud.js toggles individual effects without going through a tier change.
    *
    * `state.quality` is `@owner core/quality.js`, so this method deliberately does
-   * NOT write it — the caller owns that write (ui/hud.js sets `q[key]` itself
+   * NOT write it - the caller owns that write (ui/hud.js sets `q[key]` itself
    * immediately before calling here). All this does is re-read the flags now
    * instead of at the top of the next frame, so the toggle lands in the frame the
    * player clicked in.
@@ -879,7 +879,7 @@ export class PostPipeline {
    * Emergency path: draw the scene straight to the canvas.
    *
    * Engine's ACES tone mapping and sRGB output are still configured on the
-   * renderer, so this is a correct — if ungraded — image. Two things have to be
+   * renderer, so this is a correct - if ungraded - image. Two things have to be
    * done by hand that the composer normally does for us:
    *   - `EffectComposer.setRenderer()` sets `renderer.autoClear = false`, so a
    *     bare `renderer.render()` would composite this frame on top of the last
@@ -916,7 +916,7 @@ export class PostPipeline {
 
     // The first frames are the ones that can trip over a driver quirk in the
     // depth blit or a shader that will not link. Guard those, then leave the hot
-    // path clean — a permanent try/catch around the only draw call in the frame
+    // path clean - a permanent try/catch around the only draw call in the frame
     // is not something to leave lying around.
     if (this._verifiedFrames < 3) {
       try {
@@ -993,7 +993,7 @@ export class PostPipeline {
       // Bloom is part of the SHAPE of the stack, not just a uniform. Leaving a
       // disabled BloomEffect merged in costs a full-resolution texture fetch and
       // an ADD blend on every pixel of every frame, and ui/hud.js switches bloom
-      // off for the whole LOW tier — the one tier with no fill rate to waste.
+      // off for the whole LOW tier - the one tier with no fill rate to waste.
       // One recompile on a toggle the player makes at most a few times a session
       // is the cheaper side of that trade.
       (q.bloom !== false ? 16 : 0) |
@@ -1033,7 +1033,7 @@ export class PostPipeline {
     // `_rebuild` constructs library effects, and any of them can throw: an
     // EffectPass that cannot merge, an SMAA path that needs a DOM, a driver that
     // refuses another render target. Unguarded, that exception escapes render()
-    // — which main.js does not catch — every single frame, and the player gets a
+    // - which main.js does not catch - every single frame, and the player gets a
     // black screen plus a console flood. Retry once with the smallest stack that
     // can possibly work, then give up and take the direct-render path.
     try {
@@ -1062,7 +1062,7 @@ export class PostPipeline {
    * Disposes anything still sitting in the effect registry. Only used on the
    * rebuild failure path: `_destroyPasses` disposes effects through the pass that
    * owns them, and a half-built stack has effects that never reached a pass.
-   * Double-disposing an effect that did reach one is harmless — three's
+   * Double-disposing an effect that did reach one is harmless - three's
    * deallocate hooks are no-ops once the properties entry is gone.
    */
   _disposeOrphanEffects() {
@@ -1083,7 +1083,7 @@ export class PostPipeline {
   _rebuild(cfg, mask, aa) {
     this._destroyPasses();
 
-    // n8ao 1.10.3 is disabled unconditionally — see AO_DISABLED_REASON below.
+    // n8ao 1.10.3 is disabled unconditionally - see AO_DISABLED_REASON below.
     const wantAO = (mask & 1) !== 0 && !AO_DISABLED;
     const wantShafts = (mask & 2) !== 0;
     const wantDoF = (mask & 4) !== 0;
@@ -1106,7 +1106,7 @@ export class PostPipeline {
     // --- the merged pass ---------------------------------------------------
     const merged = [];
 
-    // CONVOLUTION, so postprocessing sorts it first — which is also where a lens
+    // CONVOLUTION, so postprocessing sorts it first - which is also where a lens
     // aberration physically belongs, ahead of everything the sensor does. Omitted
     // entirely when the tier offset is zero: at offset 0 the effect is an
     // identity function that still pays for two extra full-resolution taps, a
@@ -1161,7 +1161,7 @@ export class PostPipeline {
       merged.push(mb);
     }
 
-    // Bloom is added in LINEAR light, before the tone curve — the only place a
+    // Bloom is added in LINEAR light, before the tone curve - the only place a
     // physically plausible bloom can go. Adding it after tone mapping is what
     // produces the milky, contrast-free glow that reads as cheap.
     if (wantBloom) {
@@ -1225,7 +1225,7 @@ export class PostPipeline {
 
     // `addPass` already sizes each pass, but adding the first depth-consuming
     // pass makes the composer mint a fresh depth attachment at its default size.
-    // One explicit resize settles every target — including that one — in a
+    // One explicit resize settles every target - including that one - in a
     // single place, and it costs nothing on an unchanged size because three's
     // render targets early-out.
     if (this._width > 0) this.composer.setSize(this._width, this._height, false);
@@ -1356,8 +1356,8 @@ export class PostPipeline {
       this._exposure = target;
       this._exposurePrimed = true;
     } else {
-      // ~40 ms. Not for looks — either source can step discontinuously when the
-      // player scrubs time or the weather machine flips — but short enough that
+      // ~40 ms. Not for looks - either source can step discontinuously when the
+      // player scrubs time or the weather machine flips - but short enough that
       // it never reads as a second, laggy auto-exposure fighting the first.
       this._exposure = dampTo(this._exposure, target, 25, dt);
     }
@@ -1421,7 +1421,7 @@ export class PostPipeline {
     if (!bloom) return;
 
     // ui/hud.js owns state.quality.bloom (core/quality.js has no slot for it).
-    // Undefined means on — the HUD seeds it in its constructor. The effect is
+    // Undefined means on - the HUD seeds it in its constructor. The effect is
     // normally dropped from the pass entirely when this is false; this branch
     // only covers the single frame between the flag flipping and the rebuild.
     if (state.quality.bloom === false) {
@@ -1480,7 +1480,7 @@ export class PostPipeline {
     this._shaftLevel = dampTo(this._shaftLevel, clamp01(target), 6, dt);
 
     // The composite lands in the scene-referred buffer, so a display-referred
-    // target has to be divided back through exposure — the same conversion the
+    // target has to be divided back through exposure - the same conversion the
     // bloom threshold makes, in the opposite direction.
     shafts.intensity =
       (this._shaftLevel * SHAFT_DISPLAY_PEAK) / Math.max(this._exposure, 0.05);

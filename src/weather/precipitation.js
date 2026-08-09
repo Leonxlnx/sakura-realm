@@ -1,5 +1,5 @@
 /**
- * precipitation.js — rain, rain impact, snow and lightning.
+ * precipitation.js - rain, rain impact, snow and lightning.
  *
  * Design notes worth reading before editing:
  *
@@ -8,7 +8,7 @@
  *    keeps density exactly constant while the player walks or flies and costs one
  *    `mod()`; respawning always produces visible density waves behind a moving
  *    camera. Everything in the camera-following group stores camera-relative
- *    positions, and the group itself is translated to the camera each frame —
+ *    positions, and the group itself is translated to the camera each frame - 
  *    that keeps float precision high and makes the wrap a single subtraction.
  *
  * 2. Rain is fully analytic on the GPU (position = f(seed, time)); it is by far
@@ -19,7 +19,7 @@
  * 3. Every primitive here goes sub-pixel at distance, and thin sub-pixel quads
  *    are the worst source of shimmer in any weather effect. All four materials
  *    widen the primitive to a minimum pixel footprint and scale alpha by the
- *    inverse — energy-conserving anti-aliasing, effectively free.
+ *    inverse - energy-conserving anti-aliasing, effectively free.
  *
  * 4. Splash and droplet work is strictly camera-local. Nobody sees a splash at
  *    80 m, so nothing is spent there.
@@ -33,7 +33,7 @@ import { clamp01, lerp, smoothstep, damp, makeRNG, TAU } from '../core/math.js';
 // Quality tiers. Typed arrays are always allocated at the ULTRA size (~1.2 MB
 // total) so a tier change never reallocates a GPU buffer mid-flight; only the
 // active counts and the volume extents move. Particle density per cubic metre is
-// held roughly constant across tiers — LOW buys its speed with a shorter view
+// held roughly constant across tiers - LOW buys its speed with a shorter view
 // distance into the rain, which reads as heavier haze rather than thinner rain.
 // ---------------------------------------------------------------------------
 
@@ -171,7 +171,7 @@ const RAIN_VERT = /* glsl */ `
 
     // Motion blur is about velocity *relative to the observer*: fly forward and
     // the rain rotates to streak at you, exactly like a windscreen at speed.
-    // Only the smear is affected — the drops themselves stay world-anchored.
+    // Only the smear is affected - the drops themselves stay world-anchored.
     vec3 vel = vec3(uWind.x * lag, -speed, uWind.y * lag) - uCamVel;
     float vlen = length(vel);
     vec3 axis = vel / max(vlen, 1e-4);
@@ -200,7 +200,7 @@ const RAIN_VERT = /* glsl */ `
     // being cut, so changing intensity never pops a block of drops in or out.
     fade *= 1.0 - smoothstep(uCount - 0.06, uCount, aIndex);
     fade *= precipCurtain(worldPos.xz, uTime, 0.45);
-    // Seen end-on a streak is a dot, not a bar — dim it rather than show a slab.
+    // Seen end-on a streak is a dot, not a bar - dim it rather than show a slab.
     float a = uAlpha * aRand.z * energy * fade * mix(0.16, 1.0, sinA);
 
     if (a < 0.0035) {
@@ -211,7 +211,7 @@ const RAIN_VERT = /* glsl */ `
 
     vec3 p = rel + axis * (position.y * len) + side * (position.x * w);
 
-    // A rain streak is a dielectric cylinder — lit exactly like a hair strand,
+    // A rain streak is a dielectric cylinder - lit exactly like a hair strand,
     // so Kajiya-Kay is both the physically right and the cheapest model here.
     float TdotL = dot(axis, uKeyDir);
     float TdotV = dot(axis, Vp);
@@ -302,7 +302,7 @@ const SNOW_VERT = /* glsl */ `
       return;
     }
 
-    // Camera basis straight out of the view matrix — stable while the flake spins.
+    // Camera basis straight out of the view matrix - stable while the flake spins.
     vec3 right = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
     vec3 up    = vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
     vec3 p = rel + right * (q.x * w) + up * (q.y * w);
@@ -335,7 +335,7 @@ const SNOW_FRAG = /* glsl */ `
 `;
 
 // ---------------------------------------------------------------------------
-// Splash — one source, two variants (#define CROWN builds the vertical burst).
+// Splash - one source, two variants (#define CROWN builds the vertical burst).
 // ---------------------------------------------------------------------------
 
 const SPLASH_VERT = /* glsl */ `
@@ -586,7 +586,7 @@ export class Precipitation {
     this.rng = makeRNG(0x5a4b12);
     this.tier = TIERS[this.state.quality?.tier] || TIERS.high;
 
-    /** Smoothed intensities — weather transitions must never snap. */
+    /** Smoothed intensities - weather transitions must never snap. */
     this.rain = 0;
     this.snow = 0;
     /** Multi-pulse lightning envelope, also published to state.weather.lightning. */
@@ -761,7 +761,7 @@ export class Precipitation {
       index[i] = i / n;
       // Flutter: the sideways spiral a plate-shaped flake carves as it stalls and
       // slips. Each flake carries a unit 2-vector that is *rotated* a fixed angle
-      // per frame instead of being evaluated with sin/cos — see _updateSnow.
+      // per frame instead of being evaluated with sin/cos - see _updateSnow.
       // Frequencies are quantised into buckets so the per-frame rotation for a
       // whole bucket is computed once, not once per flake.
       this._snowAmp[i] = 0.18 + r() * 0.5;
@@ -987,7 +987,7 @@ export class Precipitation {
     this.boltMesh.visible = false;
     this.worldGroup.add(this.boltMesh);
 
-    // Scratch for midpoint displacement — reused, never reallocated.
+    // Scratch for midpoint displacement - reused, never reallocated.
     this._ptA = new Float32Array(MAX_BOLT_POINTS * 3);
     this._ptB = new Float32Array(MAX_BOLT_POINTS * 3);
     this._chStart = new Int32Array(MAX_CHANNELS);
@@ -1049,7 +1049,7 @@ export class Precipitation {
     u.uTime.value = this._time;
     u.uCamPos.value.copy(_camPos);
 
-    // Angular size of one pixel — drives every minimum-width computation. Read
+    // Angular size of one pixel - drives every minimum-width computation. Read
     // from the real drawing buffer so it survives adaptive resolution changes.
     this.renderer.getDrawingBufferSize(_size);
     const h = Math.max(1, _size.y);
@@ -1303,7 +1303,7 @@ export class Precipitation {
         const th = this.rng() * TAU;
         const wx = cx + Math.cos(th) * rr;
         const wz = cz + Math.sin(th) * rr;
-        // The canopy shelters the ground under it — no splashes there, which is
+        // The canopy shelters the ground under it - no splashes there, which is
         // exactly what makes the drip line at its edge read.
         if (canopy.w > 0.5) {
           const d = Math.hypot(wx - canopy.x, wz - canopy.z);
@@ -1807,7 +1807,7 @@ export class Precipitation {
   }
 
   // -------------------------------------------------------------------------
-  // Thunder — synthesised, no assets, created only after a real user gesture.
+  // Thunder - synthesised, no assets, created only after a real user gesture.
   // -------------------------------------------------------------------------
 
   _initAudio() {

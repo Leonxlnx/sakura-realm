@@ -1,5 +1,5 @@
 /**
- * sky/clouds.js — VolumetricClouds
+ * sky/clouds.js - VolumetricClouds
  *
  * A raymarched cloud layer built for an integrated GPU. The whole design is
  * organised around one number: how many density samples per screen pixel per
@@ -25,7 +25,7 @@
  * energy-conserving integration with a multiple-scattering octave loop.
  *
  * Both 3D volumes are baked on the GPU at init into a tiled 2D target, read back
- * once, and uploaded as Data3DTextures — no assets, no per-frame cost, and it
+ * once, and uploaded as Data3DTextures - no assets, no per-frame cost, and it
  * avoids the multi-second stall a JS-side worley bake would cost.
  */
 
@@ -36,7 +36,7 @@ import { QUALITY } from '../core/state.js';
 // ---------------------------------------------------------------------------
 // Bake resolutions. Shape is the expensive one: 128^3 RGBA8 = 8 MB, which the
 // 780M can hold comfortably and which gives ~4 texels per worley cell at the
-// finest channel — enough to stay free of cell-boundary aliasing.
+// finest channel - enough to stay free of cell-boundary aliasing.
 // ---------------------------------------------------------------------------
 const SHAPE_SIZE = 128;
 const SHAPE_TILES_X = 16;
@@ -59,7 +59,7 @@ const PLANET_RADIUS = 260000;
 /** Checkerboard divisor: 1 traced pixel per DIV x DIV block of the history
  *  buffer, so a full refresh takes DIV*DIV frames. */
 const CHECKER_DIV = 2;
-/** Bayer-2 visiting order — consecutive frames land on diagonally opposite
+/** Bayer-2 visiting order - consecutive frames land on diagonally opposite
  *  texels, which converges much faster than a raster scan. */
 const CHECKER_ORDER = [0, 0, 1, 1, 1, 0, 0, 1];
 
@@ -173,8 +173,8 @@ void main() {
   if (uMode < 0.5) {
     // Shape volume. R = perlin-worley, GBA = three worley octaves the sampling
     // shader recombines into an FBM. Keeping the octaves separate lets the
-    // runtime weight them by ALTITUDE — broad shoulders low in a cloud, tight
-    // cauliflower granulation at the top — which is where the billow shape
+    // runtime weight them by ALTITUDE - broad shoulders low in a cloud, tight
+    // cauliflower granulation at the top - which is where the billow shape
     // actually comes from.
     float pf = perlinFBM(uvw, 4.0);
     float w4 = billow(uvw, 4.0);
@@ -183,7 +183,7 @@ void main() {
     float wfbm = w4 * 0.625 + w8 * 0.25 + w16 * 0.125;
     // Perlin-Worley (Schneider): worley carves rounded lobes out of perlin's
     // connected filaments. Note this remap compresses the distribution into a
-    // narrow band around 0.65 — the CPU percentile stretch that runs after the
+    // narrow band around 0.65 - the CPU percentile stretch that runs after the
     // readback is what pulls it back to a full 0..1 range. Skip that step and
     // every cloud in the sky comes out as one uniform grey value, which is
     // exactly the "flat fog" failure this volume used to produce.
@@ -220,7 +220,7 @@ uniform float uInnerRadius;
 uniform float uThickness;
 
 /** Coverage threshold window, solved on the CPU from state.clouds.coverage. It
- *  used to be derived per sample — a pow() plus two mixes of pure uniforms,
+ *  used to be derived per sample - a pow() plus two mixes of pure uniforms,
  *  evaluated once for the primary sample and again for every one of the light
  *  march's steps and its long reach, i.e. ~9 redundant transcendentals per lit
  *  pixel-sample. The compiler cannot hoist it because it lives behind two
@@ -265,7 +265,7 @@ vec4 sampleWeather(vec3 p) {
  * three separately-evaluated profiles crossfaded together. That matters twice
  * over. Artistically, crossfading a stratus sheet (which ends at h = 0.30) with
  * a cumulus (which ends at h = 0.98) gives an intermediate type a DOUBLE
- * shoulder — a sheet with a ghost of a tower fading through it — instead of a
+ * shoulder - a sheet with a ghost of a tower fading through it - instead of a
  * single cloud that is simply taller. Morphing the edges gives a continuous
  * family of real profiles. And it costs three smoothsteps instead of eight, on
  * a function that runs once for the primary sample plus once per light-march
@@ -308,7 +308,7 @@ float heightGradient(float h, float type, float anvil) {
  * the top evaporates the crown.
  *
  * Note the base is DENSE, not thin. A cumulus base looks dark because almost no
- * sunlight survives the trip down through the body above it — not because there
+ * sunlight survives the trip down through the body above it - not because there
  * is less water there. Modelling the darkness as thinness was why the old bases
  * read as grey haze instead of a hard shadowed shelf.
  */
@@ -319,14 +319,14 @@ float densityProfile(float h) {
 /**
  * Maps the weather field through the artistic coverage dial. 0 is genuinely
  * clear and 1 genuinely socked in, and the response in between is close to
- * linear — uCovLo/uCovHi are not guesses, they are read straight off the
+ * linear - uCovLo/uCovHi are not guesses, they are read straight off the
  * INVERSE CDF of the field this function samples, so state.clouds.coverage
  * really does mean "fraction of sky with cloud". See _solveCoverage().
  */
 float coverageFrom(vec4 w, float h) {
   float field = w.r * 0.66 + w.g * 0.34;
   float cov = smoothstep(uCovLo, uCovHi, field);
-  // Anvils spread outward with altitude — the top of a thunderhead is wider
+  // Anvils spread outward with altitude - the top of a thunderhead is wider
   // than its base, which is most of what sells a storm silhouette.
   cov = mix(cov, min(cov * 1.7, 1.0), uAnvil * w.a * smoothstep(0.55, 0.95, h));
   return cov;
@@ -344,7 +344,7 @@ vec3 warpPosition(vec3 p, float h) {
  * raymarcher can use to skip empty space without stepping over a cloud.
  *
  * The weather sample is passed in rather than fetched, so the light march's near
- * steps can reuse the primary sample's — a ~1 km approximation on a field whose
+ * steps can reuse the primary sample's - a ~1 km approximation on a field whose
  * features are several kilometres wide, and it removes six 2D fetches per lit
  * sample. Only the long reach, which travels far enough for that to stop being
  * true, fetches its own.
@@ -377,7 +377,7 @@ float shapeNorm(vec3 p, float h, vec4 weather, out float coverage, out float gra
   // so weighting them by altitude is free: broad rounded shoulders down near the
   // base where a thermal is still one coherent bubble, tight granulation up top
   // where it has broken into a hundred competing turrets. A single fixed FBM
-  // weighting — what this used to do — gives every part of the cloud the same
+  // weighting - what this used to do - gives every part of the cloud the same
   // lump size, and that reads as noise rather than as convection.
   float hi = smoothstep(0.26, 0.90, h);
   float fbm = mix(s.g * 0.70 + s.b * 0.23 + s.a * 0.07,
@@ -399,7 +399,7 @@ float shapeNorm(vec3 p, float h, vec4 weather, out float coverage, out float gra
   //
   // The min() is a hard guarantee, not a taste call. remap(s.r, floor, 1, 0, 1)
   // has slope 1/(1-floor), so a floor that is free to reach 0.86 turns the
-  // lookup into a near-binary threshold on a texel-scale signal — which aliases
+  // lookup into a near-binary threshold on a texel-scale signal - which aliases
   // into crawling speckle the temporal filter then smears. Capping the floor
   // caps the slope at ~3.1, which is as much contrast as a 128^3 volume sampled
   // at ~19 m steps can carry without breaking up.
@@ -411,7 +411,7 @@ float shapeNorm(vec3 p, float h, vec4 weather, out float coverage, out float gra
   base = base * base * (3.0 - 2.0 * base);
   // A second, gentler S high in the cloud. Two stacked smoothsteps push the
   // midtones further apart than one steeper curve does without clipping either
-  // end into a flat plateau — and a plateau is exactly what turns a crown back
+  // end into a flat plateau - and a plateau is exactly what turns a crown back
   // into a smooth dome. Weighted by altitude so the base keeps its full range.
   base = mix(base, base * base * (3.0 - 2.0 * base), 0.55 * hi);
   // Stratus is a sheet, not a collection of blobs. As the type slides toward
@@ -423,7 +423,7 @@ float shapeNorm(vec3 p, float h, vec4 weather, out float coverage, out float gra
   return clamp((base - (1.0 - coverage)) / max(coverage, 1e-3), 0.0, 1.0);
 }
 
-/** Shape-only density — the cheap path, used for skipping, the light march and
+/** Shape-only density - the cheap path, used for skipping, the light march and
  *  the shadow map. */
 float densityLow(vec3 p, float h, vec4 weather) {
   float coverage, grain;
@@ -438,7 +438,7 @@ float densityLow(vec3 p, float h) {
 /**
  * Full density: the shape bitten back at its margins, in two stages.
  *
- * Only the PRIMARY march calls this, and that is deliberate — a silhouette is
+ * Only the PRIMARY march calls this, and that is deliberate - a silhouette is
  * decided by the ray that draws it, so making the light march and the shadow map
  * reproduce this work would be seven eighths of the cost for none of the look.
  *
@@ -446,7 +446,7 @@ float densityLow(vec3 p, float h) {
  * cumulus is solid liquid water and stays solid, and it is only the outer skin,
  * where the shape value is already low, that dry air entrains into and tears
  * apart. Applying a detail volume uniformly is what makes CG volumetrics look
- * like dirty cotton wool instead of cloud. The flat base is spared as well —
+ * like dirty cotton wool instead of cloud. The flat base is spared as well - 
  * shear and entrainment attack the top and the sides of a thermal, while the
  * condensation level itself stays a clean shelf.
  */
@@ -458,7 +458,7 @@ float densityFull(vec3 p, float h, vec4 weather, float erode) {
   float rim = 1.0 - smoothstep(0.07, 0.66, n);
   rim *= mix(0.32, 1.0, smoothstep(0.0, 0.17, h));
 
-  // Stage 1 — the finest worley octave of the SHAPE volume, which came back from
+  // Stage 1 - the finest worley octave of the SHAPE volume, which came back from
   // the fetch shapeNorm already made, so this costs no bandwidth at all and
   // therefore survives at any distance. That matters: the detail volume fades
   // out with range for cost reasons, and most of the sky is beyond that fade,
@@ -470,7 +470,7 @@ float densityFull(vec3 p, float h, vec4 weather, float erode) {
   // net saving rather than a net cost.
   n = clamp(remap(n, (1.0 - grain) * rim * (0.14 + 0.46 * uErosion), 1.0, 0.0, 1.0), 0.0, 1.0);
 
-  // Stage 2 — the real detail volume, for the near field only, where its
+  // Stage 2 - the real detail volume, for the near field only, where its
   // features are still larger than a pixel and larger than a march step.
   if (erode > 0.002) {
     vec3 dp = warpPosition(p, h) * uDetailScale + uDetailOffset;
@@ -483,7 +483,7 @@ float densityFull(vec3 p, float h, vec4 weather, float erode) {
     // 1.45 rather than 1.7: stage 1 has already taken a bite here, so the near
     // field would otherwise be eroded appreciably harder than before and the
     // clouds would thin out. The two together subtract about what this one used
-    // to on its own — but only this half fades with range.
+    // to on its own - but only this half fades with range.
     n = clamp(remap(n, modifier * uErosion * erode * rim * 1.45, 1.0, 0.0, 1.0), 0.0, 1.0);
   }
 
@@ -509,7 +509,7 @@ vec2 raySphere(vec3 ro, vec3 rd, vec3 ce, float r) {
 
 /**
  * Entry/exit distance of the ray through the curved cloud slab. Handles the
- * camera below, inside and above the layer — the player can fly.
+ * camera below, inside and above the layer - the player can fly.
  * Returns false when the ray never meets the slab within maxDist.
  */
 bool slabInterval(vec3 ro, vec3 rd, float outerRadius, float maxDist, out float t0, out float t1) {
@@ -521,7 +521,7 @@ bool slabInterval(vec3 ro, vec3 rd, float outerRadius, float maxDist, out float 
   if (camR < uInnerRadius) {
     // Below the layer: enter through the inner shell, leave through the outer.
     // Rays pointing down exit the inner shell on the far side of the planet,
-    // which lands beyond maxDist and is rejected — exactly right.
+    // which lands beyond maxDist and is rejected - exactly right.
     t0 = ti.y;
     t1 = to.y;
   } else if (camR < outerRadius) {
@@ -615,15 +615,15 @@ float hg(float cosT, float g) {
  * you. The old dual lobe had the spike and the shoulder but no pedestal, so the
  * only way it could produce a silver lining at all was a g = 0.85 lobe wide
  * enough to smear a soft halo over twenty-plus degrees of sky, while still
- * leaving the 60-100 degree range — where most of a daylit sky actually sits —
+ * leaving the 60-100 degree range - where most of a daylit sky actually sits - 
  * around 30% too dark. Both halves of that are visible in the current build:
  * mushy highlights near the sun and dull grey everywhere else.
  *
  * The weights sum to 1 exactly as the old mix() did, and every HG lobe
  * integrates to the same total over the sphere, so this is an energy-conserving
  * REDISTRIBUTION, not a gain change. Measured against the old function: the peak
- * at zero degrees roughly doubles while 15-25 degrees drops to ~0.65 — a
- * genuinely tight silver lining instead of a halo — 60-100 degrees gains ~40%
+ * at zero degrees roughly doubles while 15-25 degrees drops to ~0.65 - a
+ * genuinely tight silver lining instead of a halo - 60-100 degrees gains ~40%
  * (lit water rather than grey), backscatter lands within 10%, and the
  * solid-angle-weighted mean outside the forward cone moves by 9%, i.e. there is
  * no exposure shift to chase with a compensating gain.
@@ -637,9 +637,9 @@ float hg(float cosT, float g) {
  * sum look like real multiple scattering rather than three copies of one lobe.
  */
 float miePhase(float cosT, float ecc) {
-  return hg(cosT,  0.91 * ecc) * 0.52    // forward spike — the silver lining
-       + hg(cosT,  0.38 * ecc) * 0.24    // forward pedestal — side-lit luminosity
-       + hg(cosT, -0.32 * ecc) * 0.24;   // backscatter shoulder — the sunlit face
+  return hg(cosT,  0.91 * ecc) * 0.52    // forward spike - the silver lining
+       + hg(cosT,  0.38 * ecc) * 0.24    // forward pedestal - side-lit luminosity
+       + hg(cosT, -0.32 * ecc) * 0.24;   // backscatter shoulder - the sunlit face
 }
 
 const vec3 CONE[8] = vec3[8](
@@ -663,7 +663,7 @@ const vec3 CONE[8] = vec3[8](
  * ladder whose first step is already 100 m simply misses the gradient that
  * separates a sunlit crown from the shoulder just below it. Geometric spacing
  * puts the first sample ~45 m out at HIGH and ~18 m at ULTRA while the tail
- * still reaches a kilometre and a half — so raising cloudLightSteps buys near
+ * still reaches a kilometre and a half - so raising cloudLightSteps buys near
  * field precision instead of just more of the same.
  *
  * The cone offsets blur the result, a cheap stand-in for the fact that light
@@ -680,7 +680,7 @@ float lightMarch(vec3 p, vec4 weather, float jitter) {
     s *= 1.55;
   }
   // One long reach to catch distant occluders without paying for the steps in
-  // between — this is what puts one cloud's shadow on the cloud behind it, and
+  // between - this is what puts one cloud's shadow on the cloud behind it, and
   // it is where raking sunset light gets its contrast from.
   //
   // It fetches its OWN weather. It used to reuse the primary sample's, on the
@@ -688,14 +688,14 @@ float lightMarch(vec3 p, vec4 weather, float jitter) {
   // longer true: the tile shrank from 24 km to 12.5 km to get individual clouds,
   // and at a low sun this reach is ~7 km, i.e. over half a tile. Reusing the
   // near weather there does not blur the answer, it asks about the wrong cloud
-  // entirely — a sample under clear sky inherits the occlusion of a cloud
+  // entirely - a sample under clear sky inherits the occlusion of a cloud
   // kilometres away, which is a hard-edged dark stamp on exactly the low-sun
   // shot the reach exists to serve. One 2D fetch per lit sample, paid for many
   // times over by the pow() and the five smoothsteps removed from the field.
   //
   // Its weight is capped at one slab thickness, and that cap is load-bearing.
   // This is a SINGLE point sample standing in for the entire reach, and
-  // uLightSpan grows to 3.8x the slab as the sun drops — so uncapped, one texel
+  // uLightSpan grows to 3.8x the slab as the sun drops - so uncapped, one texel
   // whose reach happened to land inside a core claimed ~1.5 km of medium while
   // its neighbour claimed none. That is a hard-edged black stamp with no
   // gradient around it, on exactly the low-sun shot the long reach exists to
@@ -720,8 +720,8 @@ void main() {
   float jitter = fract(bn + uFrameIndex * 0.6180339887);
 
   // Interleaved-gradient noise, used only to decorrelate the sub-pixel offset
-  // from the march offset. Driving both from the same blue-noise value — which
-  // is what this did — locks the two together: a texel that starts its march
+  // from the march offset. Driving both from the same blue-noise value - which
+  // is what this did - locks the two together: a texel that starts its march
   // late also samples up and to the right, every frame, so the two errors add
   // instead of cancelling and the residual never averages away.
   float ign = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
@@ -729,11 +729,11 @@ void main() {
   // Sub-pixel jitter on an R2 low-discrepancy sequence, offset per pixel (per
   // axis) so neighbours stay decorrelated. The temporal filter integrates these
   // into genuine supersampling, so a static camera resolves cloud edges far
-  // finer than the half-res buffer it is stored in — for no extra cost.
+  // finer than the half-res buffer it is stored in - for no extra cost.
   //
   // Driven by uSampleIndex (traces of THIS texel), not uFrameIndex (frames). A
   // history texel is only traced every DIV*DIV = 4 frames, so advancing R2 by
-  // the frame number advances it by 4 per usable sample — and 4 * 0.7548776662
+  // the frame number advances it by 4 per usable sample - and 4 * 0.7548776662
   // is 3.0195, i.e. the x offset creeps 0.0195 per trace and needs 51 traces
   // (~3.4 s) to cross the texel. The supersampling in x was therefore not
   // happening at all: it was a slow bias, not a sequence. Counting traces makes
@@ -762,9 +762,9 @@ void main() {
   float cosT = dot(rd, uLightDir);
 
   // The phase function depends only on the view/light angle, which is CONSTANT
-  // along a ray — yet it was being evaluated once per octave per march step:
+  // along a ray - yet it was being evaluated once per octave per march step:
   // three phase evaluations, so nine Henyey-Greenstein lobes, each a sqrt and a
-  // divide, per lit sample — all recomputing a value that cannot change. A ray
+  // divide, per lit sample - all recomputing a value that cannot change. A ray
   // crossing a decent cumulus lights 15-25 samples, so this was several hundred
   // redundant transcendentals per cloud pixel. Hoisting it is the single largest
   // saving in this shader, and it is also what lets miePhase() afford a third
@@ -799,7 +799,7 @@ void main() {
   // onto it.
   //
   // Without it the two modes oscillate wherever densityLow() is positive but
-  // densityFull() has eroded the medium away — a region that stage-1 erosion
+  // densityFull() has eroded the medium away - a region that stage-1 erosion
   // and the 12.5 km weather tile between them have made much more common. Four
   // empty fine steps drop the march back to coarse; the coarse branch tests the
   // SAME shape volume, still finds it non-zero, and steps back one fine step
@@ -825,9 +825,9 @@ void main() {
     if (!refining) {
       // Coarse stride: double steps, shape only, no lighting. One 3D fetch.
       if (densityLow(p, h) > 0.0) {
-        // Step back exactly one fine step — never past the high-water mark, so
+        // Step back exactly one fine step - never past the high-water mark, so
         // t can neither regress into already-integrated medium nor re-sample a
-        // stretch fine mode has already rejected — and re-enter in fine mode so
+        // stretch fine mode has already rejected - and re-enter in fine mode so
         // we do not clip the cloud edge.
         t = max(tCovered, t - stepLen);
         refining = true;
@@ -865,7 +865,7 @@ void main() {
     // The first octave is kept separate from the rest because it is the only
     // one that is still DIRECT sunlight. Everything after it has bounced, and
     // bounced light inside a cloud has been filtered by the droplets and by the
-    // sky the cloud is sitting in — so it gets its own, cooler colour. That
+    // sky the cloud is sitting in - so it gets its own, cooler colour. That
     // split is two vec3 mads and it is most of what makes a cumulus read as
     // having an inside rather than being a lit shell.
     float eDirect = phase[0] * exp(-optical * uSigmaE);
@@ -881,7 +881,7 @@ void main() {
     // cut-out into something with a rind. Measured against a FIXED depth of
     // medium rather than against the raw density value, so it means the same
     // thing whatever scale the density dial happens to be on. Only visible on
-    // the lit side of a cloud, hence the view/light weighting. Bounded at 1 —
+    // the lit side of a cloud, hence the view/light weighting. Bounded at 1 - 
     // this darkens thin edges, it must never brighten cores past the energy we
     // actually integrated.
     float powder = 1.0 - exp(-sigmaE * uPowderDepth);
@@ -898,7 +898,7 @@ void main() {
     //
     // Measured as a FRACTION of the densest medium the dial can produce, not
     // against an absolute constant. It used to be clamp(density * 3.2), which
-    // saturates at density 0.31 — but density peaks near uDensity (0.62 by
+    // saturates at density 0.31 - but density peaks near uDensity (0.62 by
     // default, and the weather system pushes it higher in a storm), so the
     // entire top two thirds of the field sat pinned at the curve's maximum and
     // the term contributed no gradient at all exactly where the cloud has the
@@ -911,8 +911,8 @@ void main() {
     // a cloud sits in its own shadow". That is true at noon and FALSE at dawn,
     // when the sun is raking in horizontally and the bases are the brightest
     // thing in the sky. The light march already models that correctly on its
-    // own — a base sample's ray to a low sun exits sideways through very little
-    // medium — so leaving this on at low sun double-counts the occlusion and
+    // own - a base sample's ray to a low sun exits sideways through very little
+    // medium - so leaving this on at low sun double-counts the occlusion and
     // stamps the shot we most want out of the scene. uVertProb fades it out as
     // the sun drops.
     float vertProb = pow(clamp(remap(h, 0.03, 0.20, 0.06, 1.0), 0.0, 1.0), 0.75);
@@ -934,7 +934,7 @@ void main() {
     //
     // A soft knee, NOT min(). min() plateaus, and a plateau in a quantity that
     // varies smoothly across the sky draws a hard-edged bright patch with a
-    // visible boundary wherever the clamp engages — exactly the sort of
+    // visible boundary wherever the clamp engages - exactly the sort of
     // suspiciously clean white blob that has no business being in a cloud
     // render. x/(1+x/k) asymptotes to the same ceiling with a continuous
     // derivative, for one extra divide.
@@ -985,7 +985,7 @@ void main() {
   //
   // The haze colour has to be the sky radiance ALONG THIS RAY, and getting that
   // wrong is what produced the hard-edged pale slab in the noon capture. This
-  // used to mix toward one flat colour — the horizon's, which at midday is
+  // used to mix toward one flat colour - the horizon's, which at midday is
   // nearly white. A cloud 8 km out, 20 degrees up, therefore had two thirds of
   // its radiance replaced by near-white while the sky it was drawn against was
   // still deep blue. The result is a large region of uniform pale grey with a
@@ -1074,7 +1074,7 @@ void main() {
   vec4 m1 = (raw + s1 + s2 + s3 + s4) * 0.2;
   vec4 m2 = (raw * raw + s1 * s1 + s2 * s2 + s3 * s3 + s4 * s4) * 0.2;
 
-  // Unsharp mask on the FRESH sample, using taps we already have — free. A
+  // Unsharp mask on the FRESH sample, using taps we already have - free. A
   // half-res trace read through a bilinear upscale loses most of the contrast
   // at a cloud's silhouette; putting a little of it back here is what makes the
   // margins read as crisp-then-wispy instead of uniformly soft.
@@ -1103,7 +1103,7 @@ void main() {
   vec4 world = uInvViewProj * ndc;
   vec3 rd = normalize(world.xyz / world.w - uCamPos);
   vec2 hit = raySphereFar(uCamPos, rd, uPlanetCenter, uMidRadius);
-  // The miss sentinel is (1, -1), i.e. x > y — and its x is POSITIVE, so the
+  // The miss sentinel is (1, -1), i.e. x > y - and its x is POSITIVE, so the
   // old "hit.x > 0.0" test accepted it and anchored the reprojection at t = 1 m
   // (clamped up to 100 m). A miss only happens with the camera ABOVE the deck
   // looking away from it, but there it is every ray in the upper half of the
@@ -1133,7 +1133,7 @@ void main() {
   }
 
   // Variance clipping against this frame's coarse neighbourhood. Softer than a
-  // min/max box — a box this coarse would throw away the extra resolution the
+  // min/max box - a box this coarse would throw away the extra resolution the
   // history is carrying, which is the entire point of the checkerboard.
   vec4 sigma = sqrt(max(m2 - m1 * m1, vec4(0.0)));
   // Floor on sigma, and it is not cosmetic. Inside a large smooth cloud the
@@ -1141,7 +1141,7 @@ void main() {
   // clamp(hist, m1-0, m1+0) pins the output to the quarter-res mean EXACTLY.
   // Every history texel in that neighbourhood then resolves to one value, the
   // accumulated sub-pixel detail is discarded, and the region flattens into a
-  // plateau whose boundary — where sigma finally becomes non-zero — is a hard
+  // plateau whose boundary - where sigma finally becomes non-zero - is a hard
   // visible edge. A clip window that never closes below a fraction of the local
   // level keeps the filter a filter instead of a quantiser.
   sigma = max(sigma, vec4(0.004) + abs(m1) * 0.06);
@@ -1152,7 +1152,7 @@ void main() {
   // tighter the clip and the more we lean on the fresh sample. uMotion is the
   // CPU's angular-velocity estimate, folded in so a fast turn tightens the
   // filter everywhere at once instead of only where the reprojection happens to
-  // have moved far in screen space — which is what used to leave a smear
+  // have moved far in screen space - which is what used to leave a smear
   // through the centre of the frame during a flick.
   float vel = length((uv - prevUv) * uHistSize);
   float motion = clamp(max(vel / 8.0, uMotion), 0.0, 1.0);
@@ -1160,7 +1160,7 @@ void main() {
   hist = clamp(hist, m1 - sigma * k, m1 + sigma * k);
 
   // A freshly traced texel used to be written out raw, on the grounds that it
-  // is ground truth. It is — but only for the sub-pixel position this frame's
+  // is ground truth. It is - but only for the sub-pixel position this frame's
   // R2 jitter happened to pick, and next time this texel is traced the jitter
   // will be somewhere else inside it. Replacing it outright therefore threw the
   // supersampling away and left one texel in four resampling itself every
@@ -1193,7 +1193,7 @@ void main() {
   gl_FragColor = vec4(max(c.rgb, vec3(0.0)), clamp(c.a, 0.0, 1.0));
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
-  // A cloud is a huge, almost perfectly smooth gradient — exactly the signal
+  // A cloud is a huge, almost perfectly smooth gradient - exactly the signal
   // 8-bit output banding is most visible on. Interleaved-gradient noise at
   // sub-LSB amplitude costs about five ALU and removes it. Scaled by alpha so
   // it can never disturb pixels the clouds do not cover.
@@ -1202,7 +1202,7 @@ void main() {
   // Under the composer this shader writes into a LINEAR half-float target and
   // post/pipeline.js applies the tone curve much later, so the two include
   // directives above compile to nothing. A flat 1/255 of linear signal is
-  // therefore about half an output LSB in the highlights — correct — but on a
+  // therefore about half an output LSB in the highlights - correct - but on a
   // moonlit cloud sitting at a linear 0.01 it is a twenty percent perturbation,
   // i.e. visible static exactly where the sky is quietest. Scaling by luminance
   // tracks what one output LSB is actually worth after the curve.
@@ -1253,7 +1253,7 @@ void main() {
 
   // Sun. As it drops toward the horizon the shadow ray runs almost parallel to
   // the layer and the cast shadow becomes meaningless (and enormous), so fade
-  // it out — by then direct light is nearly gone anyway.
+  // it out - by then direct light is nearly gone anyway.
   float elev = uLightDir.y;
   float sunFade = smoothstep(0.02, 0.16, elev) * uShadowStrength;
   float sunT = 1.0;
@@ -1277,7 +1277,7 @@ void main() {
 // CPU-side procedural data
 // ===========================================================================
 
-/** 16 fixed unit gradients — avoids 4 trig calls per noise evaluation. */
+/** 16 fixed unit gradients - avoids 4 trig calls per noise evaluation. */
 const GRAD16 = (() => {
   const g = new Float32Array(32);
   for (let i = 0; i < 16; i++) {
@@ -1335,8 +1335,8 @@ function tileFBM2D(x, y, baseFreq, octaves, seed) {
  * Percentile stretch, in place, on an interleaved RGBA byte buffer.
  *
  * This is the fix for the single worst problem the cloud field had. Every
- * sensible way of combining perlin with worley — the Schneider remap, a screen
- * blend, anything — ends up compressing the result into a narrow band well away
+ * sensible way of combining perlin with worley - the Schneider remap, a screen
+ * blend, anything - ends up compressing the result into a narrow band well away
  * from 0 and 1. The runtime then subtracts a coverage threshold from it, and
  * because the field only varies by ~0.1 either side of its mean, the only thing
  * left with any dynamic range is the vertical height gradient. Result: every
@@ -1456,7 +1456,7 @@ function generateBlueNoise(size, seed) {
     binary[vd] = 1; splat(vd, 1);
     rank[vd] = r;
   }
-  // Phase 3: the minority is now the zeros — rebuild the energy from them.
+  // Phase 3: the minority is now the zeros - rebuild the energy from them.
   energy.fill(0);
   for (let i = 0; i < N; i++) if (!binary[i]) splat(i, 1);
   for (let r = half; r < N; r++) {
@@ -1477,7 +1477,7 @@ function generateBlueNoise(size, seed) {
 
 // ===========================================================================
 
-// Scratch — hoisted to module scope so update() never allocates.
+// Scratch - hoisted to module scope so update() never allocates.
 const _v3a = new THREE.Vector3();
 const _quatA = new THREE.Quaternion();
 const _colA = new THREE.Color();
@@ -1491,8 +1491,8 @@ const _size = new THREE.Vector2();
 const _weatherScratch = { x: 0, y: 0, z: 0, w: 0 };
 
 /**
- * Every number this module consumes per frame is written by a sibling — weather
- * owns state.clouds, wind owns state.wind — and a single NaN out of either is
+ * Every number this module consumes per frame is written by a sibling - weather
+ * owns state.clouds, wind owns state.wind - and a single NaN out of either is
  * PERMANENT here rather than transient. damp() feeds its own output back in, and
  * the advection offsets are accumulators wrapped with `%`, which propagates NaN
  * forever. Once one lands, every uniform in the field block is NaN, every ray
@@ -1511,7 +1511,7 @@ const fin = (v, fallback) => (typeof v === 'number' && v - v === 0 ? v : fallbac
  * and RESOLVE_FRAG's mix(cur, hist, feedback) then folds that NaN into the
  * history buffer, where it is self-sustaining. One bad frame out of
  * sky/atmosphere.js and the cloud layer is gone for the session with nothing in
- * the console — which is precisely the failure mode fin() exists to prevent.
+ * the console - which is precisely the failure mode fin() exists to prevent.
  * Mutates our own scratch copy, never the sibling's object.
  */
 const finColor = (c, r, g, b) => {
@@ -1527,7 +1527,7 @@ export class VolumetricClouds {
     this.renderer = ctx.renderer;
     this.state = ctx.state;
 
-    /** Set false if init fails — everything downstream degrades to "no clouds"
+    /** Set false if init fails - everything downstream degrades to "no clouds"
      *  rather than taking the whole scene down with it. */
     this.ready = false;
     this.enabled = true;
@@ -1542,8 +1542,8 @@ export class VolumetricClouds {
     // the screen (everything inside ~5 km) is smaller than one of them. So the
     // camera was almost always inside a single cloud mass, which is why the
     // silhouette was one long clean contour instead of a cloudscape. At 12.5 km
-    // the coverage features land around 4 km with 1.4 km ragged edges on top —
-    // fair-weather cumulus scale — and the sky gets a population of clouds with
+    // the coverage features land around 4 km with 1.4 km ragged edges on top - 
+    // fair-weather cumulus scale - and the sky gets a population of clouds with
     // gaps of blue between them. Costs nothing: same texture, different scale.
     this.weatherTileSize = 12500;
     this.shearAmount = 340;         // horizontal offset from base to top
@@ -1551,7 +1551,7 @@ export class VolumetricClouds {
     this.detailRiseSpeed = 6.0;     // m/s convective updraught in the detail
     // density -> per-metre extinction. Raised from 0.052 alongside the shape
     // rework: the normalised shape field has a lower mean than the old
-    // compressed one (that is the whole point — it now spans its range instead
+    // compressed one (that is the whole point - it now spans its range instead
     // of hovering near 0.77), so the same visual opacity needs more extinction
     // per unit density. Net optical depth through a mid-cloud column is
     // unchanged; the CONTRAST between core and margin is what went up.
@@ -1605,7 +1605,7 @@ export class VolumetricClouds {
     this._lightDir = new THREE.Vector3(0, 1, 0);
     this._lightColor = new THREE.Color();
     this._msColor = new THREE.Color();
-    /** Sum of 1.55^i over the light-march step count — the shader's geometric
+    /** Sum of 1.55^i over the light-march step count - the shader's geometric
      *  ladder is normalised by this so its total reach is step-count agnostic. */
     this._lightGeomSum = 1;
     this._ambientTop = new THREE.Color();
@@ -1617,7 +1617,7 @@ export class VolumetricClouds {
     this._shadowCenter = new THREE.Vector3();
 
     /**
-     * Published to sibling systems — terrain, grass and scatter bind these
+     * Published to sibling systems - terrain, grass and scatter bind these
      * objects straight into their own materials (the {value:} wrappers are
      * stable for the lifetime of this system, so binding once is enough).
      *
@@ -1641,13 +1641,13 @@ export class VolumetricClouds {
     this.shadowParams = this.shadowUniforms.uCloudShadowParams.value;
 
     /** 0..1 fraction of direct sunlight reaching the camera's ground position.
-     *  CPU-side approximation — no GPU readback, safe to poll every frame. */
+     *  CPU-side approximation - no GPU readback, safe to poll every frame. */
     this.sunTransmittance = 1.0;
 
     this._targets = { trace: null, history: [null, null], shadow: null };
     this._sizes = { hist: new THREE.Vector2(), trace: new THREE.Vector2() };
     /** Drawing-buffer size the current targets were sized from. Watched rather
-     *  than the quality dial — see the note in update(). */
+     *  than the quality dial - see the note in update(). */
     this._allocW = 0;
     this._allocH = 0;
     this._ownedTextures = [];
@@ -1841,7 +1841,7 @@ export class VolumetricClouds {
         }
       }
       // Normalise each channel to the full 0..1 range. The coverage curve in
-      // the shader is fitted to this distribution — leave it un-normalised and
+      // the shader is fitted to this distribution - leave it un-normalised and
       // the coverage dial only works over part of its travel.
       const scale = 1 / Math.max(max - min, 1e-6);
       for (let i = 0; i < N; i++) {
@@ -1868,15 +1868,15 @@ export class VolumetricClouds {
    * the map this file actually bakes, it did not: dial 0.20 produced a mean
    * coverage of 0.107, dial 0.42 (the PARTLY_CLOUDY preset, and state.js's
    * default) produced 0.646, and everything from 0.55 upward produced 0.86-1.00.
-   * So the default sky was two thirds covered — no blue between the clouds, on
-   * exactly the shot the smaller weather tile exists to fix — and the whole top
+   * So the default sky was two thirds covered - no blue between the clouds, on
+   * exactly the shot the smaller weather tile exists to fix - and the whole top
    * half of the dial was dead, leaving OVERCAST 0.90, RAIN 0.97 and STORM 1.00
    * indistinguishable in silhouette.
    *
    * A threshold at the (1 - dial) quantile of the field puts, by construction,
    * `dial` of the map above it. That is the definition the comment always
    * claimed, it needs no fitting, and it survives anyone editing the weather
-   * map's frequencies or seeds — which a hardcoded curve silently would not.
+   * map's frequencies or seeds - which a hardcoded curve silently would not.
    *
    * Built once, from the same bytes the GPU samples. 65 floats.
    */
@@ -1918,12 +1918,12 @@ export class VolumetricClouds {
 
   /**
    * Solve the coverage threshold window for a dial value. Allocation-free, one
-   * table lookup and a lerp — it runs every frame.
+   * table lookup and a lerp - it runs every frame.
    *
    * The WIDTH of the window is the second half of the artistic control: the
    * coverage field crosses it over however much horizontal distance a cloud's
    * margin occupies, so it sets how abruptly a silhouette gives out. Too narrow
-   * and clouds end at a contour of the weather map — the machine-cut edge the
+   * and clouds end at a contour of the weather map - the machine-cut edge the
    * whole erosion rework is fighting. Too wide and coverage becomes a smooth
    * gradient with nothing at 0 or 1, which is fog. It opens with the dial
    * because an overcast ceiling should give out softly and a lone fair-weather
@@ -2110,7 +2110,7 @@ export class VolumetricClouds {
       fragmentShader: COMPOSITE_FRAG,
       // Not flagged transparent on purpose: this keeps the clouds in the opaque
       // list, so they draw after the sky dome and terrain but before petals,
-      // rain and mist — the correct slot for a distant volumetric layer.
+      // rain and mist - the correct slot for a distant volumetric layer.
       transparent: false,
       depthTest: true,
       depthWrite: false,
@@ -2131,13 +2131,13 @@ export class VolumetricClouds {
   _defines() {
     const q = this.state.quality;
     // Compile-time loop bounds. These are defines rather than uniforms so the
-    // driver can bound (and partly unroll) every loop — the contract's "no
+    // driver can bound (and partly unroll) every loop - the contract's "no
     // unbounded loops in fragment shaders" rule, enforced by construction.
     const steps = clamp(Math.round(q.cloudSteps || 48), 8, 128);
     // CONE[] in the trace shader has exactly 8 entries.
     const lightSteps = clamp(Math.round(q.cloudLightSteps || 6), 2, 8);
     // A third scattering octave is what stops thick cloud interiors going flat
-    // black, and it reuses the light march's optical depth — two exps and a
+    // black, and it reuses the light march's optical depth - two exps and a
     // phase eval. Only the very cheapest tier goes without.
     const msOctaves = steps >= 32 ? 3 : 2;
     // Normaliser for the light march's geometric step ladder. Solved here (not
@@ -2149,7 +2149,7 @@ export class VolumetricClouds {
     this._lightGeomSum = sum;
     // Width of the flat cloud base, as a multiple of the ~18 m authored on HIGH.
     // A fine march step is range/(steps*1.55), so halving the step count doubles
-    // the step and a fixed shoulder falls below it — at which point the base is a
+    // the step and a fixed shoulder falls below it - at which point the base is a
     // discontinuity between samples and stair-steps across the sky. Scaled off
     // the step count, LOW gets a base it can actually resolve and ULTRA gets a
     // harder shelf than HIGH can afford. Compile-time, so it folds into the
@@ -2192,7 +2192,7 @@ export class VolumetricClouds {
     u.uMaxDist.value = maxDist;
     this.maxMarchDistance = maxDist;
     // The coarser the trace, the more contrast the bilinear upscale eats, so the
-    // lower tiers get MORE unsharp — ULTRA traces at full resolution and needs
+    // lower tiers get MORE unsharp - ULTRA traces at full resolution and needs
     // almost none. It costs nothing either way: the taps are already fetched.
     this.resolveMaterial.uniforms.uSharpen.value = sharpen;
   }
@@ -2204,7 +2204,7 @@ export class VolumetricClouds {
     this.mesh.receiveShadow = false;
     this.mesh.matrixAutoUpdate = false;
     // 1001, not 1000. sky/atmosphere.js puts its dome at 1000 and is also
-    // opaque, and three breaks a renderOrder tie on material.id — i.e. on which
+    // opaque, and three breaks a renderOrder tie on material.id - i.e. on which
     // system happened to build its ShaderMaterial first. That currently works
     // (atmosphere inits ahead of us) but it is an accident: anything that
     // rebuilds the sky material later gives it a higher id, and the dome would
@@ -2240,8 +2240,8 @@ export class VolumetricClouds {
     // core/engine.js and post/pipeline.js both fold it into
     // renderer.setPixelRatio, so getDrawingBufferSize() already carries it.
     // Multiplying by it again squared the adaptive scale: at resolutionScale
-    // 0.7 the clouds fell to 0.49 of the intended buffer — 35% of screen linear
-    // resolution instead of 50% — so the one thing that visibly blocked up was
+    // 0.7 the clouds fell to 0.49 of the intended buffer - 35% of screen linear
+    // resolution instead of 50% - so the one thing that visibly blocked up was
     // the sky, precisely when the frame was already struggling.
     const div = CHECKER_DIV;
     const histW = Math.max(div * 2, Math.round((_size.x * res) / div) * div);
@@ -2383,7 +2383,7 @@ export class VolumetricClouds {
     // Adaptive resolution never reaches resize(): the quality manager moves
     // state.quality.resolutionScale, post/pipeline.js turns that into a
     // renderer.setPixelRatio call, and the drawing buffer changes underneath us
-    // with no resize event anywhere. So watch the drawing buffer itself — that
+    // with no resize event anywhere. So watch the drawing buffer itself - that
     // catches a pixel-ratio change AND a window resize, in two integer compares,
     // and it needs no assumption about who applies the scale. Rate-limited to
     // once per 60 frames so a sliding scale cannot reallocate every frame; a
@@ -2434,7 +2434,7 @@ export class VolumetricClouds {
     // Transitions are slow on purpose: real cloud fields take minutes.
     const k = lerp(0.35, 1.1, clamp01(fin(state.weather.transition, 1)));
     // Every target goes through fin() before it reaches damp(). damp() is
-    // a = lerp(a, b, ...), so a NaN target does not produce one bad frame — it
+    // a = lerp(a, b, ...), so a NaN target does not produce one bad frame - it
     // latches into the accumulator and the layer never comes back.
     p.coverage = damp(p.coverage, clamp01(fin(c.coverage, 0.42)), 0.45 * k, dt);
     p.density = damp(p.density, Math.max(0, fin(c.density, 0.62)), 0.5 * k, dt);
@@ -2450,7 +2450,7 @@ export class VolumetricClouds {
 
     const f = this._field;
     // Coverage threshold window. This was a pow() and two mixes evaluated inside
-    // coverageFrom() — i.e. once per density sample, and the light march takes
+    // coverageFrom() - i.e. once per density sample, and the light march takes
     // seven of those per lit sample plus its long reach. It is a function of one
     // uniform, so solving it here is exactly equivalent and removes roughly nine
     // transcendentals per lit pixel-sample. getCoverageAt() reads the same two
@@ -2488,7 +2488,7 @@ export class VolumetricClouds {
     const speed = this._p.speed
       * lerp(6, 26, clamp01(fin(w.strength, 3.2) / 14))
       * clamp(fin(w.gust, 1), 0.6, 2.2);
-    // The offsets below are accumulators wrapped with `%`, and NaN % 1 is NaN —
+    // The offsets below are accumulators wrapped with `%`, and NaN % 1 is NaN - 
     // one bad heading would freeze the whole field at NaN for the session.
     let dx = fin(w.direction.x, 1), dz = fin(w.direction.y, 0);
     const dLen = Math.sqrt(dx * dx + dz * dz);
@@ -2519,7 +2519,7 @@ export class VolumetricClouds {
     doff.y = (doff.y - (this.detailRiseSpeed * this._p.speed * dt) / detailTile) % 1;
 
     const wo = this._weatherOffset;
-    // Weather systems crawl — a quarter of the cloud speed.
+    // Weather systems crawl - a quarter of the cloud speed.
     wo.x = (wo.x + dx * speed * 0.25 * dt) % weatherTile;
     wo.y = (wo.y + dz * speed * 0.25 * dt) % weatherTile;
 
@@ -2543,7 +2543,7 @@ export class VolumetricClouds {
     else this._lightDir.normalize();
 
     // Handover. The two sources swap the instant moonW crosses sunW, but their
-    // artistic scales differ by 5x (0.62 vs 3.2) — so a plain switch multiplies
+    // artistic scales differ by 5x (0.62 vs 3.2) - so a plain switch multiplies
     // the light on every cloud by five between two consecutive frames, at dusk,
     // and the temporal filter then drags that pop across the sky for the best
     // part of a second. `moonness` ramps from 0 at the crossover to 1 once one
@@ -2566,8 +2566,8 @@ export class VolumetricClouds {
     const gnd = finColor(_skyGnd.copy(sky.groundColor), 0.22, 0.24, 0.20);
 
     // Colour of the multiply-scattered octaves. Light that has bounced three or
-    // four times inside a cloud has spent long enough among the droplets — and
-    // among the sky the cloud is embedded in — to lose the sun's warmth, which
+    // four times inside a cloud has spent long enough among the droplets - and
+    // among the sky the cloud is embedded in - to lose the sun's warmth, which
     // is why a real cumulus has a warm rim and a cool grey-blue core. Blend
     // toward the zenith hue at MATCHED luminance so this is purely a hue shift
     // and cannot smuggle in extra energy.
@@ -2578,14 +2578,14 @@ export class VolumetricClouds {
     this._msColor.copy(this._lightColor).lerp(_colB, lerp(0.36, 0.20, moonness));
 
     // Ambient: sky above, ground bounce below. Overcast kills both. These two
-    // are no longer a convex blend — the shader attenuates each by how much
-    // medium sits between the sample and its source — so the coefficients are
+    // are no longer a convex blend - the shader attenuates each by how much
+    // medium sits between the sample and its source - so the coefficients are
     // the light arriving at a fully EXPOSED top / base, not an average.
     const amb = Math.max(0, fin(sky.ambientIntensity, 1));
     const overcast = 1 - 0.55 * clamp01(this._p.coverage * this._p.density * 1.4);
     this._ambientTop.copy(zen).multiplyScalar(amb * 0.66 * overcast);
     this._ambientBottom.copy(gnd).multiplyScalar(amb * 0.22 * overcast);
-    // Bases pick up the horizon at sunset — this is what makes low sun rake
+    // Bases pick up the horizon at sunset - this is what makes low sun rake
     // colour across the undersides instead of leaving them flat grey. It rides
     // the ground-bounce term, which is the one the shader lets survive down at
     // the base of a cloud, so it lands exactly where it is wanted.
@@ -2593,7 +2593,7 @@ export class VolumetricClouds {
     this._ambientBottom.add(_colA);
 
     // Aerial perspective, as the sky radiance along the ray rather than one flat
-    // colour — see the note where it is applied in TRACE_FRAG. The zenith end is
+    // colour - see the note where it is applied in TRACE_FRAG. The zenith end is
     // deliberately a little brighter than the raw zenith sky: the veil in front
     // of a cloud is lit air, and the atmosphere shader's zenith value is the
     // radiance of the WHOLE column, not of the first few kilometres of it.
@@ -2650,7 +2650,7 @@ export class VolumetricClouds {
     // metres in a slab that the weather system resizes.
     t.uPowderDepth.value = this._p.thickness * 0.19;
     // Hand the cloud bases over to the light march as the sun drops. See the
-    // vertProb comment in TRACE_FRAG — this is what lets a low sun light the
+    // vertProb comment in TRACE_FRAG - this is what lets a low sun light the
     // undersides instead of the shader insisting they must be in shadow.
     t.uVertProb.value = smoothstep(0.05, 0.34, Math.abs(this._lightDir.y));
 
@@ -2675,7 +2675,7 @@ export class VolumetricClouds {
 
     // History rejection, in two stages.
     //
-    // A hard binary kill is reserved for genuine discontinuities — a teleport,
+    // A hard binary kill is reserved for genuine discontinuities - a teleport,
     // or a turn so violent that nothing on screen was on screen last frame.
     // Killing the history dumps the resolve back to a blocky 1/4-res image for
     // one frame, so it must not fire during ordinary play.
@@ -2683,7 +2683,7 @@ export class VolumetricClouds {
     // Everything short of that is handled continuously: an angular-RATE signal
     // (normalised by dt, so it means the same thing at 30 and 144 fps) that
     // tightens the variance clip and drops the feedback across the whole frame.
-    // Screen-space velocity alone cannot do this job — near the centre of a
+    // Screen-space velocity alone cannot do this job - near the centre of a
     // fast pan the reprojection error is small in pixels but the underlying
     // sample is stale, and that is exactly where the smear used to sit.
     const moved = _v3a.copy(cam.position).sub(this._prevCamPos).length();
@@ -2709,7 +2709,7 @@ export class VolumetricClouds {
     const t = this.traceMaterial.uniforms;
     t.uBayer.value.set(bx, by);
     t.uFrameIndex.value = this._frame % 64;
-    // One R2 step per TRACE of a given history texel, not per frame — see the
+    // One R2 step per TRACE of a given history texel, not per frame - see the
     // note at the r2 line in TRACE_FRAG.
     t.uSampleIndex.value = Math.floor(this._frame / (CHECKER_DIV * CHECKER_DIV)) % 64;
     this.resolveMaterial.uniforms.uBayer.value.set(bx, by);
@@ -2738,7 +2738,7 @@ export class VolumetricClouds {
 
     const rt = this._targets.shadow;
     // Snap the map to whole texels so the shadow pattern does not crawl as the
-    // player walks — the single most visible artifact of a camera-following map.
+    // player walks - the single most visible artifact of a camera-following map.
     const texel = this.shadowExtent / rt.width;
     const cam = this.ctx.camera;
     this._shadowCenter.set(
@@ -2815,7 +2815,7 @@ export class VolumetricClouds {
     return t * t * (3 - 2 * t);
   }
 
-  /** Fraction of direct sun reaching (x, z) — the CPU twin of the shadow map,
+  /** Fraction of direct sun reaching (x, z) - the CPU twin of the shadow map,
    *  for systems that need a scalar rather than a texture. */
   _estimateSunTransmittance(pos, state) {
     if (!this._weatherData) return 1;

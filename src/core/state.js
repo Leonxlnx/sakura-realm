@@ -1,13 +1,13 @@
 /**
- * state.js — the single mutable source of truth for the whole world.
+ * state.js - the single mutable source of truth for the whole world.
  *
  * CONTRACT: systems READ freely from this object every frame. Each field has
  * exactly ONE owner system that writes it (marked `@owner` below). If you need
- * to influence a field you do not own, go through the owner's API — never write
+ * to influence a field you do not own, go through the owner's API - never write
  * it directly, or two systems will fight over it and the result will flicker.
  *
  * The object identity is stable for the lifetime of the app: hold a reference,
- * never re-read it from a getter. Nested objects are also stable — mutate their
+ * never re-read it from a getter. Nested objects are also stable - mutate their
  * fields in place, never reassign the container (`state.wind = {...}` breaks
  * every system holding a reference to the old object).
  */
@@ -41,7 +41,7 @@ export function createWorldState() {
       elapsed: 0,
       /** Seconds since last frame, already clamped to avoid tab-switch explosions. */
       delta: 0,
-      /** Monotonic frame counter — useful for temporal jitter / TAA sample index. */
+      /** Monotonic frame counter - useful for temporal jitter / TAA sample index. */
       frame: 0,
       /** Hour of day in 0..24 (13.5 === 13:30). Drives everything celestial. */
       timeOfDay: 11.2,
@@ -99,7 +99,7 @@ export function createWorldState() {
       groundColor: new Color(0.22, 0.24, 0.20),
       /** Overall scene ambient intensity, follows sun elevation. */
       ambientIntensity: 1.0,
-      /** Star visibility 0..1 — fades in at dusk, killed by cloud cover. */
+      /** Star visibility 0..1 - fades in at dusk, killed by cloud cover. */
       starIntensity: 0.0,
     },
 
@@ -109,7 +109,7 @@ export function createWorldState() {
     clouds: {
       /** 0 = clear sky, 1 = fully socked in. The main artistic dial. */
       coverage: 0.07,
-      /** Optical density — how dark the interiors get. */
+      /** Optical density - how dark the interiors get. */
       density: 0.55,
       /** Base altitude and vertical extent in world units. */
       altitude: 1500,
@@ -118,7 +118,7 @@ export function createWorldState() {
       speed: 1.0,
       /** Beer's-law absorption. Higher = moodier, more contrast. */
       absorption: 0.85,
-      /** Detail-noise erosion strength — wispy edges. */
+      /** Detail-noise erosion strength - wispy edges. */
       erosion: 0.35,
       /** 0..1 storm-cloud darkening, raised by the weather system. */
       storminess: 0.0,
@@ -133,7 +133,7 @@ export function createWorldState() {
       /** What we are blending toward, and how far along (0..1). */
       target: WEATHER.CLEAR,
       transition: 1.0,
-      /** Surface wetness 0..1 — darkens albedo and raises specular on ground/bark. */
+      /** Surface wetness 0..1 - darkens albedo and raises specular on ground/bark. */
       wetness: 0.0,
       rainIntensity: 0.0,
       snowIntensity: 0.0,
@@ -233,7 +233,7 @@ export function createWorldState() {
     },
 
     // -----------------------------------------------------------------------
-    // Debug flags — toggled from the HUD, read by anyone who cares.
+    // Debug flags - toggled from the HUD, read by anyone who cares.
     // -----------------------------------------------------------------------
     debug: {
       wireframe: false,

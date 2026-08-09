@@ -1,18 +1,18 @@
 /**
- * birds.js — high birds: wheeling flocks and lone soarers, 60–250 m up.
+ * birds.js - high birds: wheeling flocks and lone soarers, 60-250 m up.
  *
  * Everything here is about MOTION and SILHOUETTE. At the distances these are
  * seen a bird is three to eight pixels across; nobody will ever resolve a
  * feather. What the eye actually reads, in order:
  *
- *   1. the shape of the path — flocks must wheel, reform and drift, never
+ *   1. the shape of the path - flocks must wheel, reform and drift, never
  *      run a fixed circle,
- *   2. the wingbeat — a fast powered downstroke and a slow recovery, with the
+ *   2. the wingbeat - a fast powered downstroke and a slow recovery, with the
  *      hand trailing the arm. A sine wave reads as a machine. And crucially it
  *      is INTERMITTENT: a burst of three or four strokes, then a coast. At the
  *      range these are seen the beat itself is a couple of pixels of blur, so
  *      what the eye really tracks is that blur switching on and off,
- *   3. the bank — a bird that changes direction without rolling into it looks
+ *   3. the bank - a bird that changes direction without rolling into it looks
  *      instantly, unmistakably wrong,
  *   4. that they are DARK against a bright sky, and that they carry the same
  *      aerial perspective as everything else at that range.
@@ -21,8 +21,8 @@
  *
  * - Positions are stored CAMERA-RELATIVE in x/z and absolute in y, and the mesh
  *   is translated to (camX, 0, camZ) each frame. The whole flock volume
- *   therefore travels with the player — the same trick weather/precipitation.js
- *   uses — so there is never a world-sized simulation and floats stay small.
+ *   therefore travels with the player - the same trick weather/precipitation.js
+ *   uses - so there is never a world-sized simulation and floats stay small.
  *   A player who outruns a flock pushes it past the volume edge, where it fades
  *   out, is rigidly recycled to the far side and fades back in. Rigid, because
  *   wrapping birds individually would shred the flock.
@@ -32,7 +32,7 @@
  *   guarantees a bird is always seen against sky and never below the horizon.
  *   Fly mode climbs at well over 100 m/s, far faster than a damped chase can
  *   follow, so the band follows a rising eye INSTANTLY and every bird is
- *   translated by the same delta — again rigid, again unseeable. A falling eye is
+ *   translated by the same delta - again rigid, again unseeable. A falling eye is
  *   followed slowly and the birds are left where they are, so a descent does not
  *   drag them down. A rise driven by the GROUND instead of the eye is deliberately
  *   NOT carried: it moves at most 15 m/s, the per-bird altitude spring handles it,
@@ -41,13 +41,13 @@
  * - Flocking is real boids (separation / alignment / cohesion) inside a flock
  *   only, plus an ORBIT around a slowly drifting roost point: a radial spring
  *   toward a target radius and a tangential term whose sign and strength come
- *   from a slow noise. That is a limit cycle, not a circle — the flock wheels,
+ *   from a slow noise. That is a limit cycle, not a circle - the flock wheels,
  *   stalls, mills and reverses on its own. The roost drifts on 2D simplex noise
  *   and never repeats.
  *
  * - Everything is flat typed arrays and there is not a single allocation in
  *   update(). The per-frame cost is dominated by the O(n²) neighbour loop,
- *   which is bounded at 26 birds per flock — about 2.7 k pair tests a frame.
+ *   which is bounded at 26 birds per flock - about 2.7 k pair tests a frame.
  *
  * - The material owns its fog. It deliberately does NOT set `fog: true`: three
  *   r180's refreshFogUniforms() reads fogColor/fogDensity/fogNear/fogFar off any
@@ -122,7 +122,7 @@ const ROOST_SPREAD_LONE = 320;
  * two fractions sum to 1 so the excursion envelope above is unchanged.
  *
  * The anchor is the important half. Deriving the roost purely from a function of
- * time, in camera-relative space — which is what this did first — welds it to the
+ * time, in camera-relative space - which is what this did first - welds it to the
  * player: the whole orbit centre translates with the camera, the radial spring
  * drags the flock along behind it, and a walker at 5 m/s tows the same flock
  * across the map forever. Measured before the fix: after 317 m of walking a flock
@@ -177,7 +177,7 @@ const WIND_ALOFT = 1.55;
 const THERMAL_FREQ = 0.0018;
 /**
  * Lateral wander. A bird holding a perfectly clean line is the other half of the
- * lattice problem — real ones are constantly making small corrections. The rate
+ * lattice problem - real ones are constantly making small corrections. The rate
  * is quantised into buckets so the per-frame rotation is eight trig calls for the
  * whole population rather than two per bird.
  */
@@ -186,12 +186,12 @@ const WANDER_ACCEL = 1.7;
  * Bout (flap-glide) flight. Small and medium birds do not hold a steady beat:
  * they take three or four powered strokes, then hold the wings out and coast
  * for about half as long again. At 150 m the wingbeat itself is two pixels of
- * blur — what actually reads is that blur switching ON and OFF, plus the shallow
+ * blur - what actually reads is that blur switching ON and OFF, plus the shallow
  * bob in the path it causes. It is the single strongest "that is alive" cue at
  * this range, and it costs about ten flops a bird.
  *
  * The big soaring loners do not do it at all (their `boutAmt` is zero), and it
- * is suppressed on anything currently riding lift — a bird in a thermal holds
+ * is suppressed on anything currently riding lift - a bird in a thermal holds
  * its wings out and does not bound.
  */
 const BOUT_HZ_MIN = 0.55;
@@ -203,8 +203,8 @@ const BOUT_RAMP_OUT = 0.14;
 /** Mean of the duty curve above. Subtracted so the bob carries no net lift. */
 const BOUT_MEAN = 0.64;
 /**
- * Peak vertical acceleration of the bob. Real bounding flight is ballistic — a
- * full -g on the closed-wing phase — but at these periods that only buys ~0.3 m
+ * Peak vertical acceleration of the bob. Real bounding flight is ballistic - a
+ * full -g on the closed-wing phase - but at these periods that only buys ~0.3 m
  * of amplitude anyway, and half a g keeps it clear of the steering budget.
  */
 const BOUT_LIFT = 6.2;
@@ -227,7 +227,7 @@ const _size = new Vector2();
 const _wind = { x: 0, y: 0, z: 0 };
 
 // ---------------------------------------------------------------------------
-// Geometry — one bird, 17 vertices, 9 triangles.
+// Geometry - one bird, 17 vertices, 9 triangles.
 //
 // Local frame: +x spanwise (in half-span units), +y up, -z forward. The wing is
 // split at a wrist so the vertex shader can articulate it at two hinges; the
@@ -395,7 +395,7 @@ const BIRD_VERT = /* glsl */ `
     // reverses. The soaring droop is proportional to the dihedral, which gives a
     // gliding bird the arm-up / hand-down gull kink for free.
     float a2 = (bHand - bArm) * uWrist.x * amp - aBeat.y * 1.25;
-    // A real wing gets visibly shorter going up — it is partly folded.
+    // A real wing gets visibly shorter going up - it is partly folded.
     float fold = 1.0 - 0.30 * amp * max(bArm, 0.0);
     float sweep = uWrist.y * amp * bArm;
 
@@ -468,7 +468,7 @@ const BIRD_VERT = /* glsl */ `
     vec3 ambient = mix(uSkyBounce, uSkyAmbient, upFace);
 
     // Sun through the primaries. Only when the light is behind the wing AND we
-    // are looking toward it — the moment a backlit flock catches fire at dusk.
+    // are looking toward it - the moment a backlit flock catches fire at dusk.
     float back = max(-ndl, 0.0);
     float toward = max(dot(dir, uKeyDir), 0.0);
     float trans = back * toward * toward * toward * aArt.w;
@@ -650,7 +650,7 @@ export class Birds {
     const r = this.rng;
     for (let i = 0; i < MAX_BIRDS; i++) {
       const lone = i < MAX_LONERS;
-      // Loners are the big soaring birds — a longer, slower, steadier wing.
+      // Loners are the big soaring birds - a longer, slower, steadier wing.
       const span = lone ? r.range(1.45, 2.05) : r.range(0.72, 1.15);
       this.span[i] = span;
       // Wingbeat frequency scales roughly as 1/span across birds of a kind.
@@ -663,14 +663,14 @@ export class Birds {
       const sep = clamp(r.range(SEP_MIN, SEP_MAX) * (0.7 + 0.4 * span), SEP_MIN, SEP_MAX + 1);
       this.sepR2[i] = sep * sep;
       // Unit wander vector, rotated a fixed angle per frame rather than
-      // re-evaluated with sin/cos — see WANDER_RATE.
+      // re-evaluated with sin/cos - see WANDER_RATE.
       const wa = r() * TAU;
       this.wanX[i] = Math.cos(wa);
       this.wanZ[i] = Math.sin(wa);
       this.wanB[i] = Math.min(WANDER_BUCKETS - 1, Math.floor(r() * WANDER_BUCKETS));
       // Bout flight. The powered burst has to contain three or four whole beats
       // to read as a burst rather than a stutter, so the bout rate is DERIVED
-      // from this bird's own wingbeat instead of drawn independently — otherwise
+      // from this bird's own wingbeat instead of drawn independently - otherwise
       // the fast-winged birds get eight beats a bout and the slow ones get two,
       // and neither reads. Light birds bound hardest; the loners not at all.
       this.boutHz[i] = clamp(
@@ -691,7 +691,7 @@ export class Birds {
       // A slot that is never simulated still gets rasterised while it sits under
       // the live-prefix instance count. Its alpha is zero so it dies in the
       // vertex shader, but normalize() of a zero heading would produce NaNs on
-      // the way there — give every slot a valid one from the start.
+      // the way there - give every slot a valid one from the start.
       this.iFwd[i * 3 + 2] = -1;
     }
   }
@@ -718,7 +718,7 @@ export class Birds {
     // three would otherwise compute from `position` alone culls the entire mesh
     // the moment the camera looks anywhere but straight at the origin. The
     // centre tracks the altitude band each frame and the radius is grown from
-    // the birds actually published — a nominal radius derived from WRAP_R is NOT
+    // the birds actually published - a nominal radius derived from WRAP_R is NOT
     // enough, because WRAP_R bounds a group's CENTROID and stragglers hang tens
     // of metres outside it. Measured with the camera flying at 40 m/s, birds
     // reached 1.05x the old fixed radius, i.e. they left their own bounds.
@@ -768,7 +768,7 @@ export class Birds {
       depthWrite: false,
       depthTest: true,
       side: DoubleSide,
-      // NEVER true without owning fogColor/fogDensity/fogNear/fogFar — see the
+      // NEVER true without owning fogColor/fogDensity/fogNear/fogFar - see the
       // header. This material integrates its own aerial perspective instead.
       fog: false,
     });
@@ -782,8 +782,8 @@ export class Birds {
     this.mesh.castShadow = false;
     this.mesh.receiveShadow = false;
     // renderOrder only ever sorts WITHIN a queue. three renders the whole opaque
-    // list, then transmissive, then the whole transparent list — three.module.js
-    // r180 line 16675 — so ordering against the sky dome and the cloud composite
+    // list, then transmissive, then the whole transparent list - three.module.js
+    // r180 line 16675 - so ordering against the sky dome and the cloud composite
     // is already settled before renderOrder is consulted at all: both of those
     // are opaque (sky/atmosphere.js leaves `transparent` unset, sky/clouds.js
     // sets `transparent: false` deliberately to stay in the opaque list) and this
@@ -792,7 +792,7 @@ export class Birds {
     // What renderOrder actually decides is our slot among the other TRANSPARENTS,
     // and there a large number is simply wrong. The near-field transparents are
     // far petals (10), splashes (10), near petals and splash drops (11), rain and
-    // snow (12) and the lightning bolt (13) — every one of them metres from the
+    // snow (12) and the lightning bolt (13) - every one of them metres from the
     // eye, every one of them in front of a bird that is 60-250 m up. Sitting
     // above all of those punched bird silhouettes through the rain, which is a
     // case that really happens: light rain only thins the flock to about 65%.
@@ -834,7 +834,7 @@ export class Birds {
     const camZ = _cam.z;
     // Every position, every roost anchor and the altitude band are all held
     // RELATIVE to this point, so a single non-finite camera would subtract NaN
-    // out of all 108 birds and all 8 anchors at once — and nothing downstream
+    // out of all 108 birds and all 8 anchors at once - and nothing downstream
     // can recover from that, because the anchors are only ever updated by
     // `-= dx`. Skipping the frame outright costs one frame of bird motion and is
     // the only thing that keeps a transient upstream fault transient.
@@ -868,7 +868,7 @@ export class Birds {
     }
 
     // Altitude band. Anchored to whichever is higher, the ground or the camera,
-    // so birds are ALWAYS above the eye — which is what guarantees they are seen
+    // so birds are ALWAYS above the eye - which is what guarantees they are seen
     // against sky and never against the field or below the horizon.
     let groundY = 0;
     if (this.terrain && typeof this.terrain.getHeight === 'function') {
@@ -892,7 +892,7 @@ export class Birds {
     } else if (wantBase > this._bandBase) {
       // Rising: INSTANT, not smoothed. Fly mode climbs at over 100 m/s and any
       // damped chase lags by v/lambda, so the eye overtakes the band inside half
-      // a second and the flock ends up below the horizon — against the field,
+      // a second and the flock ends up below the horizon - against the field,
       // which is the one thing these must never do. Following instantly is free
       // because the birds are carried WITH the band, exactly like the horizontal
       // rebase above: a rigid translation of the whole volume produces no
@@ -911,13 +911,13 @@ export class Birds {
     // at 100 m/s is faster than any spring, so the volume has to move with it,
     // and because nothing moves relative to anything else the translation cannot
     // be seen. Measured: with the gate, a bird's position relative to the eye
-    // moves 0.04 m per frame during a 100 m/s climb — its own flight, nothing
+    // moves 0.04 m per frame during a 100 m/s climb - its own flight, nothing
     // else. Without the carry entirely it would be the full 1.67 m per frame.
     //
     // A rise driven by TERRAIN rolling under the player is NOT carried. The
     // ground term is followed instantly going up and over ~2 s coming down, so
     // carrying it biases the flock upward a little more with every hill crested,
-    // with only the 21-second altitude spring to bring it back — measured at
+    // with only the 21-second altitude spring to bring it back - measured at
     // +4.9 m of a 190 m band after 90 s of flying at 100 m/s over 34 m relief
     // (mean height above bandBase 113.9 m carried vs 109.0 m uncarried). Small,
     // but it is bias with no upside: at ground-term speeds (15 m/s at worst, and
@@ -973,7 +973,7 @@ export class Birds {
   /**
    * Place one group somewhere plausible in the volume. Called at boot, whenever
    * a group wakes from dormancy, and when a group is recycled back into the
-   * volume — so a flock that returns at dawn drifts in from a sensible distance
+   * volume - so a flock that returns at dawn drifts in from a sensible distance
    * instead of resuming wherever it was left.
    *
    * `dirX/dirZ`, when non-zero, is the unit direction the group must be placed
@@ -1018,7 +1018,7 @@ export class Birds {
     const size = this.gSize[g];
     for (let k = 0; k < size; k++) {
       const i = start + k;
-      // A loose ellipsoid stretched along the heading — a flock in transit is
+      // A loose ellipsoid stretched along the heading - a flock in transit is
       // never a ball.
       this.px[i] = cx + r.gaussian(0, 9) + hx * r.gaussian(0, 7);
       this.py[i] = cy + r.gaussian(0, 5);
@@ -1090,7 +1090,7 @@ export class Birds {
 
     u.uFlash.value = clamp01(state.weather.lightning || 0);
 
-    // This mesh unavoidably draws in FRONT of the cloud layer — the volumetrics
+    // This mesh unavoidably draws in FRONT of the cloud layer - the volumetrics
     // are opaque and this is transparent, so no renderOrder can put a bird
     // behind them. That is only correct while the whole altitude band sits clear
     // of the deck. Fade the system out across exactly that overlap rather than
@@ -1098,10 +1098,10 @@ export class Birds {
     //
     // Tested on the BAND, not on the camera. The camera test this replaced
     // missed the case that actually happens: the eye levels off fifty metres
-    // UNDER the cloud base, reads as nowhere near it, while the band — which is
-    // pinned above the eye and reaches 190 m higher — is squarely inside it.
+    // UNDER the cloud base, reads as nowhere near it, while the band - which is
+    // pinned above the eye and reaches 190 m higher - is squarely inside it.
     // Defaulted, not trusted: a NaN deck would make every smoothstep NaN and
-    // uGlobalAlpha with it, and a NaN alpha does not fail the shader's `<` kill —
+    // uGlobalAlpha with it, and a NaN alpha does not fail the shader's `<` kill - 
     // it rasterises whatever min(NaN, 1.0) happens to be on this driver.
     const deckBase = state.clouds.altitude || 900;
     const deckTop = deckBase + (state.clouds.thickness || 700);
@@ -1167,7 +1167,7 @@ export class Birds {
   _updateGroups(dt, state, camX, camZ, dx, dz) {
     // The SANITISED clock, not state.time.elapsed. A single non-finite elapsed
     // would go straight into noise2D and out into gRoostX/Z, and from there into
-    // px/py/pz — where it is permanent, because every recovery path in here is a
+    // px/py/pz - where it is permanent, because every recovery path in here is a
     // damp() and damp(NaN, finite) is NaN forever. update() already keeps a
     // last-good copy for exactly this reason; it has to be the one everybody uses.
     const t = this._time;
@@ -1199,7 +1199,7 @@ export class Birds {
     this._pop = damp(this._pop, popTarget, 0.35, dt);
 
     const pop = this._pop;
-    // Loners persist far longer than flocks — a single bird crossing a leaden
+    // Loners persist far longer than flocks - a single bird crossing a leaden
     // sky is the shot worth keeping. Flocks need genuinely good conditions.
     const lonerWant = this.tier.loners * Math.pow(pop, 0.45);
     const flockWant = this.tier.flocks * Math.pow(pop, 1.25);
@@ -1218,12 +1218,12 @@ export class Birds {
       this.gWeight[g] = damp(this.gWeight[g], target, target > this.gWeight[g] ? 0.4 : 1.1, dt);
       // Retire once the leading member's alpha is down where a three-pixel dark
       // mark against a bright sky cannot be told from nothing. Without this the
-      // exponential tail keeps a flock nominally alive — and in the instance
-      // count — long after it should have gone.
+      // exponential tail keeps a flock nominally alive - and in the instance
+      // count - long after it should have gone.
       if (target <= 0 && this.gWeight[g] * size < 0.02) this.gWeight[g] = 0;
       else if (target >= 1 && 1 - this.gWeight[g] < 1e-3) this.gWeight[g] = 1;
 
-      // Camera-relative bookkeeping. The anchor is rebased with the centroid —
+      // Camera-relative bookkeeping. The anchor is rebased with the centroid - 
       // that subtraction is the whole of "the roost is a world point".
       this.gCx[g] -= dx;
       this.gCz[g] -= dz;
@@ -1242,7 +1242,7 @@ export class Birds {
       }
 
       // --- recycle ---------------------------------------------------------
-      // The group has left the volume — either the player outran it or its own
+      // The group has left the volume - either the player outran it or its own
       // wander carried it out. It is faded to nothing by then (the edge fade
       // runs from 0.74 to 0.97 of WRAP_R, ~99 m of travel), so re-seeding it
       // outright is unseeable and gives a genuinely different flock back rather
@@ -1252,7 +1252,7 @@ export class Birds {
       // the edge fade is a distance ramp but alpha follows it through a 0.45 s
       // damp, so a player closing on the boundary fast outruns the fade. At
       // 40 m/s the group was still 19% opaque when it teleported and at 120 m/s
-      // it was 48% — a visible blink. Waiting costs nothing but a few hundred
+      // it was 48% - a visible blink. Waiting costs nothing but a few hundred
       // metres of invisible simulation, which the bounding sphere now tracks.
       const cheb = Math.max(Math.abs(this.gCx[g]), Math.abs(this.gCz[g]));
       if (cheb > WRAP_R && this.gAlphaMax[g] < 0.004) {
@@ -1264,7 +1264,7 @@ export class Birds {
       // --- roost drift ------------------------------------------------------
       // World anchor plus two decorrelated simplex walks. Slow enough that the
       // flock always overshoots and has to come back, which is what makes it
-      // wheel — but anchored, so it wheels over a fixed patch of ground.
+      // wheel - but anchored, so it wheels over a fixed patch of ground.
       const s = this.gSeed[g];
       const spread = lone ? ROOST_SPREAD_LONE : ROOST_SPREAD_FLOCK;
       const wander = spread * ROOST_WANDER;
@@ -1331,7 +1331,7 @@ export class Birds {
       soar, soarBias, thermal, yOffset, stx, sty, stz, sepR2, wanX, wanZ, wanB,
       boutHz, boutPh, boutAmt,
     } = this;
-    const t = this._time;   // sanitised clock — see _updateGroups
+    const t = this._time;   // sanitised clock - see _updateGroups
     const bandBase = this._bandBase;
     const bandTop = bandBase + BAND_HEIGHT;
     const startle = this._startle;
@@ -1382,7 +1382,7 @@ export class Birds {
           // The instance buffer keeps whatever was last written to it. A group
           // retires with an alpha of up to 0.004 still in there, which is ABOVE
           // the vertex shader's 0.0035 kill threshold, so its birds went on
-          // being rasterised — frozen in place — whenever a live group with a
+          // being rasterised - frozen in place - whenever a live group with a
           // higher slot index pushed instanceCount past them. Measured at 9355
           // slot-frames over a 5000-frame night run.
           this.iMotion[i * 4 + 3] = 0;
@@ -1444,7 +1444,7 @@ export class Birds {
           const wx = (camX + px[i]) * THERMAL_FREQ + t * 0.0016;
           const wz = (camZ + pz[i]) * THERMAL_FREQ;
           const cell = worley2D(wx, wz, 17);
-          // Core lift, ringed by compensating sink — the reason a soaring bird
+          // Core lift, ringed by compensating sink - the reason a soaring bird
           // circles rather than tracking straight up a column.
           thermal[i] = (smoothstep(0.44, 0.02, cell) - 0.22 * smoothstep(0.42, 0.72, cell)) * thermalK;
         }

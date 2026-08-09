@@ -1,5 +1,5 @@
 /**
- * loading.js — the title card.
+ * loading.js - the title card.
  *
  * This is the first thing anyone sees, and for a few seconds it is the *only*
  * thing they see, so it gets the same care as the scene behind it. Three ideas:
@@ -47,7 +47,7 @@ const HIDE_FORCE_MS = 1400;
 /** Exponential smoothing rates for the bar: normal, and while finishing up. */
 const PROGRESS_LAMBDA = 6.5;
 const PROGRESS_LAMBDA_FAST = 15;
-/** dt clamp — init work can stall a frame for 100ms+ and petals must not teleport. */
+/** dt clamp - init work can stall a frame for 100ms+ and petals must not teleport. */
 const MAX_DT = 1 / 15;
 /** Petal sprites are soft; 1.5x backing store is already past the point of return. */
 const MAX_DPR = 1.5;
@@ -56,7 +56,7 @@ const MAX_DPR = 1.5;
  * Pale, desaturated sakura. These mirror --sakura-deep / --sakura in styles.css;
  * canvas cannot read CSS custom properties without a layout read, and the art
  * direction here is "never candy pink", so the values are pinned in both places.
- * The last entry is deliberately almost cream — a field of identically pink
+ * The last entry is deliberately almost cream - a field of identically pink
  * petals is one of the loudest tells that something was generated.
  */
 const PETAL_TINTS = [
@@ -67,7 +67,7 @@ const PETAL_TINTS = [
 ];
 
 // ---------------------------------------------------------------------------
-// Procedural assets — baked once per page load, shared by every instance
+// Procedural assets - baked once per page load, shared by every instance
 // ---------------------------------------------------------------------------
 
 /** @type {{sharp: HTMLCanvasElement[], soft: HTMLCanvasElement[]} | null} */
@@ -77,7 +77,7 @@ let grainCache = null;
 
 /**
  * A sakura petal, in a -0.5..0.5 unit box, tip up.
- * The notch at the tip is the identifying feature of a cherry petal — leave it
+ * The notch at the tip is the identifying feature of a cherry petal - leave it
  * out and you have drawn a generic leaf.
  */
 function petalPath(g) {
@@ -94,7 +94,7 @@ function petalPath(g) {
 
 /**
  * Bakes one petal sprite. `blurPx > 0` produces the out-of-focus foreground
- * variant — blurring at bake time costs nothing per frame, whereas ctx.filter
+ * variant - blurring at bake time costs nothing per frame, whereas ctx.filter
  * during the draw loop would cost a full-screen readback every petal.
  */
 function bakePetal(size, tint, blurPx) {
@@ -363,7 +363,7 @@ export class LoadingScreen {
     if (this._dead || this._failed || this._hiding) return;
     this._hiding = true;
     this._hideAt = performance.now();
-    // Stop swallowing clicks immediately — the player may want pointer lock the
+    // Stop swallowing clicks immediately - the player may want pointer lock the
     // instant the scene appears, and the overlay lingers for another second.
     this.el.classList.add('is-hiding');
     // If show() was never called there is no loop to drive the fade.
@@ -387,7 +387,7 @@ export class LoadingScreen {
     this.el.classList.add('is-failed', 'is-ready');
     this.el.setAttribute('role', 'alertdialog');
 
-    // textContent, never innerHTML — the message may contain an error string.
+    // textContent, never innerHTML - the message may contain an error string.
     this.errorMessageEl.textContent = String(
       message || 'The scene could not be started in this browser.'
     );
@@ -421,7 +421,7 @@ export class LoadingScreen {
   /**
    * Deliberately not named update()/render(): this is not a world system, and
    * the integration checker scans methods with those names for hot-path
-   * allocation. It is allocation-free regardless — it runs while every other
+   * allocation. It is allocation-free regardless - it runs while every other
    * system is doing its heavy init, and a GC pause here shows as a stutter in
    * the one animation the user is staring at.
    */
@@ -464,7 +464,7 @@ export class LoadingScreen {
     if (this._shown !== this._lastFill) {
       this._lastFill = this._shown;
       // scaleX + translate only: no layout, no repaint, just a compositor
-      // transform. The fill's gradient is horizontal on purpose — scaling it
+      // transform. The fill's gradient is horizontal on purpose - scaling it
       // keeps the brightest part of the ramp pinned to the leading edge.
       this.fillEl.style.transform = `scaleX(${this._shown.toFixed(4)})`;
       this.headEl.style.transform = `translate3d(${(this._shown * this._railW).toFixed(1)}px,0,0)`;
@@ -623,7 +623,7 @@ export class LoadingScreen {
     }
 
     // A handful of large, very transparent, pre-blurred petals in front of the
-    // focal plane. Fake depth of field for the price of five drawImage calls —
+    // focal plane. Fake depth of field for the price of five drawImage calls - 
     // it is the single cheapest thing that stops a 2D layer looking like a 2D layer.
     const soft = this._sprites.soft;
     for (let i = 0; i < bokeh; i++) {
@@ -702,7 +702,7 @@ export class LoadingScreen {
       }
     }
 
-    // Rebuild only on a real change of scale — a rebuild teleports every petal,
+    // Rebuild only on a real change of scale - a rebuild teleports every petal,
     // and window drags fire resize dozens of times a second.
     const wantCount = Math.round(clamp((w * h) / 34000, 20, 46));
     if (sizeChanged || wantCount !== this._petalCount) this._buildPetals();

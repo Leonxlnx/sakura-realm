@@ -1,5 +1,5 @@
 /**
- * textures.js — the single place procedural textures are created and cached.
+ * textures.js - the single place procedural textures are created and cached.
  *
  * ZERO external assets: every byte below is computed on the CPU at runtime.
  * Nothing here runs per frame; everything is generated lazily on first request
@@ -41,7 +41,7 @@
  *     the 3×3 (or 3×3×3) search.
  *
  * ---------------------------------------------------------------------------
- * Why the surfaces do not look procedural — the anti-repetition strategy
+ * Why the surfaces do not look procedural - the anti-repetition strategy
  * ---------------------------------------------------------------------------
  * A tiled surface gives itself away in two distinct ways and they need
  * different fixes, which is why the first version of this file failed on both.
@@ -52,7 +52,7 @@
  * The soil, moss and grit maps were 70% that. Granular surfaces are built here
  * instead from `worley2Agg`, which returns a per-cell *flat* value (`id`) and
  * the narrowed cell wall, and reserves the cone (`cells`) for the one surface
- * that really is domed — moss cushions. Everything strand-like (thatch, moss
+ * that really is domed - moss cushions. Everything strand-like (thatch, moss
  * shoots, stamens, twigs, litter) is stamped as a sprite, because no noise
  * field produces a strand.
  *
@@ -85,7 +85,7 @@
  *    restated and re-measured here: the splat weights (see `_buildTerrainMacro`)
  *    and the domain-warp Jacobian (see TERRAIN_WARP_GRAD_RMS). A macro map can
  *    break DETAIL_WARP without anyone editing terrain.js, simply by putting the
- *    same contrast at a higher frequency — which the first version of this
+ *    same contrast at a higher frequency - which the first version of this
  *    suite did, hard enough to fold the mapping at ULTRA.
  *  - The splat balance is genuinely different from the bake it replaces
  *    (soil/grass/moss 25.7/56.2/18.1 against 22.3/65.8/11.9). That is an art
@@ -113,7 +113,7 @@
  *    rather than calling glGenerateMipmap: sRGB albedo is filtered in linear
  *    light, normals are averaged as vectors and the variance they lose is added
  *    back to the matching roughness level, and cutout alpha is rescaled to hold
- *    its coverage. See SECTION 2b. Consumers need do nothing — the chain is on
+ *    its coverage. See SECTION 2b. Consumers need do nothing - the chain is on
  *    `texture.mipmaps` with `generateMipmaps = false`, which three uploads as-is.
  *  - `userData.tileMeters` on a tiling map says how much world one repeat covers
  *    (a number, or `{u, v}` for bark). Set your repeat from it rather than
@@ -138,7 +138,7 @@ import {
 import { EVENTS } from './state.js';
 
 // ===========================================================================
-// SECTION 1 — periodic noise kernels
+// SECTION 1 - periodic noise kernels
 // ===========================================================================
 
 /** 12 edge-midpoint gradients (Perlin's improved set): uniform length, no bias. */
@@ -162,11 +162,11 @@ for (let i = 0; i < 512; i++) P12[i] = PERM[i] % 12;
 
 /**
  * `hash2`/`hash3` in core/math.js document themselves as 0..1 and are used that
- * way throughout this file — but they actually return exactly uniform on
+ * way throughout this file - but they actually return exactly uniform on
  * [0, 0.5). The final `* 1274126177` is a float64 multiply of an int32, so the
  * product needs 62 bits, float64 keeps 53, and the sign bit of the ToInt32 that
  * follows is therefore always clear. Measured over 200k samples: min 0.00000,
- * max 0.50000, mean 0.2500, decile counts 20/20/20/20/20/0/0/0/0/0 — flat,
+ * max 0.50000, mean 0.2500, decile counts 20/20/20/20/20/0/0/0/0/0 - flat,
  * correct, and on half the interval.
  *
  * core/math.js is shared and not ours to edit, so the correction lives here.
@@ -182,15 +182,15 @@ for (let i = 0; i < 512; i++) P12[i] = PERM[i] % 12;
  *    cell. On [0, 0.5) it spanned the lower-LEFT QUADRANT of every cell
  *    (measured offsets 0.002..0.499 in both axes, octile histogram
  *    101/114/102/124/0/0/0/0). One feature point per cell confined to a quarter
- *    of that cell is a regular sub-lattice wearing a noise function's name —
+ *    of that cell is a regular sub-lattice wearing a noise function's name - 
  *    precisely the "identical blobs on a grid of the same pitch" failure the
  *    header, `worley2Agg` and world/terrain.js all describe. It affected the
  *    shipped terrain detail map, the moss cushions, the bark plates and the
  *    ground clods.
  *  - `worley3` placed its cloud-volume points in the same way, in the lower
  *    corner octant.
- *  - `worley2Agg().id` — the per-fragment FLAT value, returned unnormalised and
- *    consumed as `(id - 0.5)` — came out mean 0.251, max 0.500, so the term was
+ *  - `worley2Agg().id` - the per-fragment FLAT value, returned unnormalised and
+ *    consumed as `(id - 0.5)` - came out mean 0.251, max 0.500, so the term was
  *    always negative and carried half its intended spread. The crumb mosaic,
  *    which is the whole reason `id` exists, was contributing half of what the
  *    amplitudes above say it does.
@@ -202,7 +202,7 @@ const HASH_SCALE = 2;
 const h2 = (x, y) => hash2(x, y) * HASH_SCALE;
 const h3 = (x, y, z) => hash3(x, y, z) * HASH_SCALE;
 
-/** Quintic fade — C2 continuous, so second derivatives (and therefore normal
+/** Quintic fade - C2 continuous, so second derivatives (and therefore normal
  *  maps derived from the field) stay smooth. */
 const fade = (t) => t * t * t * (t * (t * 6 - 15) + 10);
 
@@ -210,7 +210,7 @@ const fade = (t) => t * t * t * (t * (t * 6 - 15) + 10);
  * Lattice gradient lookup. The multiplicative mixing (rather than the classic
  * `perm[perm[x] + y]`) does two things: it decorrelates the field from its own
  * transpose, and it makes `seed` a genuinely different field instead of the
- * same field translated along x — which is what plain additive seeding gives
+ * same field translated along x - which is what plain additive seeding gives
  * you, and why "different seed, same texture" bugs are so common.
  */
 function gi2(x, y, s) {
@@ -271,9 +271,9 @@ function perlin3P(x, y, z, px, py, pz, s) {
 /**
  * Periodic 2D *value* noise, range ~[-1,1].
  *
- * Gradient noise is identically zero at every lattice point. At the 3–5 texels
+ * Gradient noise is identically zero at every lattice point. At the 3-5 texels
  * per cell that a soil-grain field wants, those zeros are only a few texels
- * apart and read as a faint regular grid through the whole map — the exact
+ * apart and read as a faint regular grid through the whole map - the exact
  * failure this file exists to avoid. Value noise has no zero set, costs half as
  * much (four hashes and three lerps, no dot products), and its slightly blockier
  * character is invisible once it is the *finest* octave in the stack.
@@ -291,8 +291,8 @@ function value2P(x, y, px, py, s) {
 
 /**
  * Octave frequency ladder. Rounded to integers (required for periodicity) and
- * pushed off exact multiples of the previous octave so lattice zeros — Perlin
- * is identically zero at every lattice point — do not stack into a grid.
+ * pushed off exact multiples of the previous octave so lattice zeros - Perlin
+ * is identically zero at every lattice point - do not stack into a grid.
  */
 function freqLadder(base, octaves, lacunarity) {
   const out = new Int32Array(octaves);
@@ -322,14 +322,14 @@ function octaveRes(size, freq, spc) {
  * `octaves` is a property of the *look* and the resolution is a property of the
  * tier, so a hand-picked octave count is a Nyquist bug waiting for a quality
  * change. Measured on the maps below: at LOW the ground's 27 mm grain ran two
- * octaves from 74 cells, i.e. 148 cells over 256 texels — 1.7 texels a cell,
- * well past the base mip's Nyquist rate — and the moss fuzz was worse at 1.6.
+ * octaves from 74 cells, i.e. 148 cells over 256 texels - 1.7 texels a cell,
+ * well past the base mip's Nyquist rate - and the moss fuzz was worse at 1.6.
  * Both showed as salt-and-pepper that sparkles in the base mip and vanishes one
  * level down, which is the worst of both: it costs a full-resolution pass to
  * compute and contributes nothing but aliasing.
  *
  * @param {number} baseSpc texels per lattice cell of the coarsest octave
- *   (`min(w/fx, h/fy)` — the tighter axis is the one that aliases first)
+ *   (`min(w/fx, h/fy)` - the tighter axis is the one that aliases first)
  * @param {number} lacunarity @param {number} wanted the count the caller asked for
  * @param {number} minSpc floor in texels a cell; 3.2 is what this file uses
  *   everywhere else it derives a frequency from a resolution.
@@ -442,7 +442,7 @@ function shapeOctave(n, kind) {
  * 2D fractal field, anisotropic and tiling.
  * opts: { fx, fy, octaves, lacunarity, gain, seed, kind, spc }
  * `fx`/`fy` are lattice periods across the *whole* tile, so an fy of 2 with an
- * fx of 20 gives features 10× taller than they are wide — which is how bark
+ * fx of 20 gives features 10× taller than they are wide - which is how bark
  * fissures and grass striations are built.
  */
 function fbm2(w, h, opts) {
@@ -612,7 +612,7 @@ function worley2Fields(w, h, fx, fy, seed, jitter, wantF2, warp = 0, extra = nul
     for (let i = 0; i < fx; i++) {
       const o = (j * fx + i) * 2;
       // h3, not hash3: the interval matters here more than anywhere else in the
-      // file — see HASH_SCALE. On [0, 0.5) `c0 + jitter*h` spans a quarter of
+      // file - see HASH_SCALE. On [0, 0.5) `c0 + jitter*h` spans a quarter of
       // the cell however large `jitter` is, which is a lattice, not a jitter.
       pts[o] = i + c0 + jitter * h3(i, j, seed);
       pts[o + 1] = j + c0 + jitter * h3(i + 977, j, seed + 31);
@@ -621,13 +621,13 @@ function worley2Fields(w, h, fx, fy, seed, jitter, wantF2, warp = 0, extra = nul
       // *interior* gets its own flat tone/height instead of inheriting the
       // radial distance profile that makes worley read as bubble wrap.
       // Consumed as `(id - 0.5)` by every caller, so it must be centred on 0.5
-      // and span 0..1 — see HASH_SCALE.
+      // and span 0..1 - see HASH_SCALE.
       if (cid) cid[j * fx + i] = h3(i + 313, j + 571, seed + 97);
     }
   }
 
   // Domain warp. One feature point per cell of a square grid is *always*
-  // readable as a square grid, however hard the points are jittered — it was
+  // readable as a square grid, however hard the points are jittered - it was
   // plainly visible as a woven/brick pattern in the soil and moss maps.
   // Displacing the lookup by a noise field at a frequency near the cell pitch
   // destroys the axis alignment while leaving the cell topology intact, which
@@ -681,7 +681,7 @@ function worley2Fields(w, h, fx, fy, seed, jitter, wantF2, warp = 0, extra = nul
         const i = out + x;
         // The warp never exceeds one cell (it is amplitude-capped at build
         // time), so folding back into one period is a single compare per axis
-        // rather than a floor and a division — which matters, because this is a
+        // rather than a floor and a division - which matters, because this is a
         // full-resolution per-texel loop over a megapixel.
         let wx = (x + 0.5) * sx + warpX[i];
         let wy = by + warpY[i];
@@ -691,7 +691,7 @@ function worley2Fields(w, h, fx, fy, seed, jitter, wantF2, warp = 0, extra = nul
         // sample can come back out of the fold as exactly `fx`, and the search
         // below indexes the sample's own cell directly. With cx === fx the
         // +1 neighbour wraps to cell 0 instead of cell 1, so one cell is
-        // searched twice and its neighbour not at all — a wrong F1/F2 pair
+        // searched twice and its neighbour not at all - a wrong F1/F2 pair
         // rather than a crash, which is exactly the kind of defect that never
         // gets found by looking at the picture.
         if (wx >= fx) wx = 0;
@@ -701,7 +701,7 @@ function worley2Fields(w, h, fx, fy, seed, jitter, wantF2, warp = 0, extra = nul
         // neighbouring cell can hold lies on that cell's near face, so the
         // squared distance to the face is a valid lower bound on F1. F2 needs
         // the second-best, so a cell is only skipped once *both* candidates are
-        // provably beaten — hence the test against d2, not d1.
+        // provably beaten - hence the test against d2, not d1.
         const gx = wx - cx, gy = (wy - cy) * ay;
         BND_X[0] = gx * gx; BND_X[1] = 0; BND_X[2] = (1 - gx) * (1 - gx);
         BND_Y[0] = gy * gy; BND_Y[1] = 0; BND_Y[2] = (ay - gy) * (ay - gy);
@@ -769,14 +769,14 @@ function worley2Fields(w, h, fx, fy, seed, jitter, wantF2, warp = 0, extra = nul
  * Aggregate structure: the cellular field a granular surface actually has.
  *
  * `cells` (inverted F1) is a radial cone centred on every feature point, which
- * is precisely why worley-driven soil and moss read as bubble wrap — every
+ * is precisely why worley-driven soil and moss read as bubble wrap - every
  * feature is the same round dome. What real crumb structure looks like is a
  * mosaic of *flat-topped* fragments at assorted heights, separated by thin
  * voids. That is `id` (a flat per-fragment value) plus `walls` (the narrowed
  * F2−F1 crease), and only a trace of `cells`.
  *
- * Computed at full resolution so `id` — which is piecewise constant and would
- * be smeared into ramps or stair-stepped by any resampling — is exact. Only the
+ * Computed at full resolution so `id` - which is piecewise constant and would
+ * be smeared into ramps or stair-stepped by any resampling - is exact. Only the
  * warp, which is smooth by construction, is evaluated cheaply and upsampled.
  *
  * @returns {{id:Float32Array, walls:Float32Array, cells:Float32Array}} 0..1 fields
@@ -802,7 +802,7 @@ function worley2Agg(w, h, fx, fy, seed, opts = {}) {
 /**
  * Worley evaluated at a resolution matched to its cell count (`spc` samples per
  * cell) and wrap-upsampled. A 14-cell field over 1024² costs 140² samples
- * instead of 1024² — a 50× saving with no visible difference once the caller's
+ * instead of 1024² - a 50× saving with no visible difference once the caller's
  * shaping curve is applied at full resolution.
  *
  * mode 0 → inverted F1 (bright at feature points: clods, pebbles, cloud puffs)
@@ -863,7 +863,7 @@ function worley3(size, freq, seed, jitter = 1, warp = 0) {
       for (let i = 0; i < f; i++) {
         const o = (k * f * f + j * f + i) * 3;
         const c = 0.5 - 0.5 * jitter;
-        // h3, not hash3 — see HASH_SCALE. Unscaled, every cloud feature point
+        // h3, not hash3 - see HASH_SCALE. Unscaled, every cloud feature point
         // sat in the lower corner octant of its cell.
         pts[o] = i + c + jitter * h3(i, j, k + seed);
         pts[o + 1] = j + c + jitter * h3(i + 131, j, k + seed);
@@ -909,7 +909,7 @@ function worley3(size, freq, seed, jitter = 1, warp = 0) {
         // the cell's slab is a valid lower bound; once the sample's own cell has
         // supplied a candidate, roughly half of the 26 neighbours are provably
         // further away and never need their point fetched. This is the hottest
-        // loop in the whole file — the cloud volumes are ~900k voxels — and the
+        // loop in the whole file - the cloud volumes are ~900k voxels - and the
         // pruning is exact, so the field is bit-identical to the naive version.
         const gx = wx - cx, gy = wy - cy, gz = wz - cz;
         BND_X[0] = gx * gx; BND_X[1] = 0; BND_X[2] = (1 - gx) * (1 - gx);
@@ -975,7 +975,7 @@ function worley3Scaled(size, freq, seed, spc = 5) {
 }
 
 // ===========================================================================
-// SECTION 2 — field utilities
+// SECTION 2 - field utilities
 // ===========================================================================
 
 /**
@@ -1029,7 +1029,7 @@ function boxBlurWrap(src, w, h, radius, scratch) {
   // itself and count texels twice.
   const r = Math.min(radius | 0, ((Math.min(w, h) - 1) / 2) | 0);
   // A copy, never `src` itself. Every caller treats the result as a separate
-  // buffer — `highpassField` does `field[i] += k * (0.5 - lo[i])` — and
+  // buffer - `highpassField` does `field[i] += k * (0.5 - lo[i])` - and
   // returning the input would turn that into a field subtracting itself in
   // place, which is a silently blank map rather than an error.
   if (r < 1) return src.slice();
@@ -1071,7 +1071,7 @@ function boxBlurWrap(src, w, h, radius, scratch) {
 
 /**
  * Box blur for cases where the result is only ever used as a *low-pass
- * reference* — cavity extraction, high-pass, luminance flattening.
+ * reference* - cavity extraction, high-pass, luminance flattening.
  *
  * Blurring at full resolution to produce something whose entire content sits
  * below 1/(2r) cycles is a straight waste of a megapixel of work. Averaging
@@ -1103,7 +1103,7 @@ function boxBlurWrapFast(src, w, h, radius) {
  * A tile only reads as a tile because the eye finds a landmark and then sees it
  * again one tile away. Landmarks are low-frequency: a big dark patch, a pale
  * blotch, a long crack. Detail maps therefore have no business carrying low
- * frequencies at all — that job belongs to the macro map, which tiles dozens of
+ * frequencies at all - that job belongs to the macro map, which tiles dozens of
  * times more slowly and has no landmark of its own at the detail map's scale.
  * Stripping the bottom of the spectrum out of the detail map costs nothing and
  * removes the thing the eye was locking onto.
@@ -1162,7 +1162,7 @@ for (let i = 0; i < 256; i++) {
 }
 
 // ===========================================================================
-// SECTION 2b — hand-built mip chains
+// SECTION 2b - hand-built mip chains
 // ===========================================================================
 //
 // Why not just let the driver call glGenerateMipmap?
@@ -1175,7 +1175,7 @@ for (let i = 0; i < 256; i++) {
 //  2. Normals. Averaging unit normals and renormalising throws away exactly the
 //     information that matters: how much the surface wobbled inside the
 //     footprint. That lost wobble has to reappear as roughness or the surface
-//     specular-aliases — which on this target is very visible, because there is
+//     specular-aliases - which on this target is very visible, because there is
 //     no temporal AA to hide it. The chains below keep the *unnormalised* mean
 //     vector, derive a von Mises-Fisher variance from its length, and widen the
 //     matching roughness mip by it (Toksvig / Frostbite specular AA).
@@ -1429,12 +1429,12 @@ function ormMipChain(base, w, h, sigma2) {
 }
 
 // ===========================================================================
-// SECTION 3 — void-and-cluster blue noise
+// SECTION 3 - void-and-cluster blue noise
 // ===========================================================================
 
 /**
  * Void-and-cluster (Ulichney 1993). Produces a rank field whose every
- * threshold slice is itself a blue-noise pattern — which is exactly what a
+ * threshold slice is itself a blue-noise pattern - which is exactly what a
  * raymarch jitter needs, because the marcher thresholds it implicitly.
  *
  * The energy field is maintained incrementally: adding or removing a point
@@ -1449,7 +1449,7 @@ function voidAndCluster(size, seed) {
   const energy = new Float32Array(N);
   const rank = new Int32Array(N).fill(-1);
 
-  // Truncated Gaussian, sigma 1.5 — Ulichney's value. Radius 4 sigma.
+  // Truncated Gaussian, sigma 1.5 - Ulichney's value. Radius 4 sigma.
   const SIG = 1.5;
   const R = Math.min(Math.floor(size / 2) - 1, 6);
   const K = 2 * R + 1;
@@ -1462,7 +1462,7 @@ function voidAndCluster(size, seed) {
 
   // --- row-blocked extreme cache -------------------------------------------
   // The textbook algorithm scans all N texels for its argmax and again for its
-  // argmin, N times over, which is O(N²) with a constant of two — about 50 M
+  // argmin, N times over, which is O(N²) with a constant of two - about 50 M
   // comparisons at 64² and the reason a second independent pattern was too
   // expensive to want. A splat only perturbs a (2R+1)² neighbourhood, so per
   // row we cache the extremes and recompute only the rows the splat dirtied:
@@ -1588,7 +1588,7 @@ function voidAndCluster(size, seed) {
 }
 
 // ===========================================================================
-// SECTION 4 — sprite rasterisation helpers
+// SECTION 4 - sprite rasterisation helpers
 // ===========================================================================
 
 /**
@@ -1609,7 +1609,7 @@ const BARK_TILE_M = { u: 1.1, v: 1.8 };
 /**
  * World tile of the terrain near-detail suite, metres.
  *
- * This MUST equal `TILE_NEAR` in world/terrain.js — that file sets the repeat,
+ * This MUST equal `TILE_NEAR` in world/terrain.js - that file sets the repeat,
  * this one sizes every feature against it. If terrain.js ever changes TILE_NEAR
  * the maps below stay seamless (they are periodic regardless) but every physical
  * size in `_buildTerrainSurface` scales with it, which is exactly how a 12 mm
@@ -1625,7 +1625,7 @@ const TERRAIN_TILE_M = 2.0;
  * `_buildTerrainSurface` states the defect and fixes it for its own suite with
  * `perSqM`; the three older builders below still had it. A sprite count written
  * as `N / k` is proportional to S², and every sprite's *area* is proportional to
- * S² as well because its size is authored in metres over a fixed world tile — so
+ * S² as well because its size is authored in metres over a fixed world tile - so
  * coverage grows with the square of the resolution and a tier change hands you a
  * different surface rather than a sharper one. Measured on `mossSet`, which is
  * live (tree/sakura.js consumes it for the trunk base): LOW and MEDIUM bake at
@@ -1649,7 +1649,7 @@ const spriteCount = (divisor) => Math.max(1, Math.round((SPRITE_REF * SPRITE_REF
  * bubble wrap, and it is far smaller than intuition suggests. Bare earth under
  * a metre of meadow is nearly flat: the relief is a few millimetres of crumb
  * and grain over centimetres of run. The map this replaces produced an RMS
- * slope near fifty — round, evenly spaced, strongly shaded domes, visible as a
+ * slope near fifty - round, evenly spaced, strongly shaded domes, visible as a
  * regular carpet through the grass in every capture of the build. Amplitude is
  * not a taste setting here; it is measured (see `gradientRMS`) and solved for,
  * so it stays correct when the height field, the resolution or the tier changes.
@@ -1657,8 +1657,8 @@ const spriteCount = (divisor) => Math.max(1, Math.round((SPRITE_REF * SPRITE_REF
  * 11, down from 14. The value that matters is the product with terrain.js's
  * `uNormalScale`, and the two moved together in the same pass: 14 x 0.85 = 11.9
  * effective degrees became 11 x 0.62 = 6.8. The relief that survives is fine
- * grain and the thin voids between crumbs — which is all a millimetre of soil
- * texture at 8 mm a texel can honestly cast — while the centimetre-scale
+ * grain and the thin voids between crumbs - which is all a millimetre of soil
+ * texture at 8 mm a texel can honestly cast - while the centimetre-scale
  * shading that made the ground read as a moulded surface rather than as dirt is
  * gone. Below about 5 degrees the surface goes plastic-smooth at grazing
  * incidence, so this is near the floor, not merely lower.
@@ -1676,7 +1676,7 @@ const TERRAIN_SLOPE_RMS_DEG = 11;
  *   2.6 m  det 0.70 .. 1.31        3.4 m  det 0.62 .. 1.40
  *   6.5 m  det 0.30 .. 1.81  (visibly blurs)      10.0 m  det -0.02 .. 2.29 (FOLDS)
  *
- * That bound is NOT a property of 3.4 alone — it is 3.4 times the *gradient* of
+ * That bound is NOT a property of 3.4 alone - it is 3.4 times the *gradient* of
  * this map's B and A channels, and the gradient is standard deviation times
  * frequency. Which means a macro map can break another module's calibrated
  * number without touching it, just by putting the same contrast at a higher
@@ -1685,7 +1685,7 @@ const TERRAIN_SLOPE_RMS_DEG = 11;
  * 0.62..1.40 exactly; the first version of `_buildTerrainMacro` came out at
  * 0.324 (det 0.09..2.05, i.e. between terrain.js's "visibly blurs" and "folds"
  * rows) and at ULTRA's 256² at 0.422 with a determinant that went *negative*
- * — the mapping folded, which is a hard artefact, not a soft one.
+ * - the mapping folded, which is a hard artefact, not a soft one.
  *
  * So the number below is held as a measured constraint, not assumed: see the
  * solve at the end of `_buildTerrainMacro`.
@@ -1708,8 +1708,8 @@ const TERRAIN_WARP_GRAD_RMS = 0.126;
  * heights and takes its palette from world/terrain.js, so it passes no colour
  * buffers at all: dropping them removes three Float32Array(S*S) of transient
  * allocation (3 MB at 256², 12 MB at 512²) and three lerps from the inner write
- * of every one of ~5000 strands. The RNG draws are unchanged either way — the
- * palette pick and the tone jitter still happen — so `a` and `h` come out
+ * of every one of ~5000 strands. The RNG draws are unchanged either way - the
+ * palette pick and the tone jitter still happen - so `a` and `h` come out
  * byte-identical with or without colour. Colours are sRGB 0..255.
  */
 function stampFibres(S, count, rand, cfg, out) {
@@ -1717,7 +1717,7 @@ function stampFibres(S, count, rand, cfg, out) {
   const R = out.r || null, G = out.g || null, B = out.b || null;
   const pal = cfg.palette;
   const taper = cfg.taper ?? 0.4;
-  // The width profile is pow(1 - u², taper) — one Math.pow per texel of every
+  // The width profile is pow(1 - u², taper) - one Math.pow per texel of every
   // fibre, which measured as most of this function. `taper` is constant for the
   // whole call, so a 129-entry table plus a lerp is exact to within a thousandth
   // and about fifteen times cheaper.
@@ -1740,7 +1740,7 @@ function stampFibres(S, count, rand, cfg, out) {
       // SEVEN draws, matching the seven the accepted branch makes below:
       // length is `rand() * rand()` and costs two, then width, bend, palette,
       // tone and height. It was six, which is the same off-by-one this comment
-      // was written to prevent — tuning `maskBias` resequenced the RNG from the
+      // was written to prevent - tuning `maskBias` resequenced the RNG from the
       // first rejected fibre onward and reshuffled the whole tile rather than
       // just thinning it. (The degenerate-size bail below is already correct at
       // four: `lt` and `hw` have been drawn by the time it fires.)
@@ -1796,7 +1796,7 @@ function stampFibres(S, count, rand, cfg, out) {
         // Straight-alpha `over`, NOT `lerp(dst, src, cov)`.
         //
         // These buffers start at zero and every consumer composites them with
-        // their own alpha again — `lerp(soil, th.r, th.a)` for colour and
+        // their own alpha again - `lerp(soil, th.r, th.a)` for colour and
         // `th.h * th.a` for height. Weighting the source by `cov` here as well
         // makes the contribution quadratic in coverage, so the one-to-three
         // texel edge that is most of a strand's area came out as a black
@@ -1825,7 +1825,7 @@ function stampFibres(S, count, rand, cfg, out) {
  * Stamp part-buried grit on a jittered grid.
  *
  * `bury` is the fraction of the stone's radius that sits below the surface.
- * Leaving it out — which is what a plain `sqrt(1 - e)` dome does — is what turns
+ * Leaving it out - which is what a plain `sqrt(1 - e)` dome does - is what turns
  * scattered grit into a floor of marbles: a real stone in soil shows a shallow
  * cap, not a hemisphere. `out` is `{h, m, t}`: protrusion, coverage mask, and a
  * per-stone tone in 0..1.
@@ -1845,7 +1845,7 @@ function stampPebbles(S, gridN, occupancy, rand, cfg, out) {
       const rb = ra * (0.62 + 0.38 * ar);
       // Both are divisors. At the LOW tier a configured 3 mm stone is already
       // under half a texel, and a config that rounded one to zero would make
-      // `e` NaN — which passes the `e >= 1` reject and writes NaN into the
+      // `e` NaN - which passes the `e >= 1` reject and writes NaN into the
       // height field, where a single poisoned texel spreads through the blur
       // and the normal chain into the whole map.
       if (!(ra > 0) || !(rb > 0)) continue;
@@ -1885,9 +1885,9 @@ function stampPebbles(S, gridN, occupancy, rand, cfg, out) {
  * The litter channel of a ground splat map is a *coverage* field, and coverage
  * fields are where procedural ground most often gives itself away: two
  * inverted-Worley lattices thresholded into discs, which is a grid of identical
- * round dots however hard the points are jittered. A petal is not a disc — it is
+ * round dots however hard the points are jittered. A petal is not a disc - it is
  * a spatulate blade with a notched tip lying at a random angle and a random
- * foreshortening — and `petalDist` already knows that shape, because the blossom
+ * foreshortening - and `petalDist` already knows that shape, because the blossom
  * card, the single-petal card and the ground litter all share it. Stamping the
  * real silhouette costs a few milliseconds and removes the lattice outright.
  *
@@ -1994,7 +1994,7 @@ function fieldStats(field) {
  * Affine-map a field to a target mean and standard deviation, then clamp.
  *
  * `normalizeField` fixes a field's *range*, which says nothing about how the
- * mass inside it is distributed — two maps normalised to 0..1 can have standard
+ * mass inside it is distributed - two maps normalised to 0..1 can have standard
  * deviations a factor of three apart. Every channel below feeds a splat blend
  * whose behaviour depends on exactly that spread, so the distributions are set
  * explicitly and measured afterwards rather than inherited from whatever the
@@ -2014,7 +2014,7 @@ function retargetField(field, mean, sd, lo = 0.02, hi = 0.98) {
  *
  * The last line of defence against visible tiling. Even after every source
  * field is high-passed, the *composition* of them can leave a broad bright or
- * dark region — and a broad bright region is exactly the landmark that makes a
+ * dark region - and a broad bright region is exactly the landmark that makes a
  * repeat readable. Normalising against a heavily blurred copy of the map's own
  * luminance guarantees there is none, without touching any detail. `keep` lets
  * a caller leave a trace behind so the surface does not go clinically flat.
@@ -2040,7 +2040,7 @@ function flattenLowFrequency(r, g, b, w, h, radius, keep = 0) {
  * where `L` is the petal length. Shared by the blossom card, the single-petal
  * card and the ground litter so all three read as the same species.
  *
- * The width curve peaks at t≈0.8 — a sakura petal is spatulate: a narrow claw
+ * The width curve peaks at t≈0.8 - a sakura petal is spatulate: a narrow claw
  * at the base widening to a broad, almost square tip. The `notch` term cuts a
  * shallow V into that tip, which is the feature that makes a cherry petal
  * instantly readable and which almost every procedural petal misses.
@@ -2061,7 +2061,7 @@ function petalDist(t, py, L, wMax, notch, nw) {
  * Petal width at parameter t, for the outline and for placing veins.
  *
  * Tabulated because `sqrt(t) * pow(1 - t^6, 0.42)` is evaluated twice per texel
- * — once for the silhouette and once for the vein fan — across every petal of
+ * - once for the silhouette and once for the vein fan - across every petal of
  * every card and every petal of the ground litter. That was three million
  * `Math.pow` calls and the largest single cost in the blossom bake. A 257-entry
  * table with a lerp is accurate to about a ten-thousandth of the width, which is
@@ -2082,7 +2082,7 @@ function petalWidth(t, wMax) {
 }
 
 // ===========================================================================
-// SECTION 5 — the factory
+// SECTION 5 - the factory
 // ===========================================================================
 
 /** Fallback returned instead of throwing when a generator fails mid-load. */
@@ -2104,13 +2104,13 @@ const normKey = (s) => String(s).toLowerCase().replace(/[^a-z0-9]/g, '');
  * over a generator is describing a texture the factory has never heard of. But
  * world/terrain.js asks for its three ground maps through this factory and says
  * in its own words that they "come from the shared TextureFactory when there is
- * one, and it owns their lifetime — when there is not, or it refuses, we bake
+ * one, and it owns their lifetime - when there is not, or it refuses, we bake
  * locally". Its local bake is the fallback for a factory that cannot supply
  * them, and this file can: the maps are procedural surface textures, which is
  * precisely what it owns per the ownership map.
  *
  * That matters because the local fallback is where the regular carpet of round
- * pale blobs on the ground came from — two inverted-F1 Worley layers carrying
+ * pale blobs on the ground came from - two inverted-F1 Worley layers carrying
  * 52% of the micro-relief height, at 8 cm and 17 cm over a 2 m tile, with a
  * cavity-AO channel that then lit the top of every dome. Inverted F1 is a radial
  * cone centred on each feature point, so every feature is the same round dome on
@@ -2118,7 +2118,7 @@ const normKey = (s) => String(s).toLowerCase().replace(/[^a-z0-9]/g, '');
  * 4 m -> 2 m) only shrinks the domes.
  *
  * Anything not listed here keeps the old precedence exactly. If a listed
- * built-in throws, the caller's generator still runs — the override can degrade,
+ * built-in throws, the caller's generator still runs - the override can degrade,
  * never break.
  */
 const FACTORY_OWNED = new Set(['terraindetail', 'terrainnormalao', 'terrainmacro']);
@@ -2138,7 +2138,7 @@ export class TextureFactory {
 
     // Held as LIVE references, not read once. This factory is constructed
     // alongside QualityManager and every bake is lazy, so the tier that matters
-    // is the one in effect when a texture is first asked for — not the one that
+    // is the one in effect when a texture is first asked for - not the one that
     // happened to be set during construction. Whichever of these is supplied is
     // authoritative; with neither, `this.tier` is whatever it was last set to.
     this._qualitySrc = quality || null;
@@ -2151,7 +2151,7 @@ export class TextureFactory {
 
     // Anisotropy matters a lot here: ground and bark are almost always viewed
     // at grazing angles, and without it they turn to mush two metres out.
-    // Capped at 8 — the 780M pays real bandwidth beyond that for no visible win.
+    // Capped at 8 - the 780M pays real bandwidth beyond that for no visible win.
     let maxAniso = 4;
     try {
       maxAniso = renderer?.capabilities?.getMaxAnisotropy?.() ?? 4;
@@ -2167,7 +2167,7 @@ export class TextureFactory {
      * Distinct from `tier` on purpose: when a live source is supplied, that
      * source is the same object the quality manager writes, so it has already
      * moved by the time QUALITY_CHANGED is delivered. Comparing against `tier`
-     * would then always find "no change" and never rebake — which is exactly
+     * would then always find "no change" and never rebake - which is exactly
      * what happened the first time this factory was given a live source.
      */
     this._lastBakedTier = null;
@@ -2190,7 +2190,7 @@ export class TextureFactory {
    * Adopt the live quality/state objects when they were not available at
    * construction. Idempotent, cheap, and safe to call from anywhere.
    *
-   * THIS IS NOT OPTIONAL POLISH — without it the entire size policy below is
+   * THIS IS NOT OPTIONAL POLISH - without it the entire size policy below is
    * dead code. `src/main.js` builds this factory as
    * `new TextureFactory({ renderer: engine.renderer })`: no `state`, no
    * `quality`, no `bus`. So `this.tier` falls through to its `'high'` default
@@ -2203,7 +2203,7 @@ export class TextureFactory {
    * moss, noise2d, blossom): 6.78 MB at LOW and 8.79 MB at MEDIUM against
    * 17.84 MB at HIGH. The 780M this project targets detects as LOW or MEDIUM and
    * has no dedicated VRAM, so it was carrying about 11 MB of texture it had
-   * asked not to have — which is precisely the failure the size policy below
+   * asked not to have - which is precisely the failure the size policy below
    * says in its own comments that it exists to prevent.
    *
    * Only fills sources that are still empty, so an explicitly-constructed
@@ -2213,9 +2213,9 @@ export class TextureFactory {
    * rebake is warranted. Moving it behind their backs would break both.
    *
    * Deliberately does NOT subscribe to the bus. `rebake()` re-runs every stored
-   * recipe synchronously — including generators owned by other systems, some of
+   * recipe synchronously - including generators owned by other systems, some of
    * which (the cloud volumes) cost hundreds of milliseconds and are re-created
-   * by their owners on the same event — so auto-wiring it would trade a memory
+   * by their owners on the same event - so auto-wiring it would trade a memory
    * bug for a mid-frame stall and a double bake. Callers that genuinely want a
    * resize at runtime still have `onQualityChange()` / `setQuality()`.
    *
@@ -2250,7 +2250,7 @@ export class TextureFactory {
       // Every bake is lazy, so the tier is resolved here rather than in the
       // constructor: on the target iGPU the quality manager settles on LOW or
       // MEDIUM, and a factory that snapshotted 'high' at construction would
-      // bake the whole suite at HIGH sizes anyway — three times the texture
+      // bake the whole suite at HIGH sizes anyway - three times the texture
       // memory on a part with no dedicated VRAM.
       const live = this._qualitySrc?.tier || this._stateSrc?.quality?.tier;
       if (live && live !== this.tier) this.tier = live;
@@ -2261,7 +2261,7 @@ export class TextureFactory {
     const low = t === 'low';
     const half = low || t === 'medium';
     switch (kind) {
-      // Bark is the hero asset — the player can put their face on the trunk —
+      // Bark is the hero asset - the player can put their face on the trunk - 
       // but it is also the most expensive thing in the file, because every
       // field, every mip chain and every per-texel pass scales with its area.
       // 768 over the 1.1 m of trunk circumference it tiles across is 1.4 mm a
@@ -2318,7 +2318,7 @@ export class TextureFactory {
   // -------------------------------------------------------------------------
 
   /**
-   * Memoised texture accessor — the contract entry point.
+   * Memoised texture accessor - the contract entry point.
    * `generatorFn` may be omitted for any built-in name (see `builtinNames()`),
    * which lets sibling systems ask for `textures.get('barkAlbedo')` without
    * knowing how it is made.
@@ -2515,7 +2515,7 @@ export class TextureFactory {
         return worley2Scaled(w, h, fx, fy, s, spec.mode ?? 0, spec.jitter ?? 1, spec.spc ?? 10);
       case 'white': {
         const f = new Float32Array(w * h);
-        // h2, not hash2: a "white" channel is meant to fill 0..1 — see HASH_SCALE.
+        // h2, not hash2: a "white" channel is meant to fill 0..1 - see HASH_SCALE.
         for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) f[y * w + x] = h2(x + s, y * 31 + s);
         return f;
       }
@@ -2523,7 +2523,7 @@ export class TextureFactory {
         const kind = spec.type === 'ridged' ? 2 : spec.type === 'billow' ? 1 : 0;
         const lac = spec.lacunarity ?? 2;
         // The default channel set asks for four octaves from 17 cells, which at
-        // the LOW tier's 256² lands its finest at 143 cells — 1.8 texels a cell.
+        // the LOW tier's 256² lands its finest at 143 cells - 1.8 texels a cell.
         // That is aliasing, not detail: it sparkles in the base mip and is gone
         // one level down. The caller's count is an upper bound, not a promise.
         const oct = octavesFor(Math.min(w / fx, h / fy), lac, spec.octaves ?? 4);
@@ -2571,12 +2571,12 @@ export class TextureFactory {
   }
 
   // -------------------------------------------------------------------------
-  // LEAF 1 — cloud volumes and blue noise
+  // LEAF 1 - cloud volumes and blue noise
   // -------------------------------------------------------------------------
 
   /**
    * Perlin-Worley cloud shape volume (Schneider/Guerrilla, Horizon Zero Dawn).
-   *   R = perlin remapped by an inverted worley fbm — billowy cumulus base
+   *   R = perlin remapped by an inverted worley fbm - billowy cumulus base
    *   G/B/A = worley fbms at rising frequency, for progressive edge erosion
    *
    * A cloud shader typically does:
@@ -2620,7 +2620,7 @@ export class TextureFactory {
     }
     // Each channel is stretched to fill 0..1. The remap above only ever spans
     // roughly 0.16..1, and a cloud raymarch samples this texture more than
-    // anything else in the frame — throwing away a fifth of the 8-bit range
+    // anything else in the frame - throwing away a fifth of the 8-bit range
     // there is precision nobody can afford.
     normalizeField(chR, 0.001, 0.999);
     normalizeField(chG, 0.001, 0.999);
@@ -2689,7 +2689,7 @@ export class TextureFactory {
   /**
    * Blue-noise mask for raymarch offsets, dithering and stochastic alpha.
    *   R = void-and-cluster rank
-   *   G = R advanced by the golden ratio — add `frame * 0.618034` to R yourself
+   *   G = R advanced by the golden ratio - add `frame * 0.618034` to R yourself
    *       for temporally stable animated noise, or just sample G on odd frames
    *   B = a second, independent pattern (use with R for 2D sample directions)
    *   A = R offset by 2φ
@@ -2722,7 +2722,7 @@ export class TextureFactory {
   /**
    * Tiling 2D curl-noise vector field, RG = normalised curl, B = |curl|,
    * A = the scalar potential. Divergence-free, so anything advected by it
-   * swirls instead of piling up — gusts, mist drift, petal eddies.
+   * swirls instead of piling up - gusts, mist drift, petal eddies.
    */
   curlNoise2D(size = 256, freq = 6) {
     return this.get(`curl2D_${size}_${freq}`, () => {
@@ -2765,7 +2765,7 @@ export class TextureFactory {
   }
 
   // -------------------------------------------------------------------------
-  // LEAF 4 helper — the reusable height→normal converter
+  // LEAF 4 helper - the reusable height→normal converter
   // -------------------------------------------------------------------------
 
   /**
@@ -2775,7 +2775,7 @@ export class TextureFactory {
    * vertical taps low-pass the gradient, which measurably reduces the specular
    * sparkle that plain central differences produce on high-frequency fields.
    *
-   * `strength` is resolution-independent — the gradient is scaled by
+   * `strength` is resolution-independent - the gradient is scaled by
    * `size/128`, so a 512² and a 1024² bake of the same field give the same
    * apparent relief instead of the finer one going flat.
    *
@@ -2836,14 +2836,14 @@ export class TextureFactory {
   }
 
   // -------------------------------------------------------------------------
-  // LEAF 2 — sakura bark
+  // LEAF 2 - sakura bark
   // -------------------------------------------------------------------------
 
   /**
    * Bark suite for Prunus serrulata.
    *
    * The species reads as: a smooth, faintly glossy grey-brown ground; bold
-   * *horizontal* lenticel dashes (the single most identifying feature — cherry
+   * *horizontal* lenticel dashes (the single most identifying feature - cherry
    * is the tree with dashes running around the trunk); shallow, wandering
    * vertical fissures rather than the deep plated relief of oak; and patches of
    * sage lichen sitting on the raised plates. Generic brown fbm gets none of
@@ -2868,7 +2868,7 @@ export class TextureFactory {
     // Straight fissures are the giveaway that noise was stretched rather than
     // grown, so each octave is sampled through a domain warp that makes the
     // creases wander and occasionally merge, as real bark splits do. Each octave
-    // is evaluated at its own resolution — ten samples per lattice cell — and
+    // is evaluated at its own resolution - ten samples per lattice cell - and
     // wrap-upsampled, warp included: the warp is low frequency by construction,
     // so evaluating it per texel for every octave was five sixths of this
     // function's cost for no information at all. Five octaves now cost a
@@ -2944,7 +2944,7 @@ export class TextureFactory {
       //
       // The columns were fixed by walking them at accumulated gaps; the rows
       // were left on a lattice with a ±0.325-row jitter on top, and jittering a
-      // lattice preserves its pitch — the same lesson, the other axis. The
+      // lattice preserves its pitch - the same lesson, the other axis. The
       // vertical autocorrelation of the finished albedo showed the residual as
       // local maxima at lags 10, 23 and 35, i.e. a ripple at exactly the
       // S/64 row spacing. Gaps drawn over 0.55..1.45 of the mean and then
@@ -2959,8 +2959,8 @@ export class TextureFactory {
       let rowAcc = rand() * S;
       for (let j = 0; j < LV; j++) { rowY[j] = rowAcc; rowAcc += rowGap[j] * gapK; }
       // Dashes are walked along each row at randomly-drawn gaps rather than
-      // placed on a lattice of LU columns. Jittering a lattice — which is what
-      // the first two drafts did — leaves the lattice *pitch* intact no matter
+      // placed on a lattice of LU columns. Jittering a lattice - which is what
+      // the first two drafts did - leaves the lattice *pitch* intact no matter
       // how hard you jitter, and an autocorrelation of the finished map showed
       // a 0.24 spike at exactly the column spacing: a readable vertical grid
       // across the whole trunk. Accumulated random gaps have no pitch at all.
@@ -2998,7 +2998,7 @@ export class TextureFactory {
               const v = core * core;
               const k = row + xx;
               if (v > lent[k]) lent[k] = v;
-              // Rim sits just below the dash — a lenticel is a raised pore with
+              // Rim sits just below the dash - a lenticel is a raised pore with
               // a shadow line under it, and that line is what sells the relief.
               const ry = ly - halfH * 0.85;
               const er = (lx / (halfL * 1.05)) * (lx / (halfL * 1.05)) +
@@ -3016,15 +3016,15 @@ export class TextureFactory {
     // texels of Nyquist, so the extra samples buy nothing and cost a full-res
     // pass over a megapixel.
     const grain = normalizeField(fbm2(S, S, { fx: 90, fy: 26, octaves: 2, gain: 0.55, spc: 6, seed: seed + 131 }));
-    // Cherry bark bands *horizontally* — around the trunk, not up it — because
+    // Cherry bark bands *horizontally* - around the trunk, not up it - because
     // that is the direction a season's growth runs. U is around the trunk here,
     // so a horizontal band means low frequency in U and high in V. The first
     // draft had fx 3 / fy 2, which is the wrong way round and gave isotropic
     // blotches that could have been any species at all.
     const tonal = normalizeField(fbm2(S, S, { fx: 2, fy: 8, octaves: 3, gain: 0.55, seed: seed + 211 }));
     const tonalBlot = normalizeField(fbm2(S, S, { fx: 4, fy: 3, octaves: 3, seed: seed + 217 }));
-    // Crustose lichen on a cherry trunk is 10–40 mm flecks, not the 200 mm
-    // splodges the first draft produced — those read as camouflage and, being
+    // Crustose lichen on a cherry trunk is 10-40 mm flecks, not the 200 mm
+    // splodges the first draft produced - those read as camouflage and, being
     // the largest and highest-contrast feature in the map, were also exactly the
     // landmark that makes a tiled trunk obviously tiled.
     const lichenF = normalizeField(fbm2(S, S, { fx: 22, fy: 16, octaves: 3, gain: 0.5, spc: 6, seed: seed + 313 }));
@@ -3057,7 +3057,7 @@ export class TextureFactory {
     // --- palette (sRGB, deliberately low chroma) ---------------------------
     // Checked in linear reflectance, not by eye: Somei-Yoshino bark is a mid
     // grey-brown around 0.09 linear with a faint purple cast, and the previous
-    // set averaged 0.066 — dark enough that the trunk read as a silhouette in
+    // set averaged 0.066 - dark enough that the trunk read as a silhouette in
     // anything but direct sun.
     const cDark = rgb(0x322820);
     const cMid = rgb(0x5a4b3f);
@@ -3096,7 +3096,7 @@ export class TextureFactory {
           r = lerp(cMid[0], cLight[0], k); gr = lerp(cMid[1], cLight[1], k); b = lerp(cMid[2], cLight[2], k);
         }
 
-        // Grain modulates value only — tinting it would add chroma noise, and
+        // Grain modulates value only - tinting it would add chroma noise, and
         // low-chroma is the whole art direction.
         const gm = 0.90 + 0.20 * g;
         r *= gm; gr *= gm; b *= gm;
@@ -3114,7 +3114,7 @@ export class TextureFactory {
         const rk = clamp01(lr * 0.55) * (1 - lk);
         r = lerp(r, cFiss[0], rk); gr = lerp(gr, cFiss[1], rk); b = lerp(b, cFiss[2], rk);
 
-        // Lichen: only on raised, unfissured plate — it cannot grow in a crack
+        // Lichen: only on raised, unfissured plate - it cannot grow in a crack
         // that sheds water, and putting it there is the usual procedural error.
         const exposure = clamp01((height[i] - 0.42) * 2.6) * (1 - clamp01(f * 2.2));
         const lich = smoothstep(0.66, 0.90, lichenF[i]) * exposure * 0.46;
@@ -3164,7 +3164,7 @@ export class TextureFactory {
     // growth banding *is* the species read, and a trunk is normally about one
     // tile tall so the banding never gets a chance to repeat vertically. What
     // was removed instead is the one feature big enough to be a landmark when a
-    // branch does repeat the map — the oversized lichen.
+    // branch does repeat the map - the oversized lichen.
     for (const t of [albedoTex, pbr.normal, pbr.orm]) t.userData.tileMeters = BARK_TILE_M;
 
     this._register('barkAlbedo', albedoTex);
@@ -3184,7 +3184,7 @@ export class TextureFactory {
   }
 
   // -------------------------------------------------------------------------
-  // LEAF 3 — ground
+  // LEAF 3 - ground
   // -------------------------------------------------------------------------
 
   /**
@@ -3200,7 +3200,7 @@ export class TextureFactory {
    * What aggregated earth actually looks like at centimetre scale is a mosaic of
    * flat-ish fragments at slightly different heights, separated by thin voids,
    * with the visible relief dominated by grain an order of magnitude finer than
-   * the fragments — plus, under a grass field, a mat of dead stems. So:
+   * the fragments - plus, under a grass field, a mat of dead stems. So:
    *
    *   - fragments come from `worley2Agg`'s per-cell `id` (flat plateaus) and
    *     `walls` (narrow creases), never from `cells`;
@@ -3256,7 +3256,7 @@ export class TextureFactory {
     // alone leaves its zero set. Superimposed at incommensurate frequencies each
     // conceals the other's signature, which neither could do on its own.
     // Octave counts are derived, not written down: at LOW (256²) the second
-    // octave of the 27 mm layer landed at 148 cells — 1.7 texels a cell — and
+    // octave of the 27 mm layer landed at 148 cells - 1.7 texels a cell - and
     // sparkled. `octavesFor` drops it there and keeps it at HIGH and ULTRA,
     // where the resolution genuinely carries it.
     const gFine = finest(12);
@@ -3273,13 +3273,13 @@ export class TextureFactory {
     const mat = normalizeField(fbm2(S, S, { fx: cellsFor(340), fy: cellsFor(520), octaves: 3, gain: 0.55, seed: seed + 31 }));
     const th = { a: new Float32Array(N), r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N), h: new Float32Array(N) };
     // Count is a density over the tile's fixed 2 m of world, not a fraction of
-    // the texel count — see SPRITE_REF.
+    // the texel count - see SPRITE_REF.
     stampFibres(S, spriteCount(130), makeRNG(seed + 401), {
-      // 40–150 mm of dead stem, 3–8 mm across.
+      // 40-150 mm of dead stem, 3-8 mm across.
       lenMin: 0.040 * S / TILE_M, lenMax: 0.150 * S / TILE_M,
       widMin: 0.0030 * S / TILE_M, widMax: 0.0080 * S / TILE_M,
       bend: 0.30, taper: 0.55,
-      // Dead grass is *paler* than the soil it lies on — that value contrast is
+      // Dead grass is *paler* than the soil it lies on - that value contrast is
       // most of what makes thatch visible at all.
       palette: [rgb(0x8d8058), rgb(0xa39263), rgb(0x6f6441), rgb(0xb2a475), rgb(0x585034)],
       shade: 0.22, hMin: 0.55, hMax: 1.0,
@@ -3305,12 +3305,12 @@ export class TextureFactory {
     }
 
     const peb = { h: new Float32Array(N), m: new Float32Array(N), t: new Float32Array(N) };
-    // 6–22 mm grit, a fifth of the cells occupied, and mostly buried: a pebble
+    // 6-22 mm grit, a fifth of the cells occupied, and mostly buried: a pebble
     // that stands proud of the soil by its own radius is a marble.
     stampPebbles(S, cellsFor(85), 0.20, makeRNG(seed + 555), {
       rMin: 0.0030 * S / TILE_M, rMax: 0.0110 * S / TILE_M, bury: 0.58,
     }, peb);
-    // And a very few larger stones, 25–55 mm. These are what the eye actually
+    // And a very few larger stones, 25-55 mm. These are what the eye actually
     // finds in a patch of soil; grit alone reads as texture rather than as
     // objects lying in the ground.
     stampPebbles(S, cellsFor(420), 0.28, makeRNG(seed + 557), {
@@ -3356,13 +3356,13 @@ export class TextureFactory {
 
     // Ground under a metre of pampas is dark: shaded thatch, humus and damp
     // mineral soil. The pale dry end exists but should be rare, and it is the
-    // macro map's business to decide where — hence the narrow spread here.
+    // macro map's business to decide where - hence the narrow spread here.
     //
     // These are checked against *linear* reflectance, not eyeballed as hex.
     // sRGB is deceptive: #332a20 looks like a reasonable mid brown and is
     // actually 0.024 linear, which is darker than fresh asphalt and turns the
     // whole field into a void the moment the sun goes behind a cloud. Damp soil
-    // is 0.05–0.09 linear, dry soil 0.13–0.20, and the mix below lands at ~0.07.
+    // is 0.05-0.09 linear, dry soil 0.13-0.20, and the mix below lands at ~0.07.
     const cWet = rgb(0x40372b);
     const cEarth = rgb(0x776856);
     const cDry = rgb(0x9c8a74);
@@ -3383,7 +3383,7 @@ export class TextureFactory {
         const hgt = height[i];
 
         // Raised texels dry out first, so micro-relief drives the wet↔dry mix
-        // as well as the noise field — that correlation is what makes soil
+        // as well as the noise field - that correlation is what makes soil
         // colour look like it belongs to the surface rather than painted on.
         const dryK = clamp01(dr * 0.72 + (hgt - 0.5) * 0.55 + 0.14);
         let r, g, b;
@@ -3489,13 +3489,13 @@ export class TextureFactory {
   /**
    * Moss / low undergrowth variant, for blending over soil.
    *
-   * Unlike soil, moss genuinely *is* domed — a cushion is a hemisphere of
-   * shoots — so a trace of the cellular cone is correct here where it was wrong
+   * Unlike soil, moss genuinely *is* domed - a cushion is a hemisphere of
+   * shoots - so a trace of the cellular cone is correct here where it was wrong
    * there. What was wrong before is that the cone was 70% of the amplitude on a
    * hard 11-cell grid, which turned a woodland floor into a tray of green
    * marbles. Cushions now get their bulk from per-cushion flat offsets and their
    * edges from the narrowed cell walls, and the *relief* is dominated by the
-   * shoot layer: thousands of stamped 6–20 mm strands, because a moss cushion
+   * shoot layer: thousands of stamped 6-20 mm strands, because a moss cushion
    * seen from a metre away is visibly made of individual shoots and no amount
    * of fbm produces a shoot.
    */
@@ -3525,7 +3525,7 @@ export class TextureFactory {
     // --- shoots ------------------------------------------------------------
     // One octave at LOW, two at HIGH and above. `finest(7)` is already pinned to
     // 3.2 texels a cell by the Nyquist cap, so a second octave doubled straight
-    // through it — 1.6 texels a cell at 256² — and the shoot fuzz came out as
+    // through it - 1.6 texels a cell at 256² - and the shoot fuzz came out as
     // sparkling salt-and-pepper instead of pile.
     const fuzzF = finest(7);
     const fuzz = normalizeField(valueFbm2(S, S, {
@@ -3625,7 +3625,7 @@ export class TextureFactory {
         const fz = 0.90 + 0.20 * fuzz[i];
         r *= fz; g *= fz; b *= fz;
 
-        // Moss self-shadows hard — it is a deep pile, and light does not reach
+        // Moss self-shadows hard - it is a deep pile, and light does not reach
         // the base of a cushion at all.
         const ao = clamp01(1 - cavity[i] * 0.82);
         const aoAlb = lerp(1, ao, 0.65);
@@ -3644,7 +3644,7 @@ export class TextureFactory {
     }
 
     // Moss has real large-scale variation, so only two thirds of the low
-    // frequency is removed — enough that no cushion group becomes a landmark.
+    // frequency is removed - enough that no cushion group becomes a landmark.
     flattenLowFrequency(fr, fg, fb, S, S, Math.max(2, Math.round(S / 8)), 0.34);
 
     const albedo = new Uint8Array(N * 4);
@@ -3679,7 +3679,7 @@ export class TextureFactory {
    * Fallen-petal litter layer. RGB is petal colour, A is coverage, so the
    * ground shader can lerp it over soil or moss with a single mix().
    * The companion normal gives the petals just enough relief to catch a rim of
-   * light at low sun — flat petals look like a decal.
+   * light at low sun - flat petals look like a decal.
    *
    * Two things were wrong here and both are scale errors, which is the usual
    * story with procedural litter. The petals were 11 cm long (a sakura petal is
@@ -3714,7 +3714,7 @@ export class TextureFactory {
       normalizeField(fbm2(S, S, { fx: 7, fy: 4, octaves: 3, gain: 0.55, seed: seed + 21 })),
       S, S, Math.max(2, Math.round(S / 4)), 0.25));
 
-    // Fresh, aged and browning. All pale and desaturated — a saturated pink
+    // Fresh, aged and browning. All pale and desaturated - a saturated pink
     // litter layer is the fastest way to make the whole scene look like candy.
     const cFresh = rgb(0xe6d2d4);
     const cPink = rgb(0xd8b9bf);
@@ -3883,7 +3883,7 @@ export class TextureFactory {
   }
 
   /**
-   * Macro variation — the other half of the anti-repetition strategy.
+   * Macro variation - the other half of the anti-repetition strategy.
    *
    * The detail maps have had their low frequencies deliberately stripped out
    * (see `highpassField` and `flattenLowFrequency`), which is what stops the eye
@@ -3891,7 +3891,7 @@ export class TextureFactory {
    * at a scale where repetition is beyond the far plane. Tile it at
    * `userData.tileMeters` (96 m by default) and modulate the detail maps with
    * it; the ratio to the detail tiling is about 1:48, and every octave in here
-   * is chosen so that *no* single frequency dominates — a macro map with one
+   * is chosen so that *no* single frequency dominates - a macro map with one
    * strong 3-cycle blob just moves the landmark problem out to 96 m instead of
    * solving it.
    *
@@ -3904,7 +3904,7 @@ export class TextureFactory {
       const seed = this.seed + 7700;
 
       // Five octaves at gain 0.62 rather than four at 0.52: a slow rolloff
-      // spreads the energy across 3–48 cycles instead of piling it into the
+      // spreads the energy across 3-48 cycles instead of piling it into the
       // first two, so the field has structure at every zoom the player can
       // reach rather than one continent-sized blotch.
       const value = normalizeField(fbm2(S, S, { fx: 3, octaves: 5, gain: 0.62, lacunarity: 2.07, seed: seed + 1 }));
@@ -3944,7 +3944,7 @@ export class TextureFactory {
   }
 
   // -------------------------------------------------------------------------
-  // LEAF 3b — the terrain surface suite (world/terrain.js's three ground maps)
+  // LEAF 3b - the terrain surface suite (world/terrain.js's three ground maps)
   // -------------------------------------------------------------------------
 
   /**
@@ -3954,7 +3954,7 @@ export class TextureFactory {
    * terrain.js always asks for all three: computing the aggregate structure
    * three times would triple the most expensive part of the bake for nothing.
    *
-   * CHANNEL CONTRACT — fixed by terrain.js's fragment shader, not by taste:
+   * CHANNEL CONTRACT - fixed by terrain.js's fragment shader, not by taste:
    *
    *   detail    R  bare-soil layer height. Also drives ±20% of the ground's
    *                albedo value and ±6% of its roughness.
@@ -3980,20 +3980,20 @@ export class TextureFactory {
    *   macro     R  dryness   G  lushness   B  moss affinity   A  mottle.
    *                Sampled at 1024 m (region) and 128 m (patch). A and B also
    *                drive the 3.4 m domain warp that breaks the near tile's
-   *                repeat, so their gradient is not free — see the note in
+   *                repeat, so their gradient is not free - see the note in
    *                `_buildTerrainMacro`.
    *
    * WHAT THIS REPLACES, because it is the instructive part: terrain.js's local
    * fallback bake built its micro-relief height from `fbm*0.55 + invWorley(24
    * cells)*0.30 + invWorley(12 cells)*0.22`. Inverted F1 is a radial cone
    * centred on every feature point, so 52% of the relief was identical round
-   * domes on a 8 cm and a 17 cm grid — and the cavity-AO channel derived from
+   * domes on a 8 cm and a 17 cm grid - and the cavity-AO channel derived from
    * the same field then put a bright disc on top of each one. That is the
    * regular carpet of soft pale blobs visible through the grass in every capture
    * of this build, and it survives any change to the tile size because the
    * problem is the feature *shape*, not its scale.
    *
-   * The inverted-F1 cone appears in exactly one place below — a 0.16 trace in
+   * The inverted-F1 cone appears in exactly one place below - a 0.16 trace in
    * the moss channel, modulated by where the mat is thick, because a moss
    * cushion genuinely is a dome and a soil crumb is not. It is nowhere in the
    * micro-relief height at all. Granular structure there comes from
@@ -4009,7 +4009,7 @@ export class TextureFactory {
    * re-running the same tests against `tex.image.data`.
    *
    *   Seamlessness. For each channel and each axis, the RMS step across the wrap
-   *   pair divided by the RMS step between interior neighbours — 1.0 is a
+   *   pair divided by the RMS step between interior neighbours - 1.0 is a
    *   perfectly periodic field, and a real seam is several times the interior:
    *     terrainDetail    0.92 .. 1.12   terrainNormalAO  0.95 .. 1.08
    *     terrainMacro     0.57 .. 1.63 (128 wrap pairs; the outlier is G, worth
@@ -4022,15 +4022,15 @@ export class TextureFactory {
    *   its published det 0.62..1.40 row rather than its "blurs" or "folds" rows.
    *
    *   Distributions. detail R 0.480/0.179  G 0.454/0.169  B 0.471/0.205,
-   *   A mean 0.229 max 0.687 with 25.2% of texels over 0.5 — the sparse-mask
+   *   A mean 0.229 max 0.687 with 25.2% of texels over 0.5 - the sparse-mask
    *   distribution terrain.js's petal-litter weight of 1.5 is calibrated
    *   against, and it is resolution-independent (see `perSqM`).
    *
    *   Micro-relief. gradRMS 0.212, encode strength 0.458, i.e. exactly the
    *   TERRAIN_SLOPE_RMS_DEG the solve asks for.
    *
-   *   Colour space. All three maps are NoColorSpace. They are data — splat
-   *   heights, a tangent-space normal, cavity AO, region masks — and every one
+   *   Colour space. All three maps are NoColorSpace. They are data - splat
+   *   heights, a tangent-space normal, cavity AO, region masks - and every one
    *   of them would be silently gamma-decoded on upload if it were tagged sRGB.
    *
    *   Cost. 290 ms for the whole suite on a laptop CPU (grain 34 · aggregate 65
@@ -4051,7 +4051,7 @@ export class TextureFactory {
     /** As `cellsFor`, but never finer than ~3.2 texels a cell: past that the
      *  base mip aliases against its own lattice and the ground sparkles. */
     const finest = (mm) => Math.min(cellsFor(mm), Math.max(2, Math.round(S / 3.2)));
-    /** Texels per metre — every sprite size below is authored in metres. */
+    /** Texels per metre - every sprite size below is authored in metres. */
     const perM = S / TILE_M;
     /**
      * Sprite counts are a DENSITY (per square metre of ground), not a fraction
@@ -4067,11 +4067,11 @@ export class TextureFactory {
      * three times the fallen petals of HIGH, saturated the channel, and broke
      * the distribution terrain.js's litter weight of 1.5 is calibrated against.
      * The thatch layers had the same defect, hidden by `retargetField` putting
-     * the mean and spread back afterwards — but a mat four times as dense is a
+     * the mean and spread back afterwards - but a mat four times as dense is a
      * different surface, not a rescaled one.
      *
      * The densities below are the ones the 256² bake actually ran at, so HIGH is
-     * byte-for-byte unchanged and only ULTRA moves — onto the same surface at
+     * byte-for-byte unchanged and only ULTRA moves - onto the same surface at
      * twice the texel density, which is what a quality tier is supposed to buy.
      */
     const tileM2 = TILE_M * TILE_M;
@@ -4111,7 +4111,7 @@ export class TextureFactory {
 
     // --- aggregate structure -----------------------------------------------
     // Soil crumb is a mosaic of flat-ish fragments at slightly different heights
-    // separated by thin voids — never a field of domes. `id` is the per-fragment
+    // separated by thin voids - never a field of domes. `id` is the per-fragment
     // flat value, `walls` the F2-F1 crease; `cells` (the cone) is not used here
     // at all. Both layers are domain-warped, because one feature point per cell
     // of a square grid is readable as a square grid however hard it is jittered.
@@ -4119,7 +4119,7 @@ export class TextureFactory {
     const aggF = worley2Agg(S, S, cellsFor(38), cellsFor(38), seed + 9, { warp: 0.55 });
     const wallC = aggC.walls, wallF = aggF.walls;
     // Narrow both creases hard. F2-F1 comes back as a broad linear ramp, and the
-    // void between two crumbs is a slot, not a valley — an unnarrowed wall mask
+    // void between two crumbs is a slot, not a valley - an unnarrowed wall mask
     // is what makes cellular soil read as a paved mosaic.
     for (let i = 0; i < N; i++) {
       const a = wallC[i], b = wallF[i];
@@ -4133,8 +4133,8 @@ export class TextureFactory {
     const idF = boxBlurWrap(aggF.id, S, S, Math.max(1, Math.round(S / 320)));
     mark('aggregate');
 
-    // Aggregation is patchy in reality — soil is crumbed where roots and worms
-    // worked it and smooth where they did not — and structure that is uniformly
+    // Aggregation is patchy in reality - soil is crumbed where roots and worms
+    // worked it and smooth where they did not - and structure that is uniformly
     // strong everywhere is the other way procedural ground gives itself away.
     // Deliberately mid-frequency (18-25 cm): any coarser and it becomes the
     // landmark the eye locks onto to find the 2 m repeat.
@@ -4153,9 +4153,9 @@ export class TextureFactory {
     // they are rasterised as sprites, each inside its own oriented box.
     //
     // No colour buffers at all: this suite stores layer *heights* and
-    // world/terrain.js supplies the palette — uColEarth/uColEarthDry,
+    // world/terrain.js supplies the palette - uColEarth/uColEarthDry,
     // uColThatch/uColThatchDry, uColMoss, uColPetal; there has been no
-    // "uColGrass" since the ground stopped drawing the sward — so every byte of
+    // "uColGrass" since the ground stopped drawing the sward - so every byte of
     // strand colour computed here was written and never read. `stampFibres`
     // still draws the palette index and the tone jitter, so `a` and `h` are
     // byte-identical to the version that kept them.
@@ -4181,7 +4181,7 @@ export class TextureFactory {
     mark('thatch');
 
     // Part-buried grit. `bury` is what stops scattered stones reading as a floor
-    // of marbles: a stone in soil shows a shallow cap, not a hemisphere — which
+    // of marbles: a stone in soil shows a shallow cap, not a hemisphere - which
     // is the same mistake, in sprite form, that the inverted-Worley domes were.
     //
     // The sizes are a deliberate compromise with the texel grid, and worth being
@@ -4210,7 +4210,7 @@ export class TextureFactory {
     // that then repeats every 2 m across the whole field.
     //
     // A moss cushion genuinely is domed, unlike a soil crumb, so a trace of the
-    // cellular cone is correct here where it would be wrong above — a trace, at
+    // cellular cone is correct here where it would be wrong above - a trace, at
     // a tenth of the amplitude the fallback bake gave it.
     //
     // 85 mm cushions, not 55: at 55 every cell got a crisp complete outline at
@@ -4221,7 +4221,7 @@ export class TextureFactory {
     const mossFrag = worley2Agg(S, S, cellsFor(85), cellsFor(85), seed + 63, { warp: 0.72 });
     const mossWall = mossFrag.walls;
     for (let i = 0; i < N; i++) { const w = mossWall[i]; mossWall[i] = w * w * w; }
-    // Soften the per-cushion plateaus. A cushion has no edge — it thins out.
+    // Soften the per-cushion plateaus. A cushion has no edge - it thins out.
     const mossSoft = boxBlurWrap(mossFrag.id, S, S, Math.max(1, Math.round(S / 90)));
     // And where the mat is cushiony at all. Moss is not uniformly deep: it is
     // thick in the damp hollows and a thin film elsewhere, and structure that is
@@ -4230,7 +4230,7 @@ export class TextureFactory {
       fx: cellsFor(150), fy: cellsFor(210), octaves: 3, gain: 0.55, seed: seed + 67,
     }));
     // One octave, not two. `valueFbm2` doubles per octave, so a second octave on
-    // top of 0.79*fFine lands at 2.0 texels a cell — under Nyquist for the base
+    // top of 0.79*fFine lands at 2.0 texels a cell - under Nyquist for the base
     // mip. It came out as salt-and-pepper that would sparkle through the albedo
     // micro term and wash out entirely one mip later, which is the worst of both.
     const mossGrain = normalizeField(valueFbm2(S, S, {
@@ -4248,7 +4248,7 @@ export class TextureFactory {
     const flake = { h: new Float32Array(N), a: new Float32Array(N) };
     // Real fallen sakura petals are 12-18 mm; at 7.8 mm a texel that is under
     // three texels and no silhouette survives, so these are stamped at 18-36 mm
-    // — within a factor of two of life and legible at ULTRA's 3.9 mm texel.
+    // - within a factor of two of life and legible at ULTRA's 3.9 mm texel.
     // 2340 candidates per square metre gives ~25% coverage after drift
     // rejection, which is the distribution terrain.js's litter weight of 1.5 was
     // calibrated against; the measured coverage is printed at the end of this
@@ -4265,7 +4265,7 @@ export class TextureFactory {
     // Amplitudes are "how steep", not "how big": a normal map shows the
     // *gradient*, and the RMS gradient of a band-limited layer goes as its
     // amplitude divided by its wavelength. The first balance here made that
-    // mistake in the other direction from the map it replaces — the 11 mm grain
+    // mistake in the other direction from the map it replaces - the 11 mm grain
     // had 0.34 against the 95 mm clods' 0.15, which is a gradient ratio of five
     // to one, and the finished surface was uniform sandpaper with no aggregate
     // structure visible at all. Fine grain must still lead (real earth is
@@ -4313,7 +4313,7 @@ export class TextureFactory {
     // `normalFromHeight` scales the Sobel gradient by `strength * S / 128`, so
     // the RMS surface slope it produces is atan(k * gradientRMS). Inverting that
     // makes the relief resolution-independent, tier-independent and immune to
-    // any later change to the height stack — and it is the whole fix for
+    // any later change to the height stack - and it is the whole fix for
     // "strong round bumps make it look like bubble wrap", because the amplitude
     // can no longer drift up as fields are added.
     const gRMS = gradientRMS(height, S, S);
@@ -4333,7 +4333,7 @@ export class TextureFactory {
     // --- detail channels ----------------------------------------------------
     // Every one is high-passed. A tile reads as a tile because the eye finds a
     // landmark and then finds it again one tile away, and landmarks are
-    // low-frequency by definition — so a map that repeats every 2 m has no
+    // low-frequency by definition - so a map that repeats every 2 m has no
     // business carrying anything above about half a metre. Broad drift is the
     // macro map's job and only its job.
     const chR = new Float32Array(N);
@@ -4341,7 +4341,7 @@ export class TextureFactory {
     const chB = new Float32Array(N);
     const chA = new Float32Array(N);
     for (let i = 0; i < N; i++) {
-      // R — bare soil. Grain plus the fragment mosaic plus grit; the thatch
+      // R - bare soil. Grain plus the fragment mosaic plus grit; the thatch
       // subtracts, because where stems lie you see stems, not soil structure.
       //
       // The crumb terms are modulated by `mat`, so the tile has worked, crumbed
@@ -4360,7 +4360,7 @@ export class TextureFactory {
         + peb.m[i] * 0.34
         - th.a[i] * 0.12;
 
-      // G — DEAD thatch: the two stamped fibre layers, sitting in their mat.
+      // G - DEAD thatch: the two stamped fibre layers, sitting in their mat.
       // Not "grass". This channel is straw and broken stem lying on the soil;
       // world/grass.js draws everything that is alive and green.
       chG[i] = 0.34
@@ -4369,7 +4369,7 @@ export class TextureFactory {
         + thF.h[i] * thF.a[i] * 0.34
         + (grainA[i] - 0.5) * 0.16;
 
-      // B — moss: softened cushions where the mat is thick, a trace of dome,
+      // B - moss: softened cushions where the mat is thick, a trace of dome,
       // and a fine crumb that dominates within each cushion.
       // The fine terms are deliberately the *minority* here, unlike in R. This
       // channel is a splat height with a standard deviation of 0.21, so the
@@ -4384,11 +4384,11 @@ export class TextureFactory {
         + (mossGrain[i] - 0.5) * 0.24
         + (grainA[i] - 0.5) * 0.10;
 
-      // A — fallen petals. Not high-passed: it is a sparse mask, and recentring
+      // A - fallen petals. Not high-passed: it is a sparse mask, and recentring
       // a sparse mask on 0.5 lifts its empty background into the blend.
       //
       // The gain and bias are set to reproduce the *distribution* terrain.js
-      // calibrated its litter weight of 1.5 against — "peaks only reach ~0.64
+      // calibrated its litter weight of 1.5 against - "peaks only reach ~0.64
       // and exceed 0.7 essentially never", measured coverage near 30%. This is
       // a splat height, not a real one, and matching it is what keeps the pink
       // under the canopy a scatter of petals in the hollows rather than the
@@ -4403,7 +4403,7 @@ export class TextureFactory {
 
     // Explicit distributions. `terrainHeightBlend` forms `w + h*0.5` and admits
     // any layer within 0.22 of the leader, so a channel's standard deviation is
-    // exactly how decisively it competes — and these were chosen to sit close to
+    // exactly how decisively it competes - and these were chosen to sit close to
     // what the fallback bake produced (measured means 0.45 / 0.37 / 0.49) so
     // terrain.js's splat weights, which were tuned against those, still land
     // where their author put them. Only the spread is widened, and only enough
@@ -4434,7 +4434,7 @@ export class TextureFactory {
       srgb: false, name: 'terrainDetail', anisotropy: aniso,
     });
     // A tangent-space normal encodes as an affine function of its components, so
-    // box-filtering the encoded bytes IS averaging the vectors — which is the
+    // box-filtering the encoded bytes IS averaging the vectors - which is the
     // correct mip filter here, and the shortened mean vector it leaves behind is
     // the right answer too: a footprint whose normals disagreed should shade
     // flatter. (`normalMipChain` would additionally hand the lost variance to a
@@ -4468,7 +4468,7 @@ export class TextureFactory {
       }
       const sR = fieldStats(chR), sG = fieldStats(chG), sB = fieldStats(chB);
       console.info(
-        `[TextureFactory] terrainSurface ${S}² — RMS slope ${TERRAIN_SLOPE_RMS_DEG}° `
+        `[TextureFactory] terrainSurface ${S}² - RMS slope ${TERRAIN_SLOPE_RMS_DEG}° `
         + `(gradRMS ${gRMS.toFixed(4)}, strength ${nrmStrength.toFixed(3)}); `
         + `R ${sR.mean.toFixed(3)}/${sR.sd.toFixed(3)} `
         + `G ${sG.mean.toFixed(3)}/${sG.sd.toFixed(3)} `
@@ -4488,12 +4488,12 @@ export class TextureFactory {
    * Region and patch variation: R dryness, G lushness, B moss affinity,
    * A mottle. Linear data, no colour.
    *
-   * terrain.js samples this one texture at two scales — 1024 m for the region
-   * and 128 m quarter-turned for the patch — and sums the two, which widens the
+   * terrain.js samples this one texture at two scales - 1024 m for the region
+   * and 128 m quarter-turned for the patch - and sums the two, which widens the
    * distribution instead of averaging it flat. That only works if the map has
    * real structure across its whole spectrum, so the octave ladders run as deep
    * as the resolution allows rather than piling their energy into the first two
-   * — except for the two channels the warp differentiates, which are capped in
+   * - except for the two channels the warp differentiates, which are capped in
    * cells instead. See point 2.
    *
    * TWO THINGS HERE ARE LOAD-BEARING FOR ANOTHER MODULE. Both are stated with
@@ -4519,8 +4519,8 @@ export class TextureFactory {
    *     18.1"): they described a terrain material that carried a living-green
    *     "grass" layer at over half the ground, which is precisely what made the
    *     ground read as a mottled blue-green bog and why that layer was deleted.
-   *     The ground is now substrate — earth leading, straw supporting, moss a
-   *     hollow-and-shade minority — and world/grass.js owns the sward. Raising
+   *     The ground is now substrate - earth leading, straw supporting, moss a
+   *     hollow-and-shade minority - and world/grass.js owns the sward. Raising
    *     G here to "get the green back" would reopen exactly that bug.
    *
    *     R's mean is held at 0.46 rather than 0.50 for a different reason now: it
@@ -4539,7 +4539,7 @@ export class TextureFactory {
    *     barely moved (A 0.176 -> 0.145, B 0.160 -> 0.188) but the octave ladders
    *     were derived from the texture resolution, so the per-texel gradient rose
    *     2.6x at 128² and 3.4x at ULTRA's 256², putting the warp determinant at
-   *     0.09..2.05 and -0.81..2.71 respectively — past terrain.js's own "visibly
+   *     0.09..2.05 and -0.81..2.71 respectively - past terrain.js's own "visibly
    *     blurs" row and into its "FOLDS" row, with ULTRA worse than HIGH.
    *     So the two warp-driving channels get a ladder capped in CELLS rather
    *     than in texels, and the finished gradient is measured and solved for.
@@ -4554,7 +4554,7 @@ export class TextureFactory {
      *
      * Not decoration: a hand-picked octave count is a Nyquist bug waiting for a
      * resolution change, and this map has two of them (128 and 256). Five
-     * octaves from 6 cells reaches 96, which at 128² is 1.3 texels a cell — pure
+     * octaves from 6 cells reaches 96, which at 128² is 1.3 texels a cell - pure
      * aliasing, contributing sparkle to the base mip and literally nothing one
      * level down, while costing a full-resolution pass to compute. Deriving the
      * count from the resolution is the only way "as much spectrum as possible"
@@ -4591,13 +4591,13 @@ export class TextureFactory {
     const dry = normalizeField(fbm2(S, S, { fx: 3, octaves: octFor(3), gain: 0.62, lacunarity: 2.11, seed: seed + 1 }));
     const lush = normalizeField(fbm2(S, S, { fx: 4, octaves: octFor(4), gain: 0.60, lacunarity: 2.03, seed: seed + 2 }));
     // Moss follows drainage, and drainage follows the *valleys* of a ridged
-    // field — which is a real reason for a boundary to be lobed rather than
+    // field - which is a real reason for a boundary to be lobed rather than
     // blobby, and the reason a thresholded fbm never looks like vegetation.
     const drain = normalizeField(fbm2(S, S, { fx: 4, octaves: octWarp(4), gain: 0.5, kind: 2, seed: seed + 3 }));
     const drainF = normalizeField(fbm2(S, S, { fx: 9, octaves: octWarp(9), gain: 0.5, kind: 2, seed: seed + 4 }));
     const mossW = normalizeField(fbm2(S, S, { fx: 6, octaves: octWarp(6), gain: 0.58, seed: seed + 5 }));
-    // Mottle is stretched along one axis: the things it stands for — old burn,
-    // drift, grazing — all have a direction. Base 3, not 6: the fallback bake
+    // Mottle is stretched along one axis: the things it stands for - old burn,
+    // drift, grazing - all have a direction. Base 3, not 6: the fallback bake
     // ran this channel from base 2, and tripling its fundamental was most of
     // why the warp gradient blew up (its gradient-to-spread ratio went 0.077 to
     // 0.241 while its spread actually *fell*).
@@ -4615,8 +4615,8 @@ export class TextureFactory {
       // anti-correlated collapses two degrees of freedom into one.
       cLush[i] = lush[i] * 0.88 + (1 - dry[i]) * 0.17;
       // Wide smoothstep windows on purpose. A narrow one is a contrast
-      // expander — 0.46..0.08 multiplies the field's gradient by 1.5/0.38 ≈ 3.9
-      // inside the transition band — and this channel's gradient is spent
+      // expander - 0.46..0.08 multiplies the field's gradient by 1.5/0.38 ≈ 3.9
+      // inside the transition band - and this channel's gradient is spent
       // budget, not free (see the header). 0.60 and 0.52 wide give the same
       // lobed drainage boundary at a third less slope.
       const damp = clamp01(smoothstep(0.62, 0.02, drain[i]) * 0.72 + smoothstep(0.56, 0.04, drainF[i]) * 0.42);
@@ -4626,7 +4626,7 @@ export class TextureFactory {
     // 0.46, not 0.50. R does two jobs in terrain.js and both want it low.
     //
     // It enters `wEarth` at +0.85 and `wThatch` at -0.14, so it is the dial that
-    // strips dead straw off and exposes bare soil — and it is ALSO the dominant
+    // strips dead straw off and exposes bare soil - and it is ALSO the dominant
     // term of `gDry`, the damp-umber -> pale-grey-crust axis, which spans a
     // factor of 3.7 in linear luminance. Centring it at 0.50 pulls the median
     // gDry from 0.34 to 0.42 and lightens the whole field toward dry crust,
@@ -4692,7 +4692,7 @@ export class TextureFactory {
     if (this.verbose) {
       const sD = fieldStats(cDry), sL = fieldStats(cLush);
       const sM = fieldStats(cMossW), sT = fieldStats(cMotW);
-      console.info(`[TextureFactory] terrainMacro ${S}² — R ${sD.mean.toFixed(3)}/${sD.sd.toFixed(3)} `
+      console.info(`[TextureFactory] terrainMacro ${S}² - R ${sD.mean.toFixed(3)}/${sD.sd.toFixed(3)} `
         + `G ${sL.mean.toFixed(3)}/${sL.sd.toFixed(3)} B ${sM.mean.toFixed(3)}/${sM.sd.toFixed(3)} `
         + `A ${sT.mean.toFixed(3)}/${sT.sd.toFixed(3)}; warp gradient ${warpFinal.toFixed(3)} `
         + `(budget ${TERRAIN_WARP_GRAD_RMS}, ${warpPasses} smoothing pass${warpPasses === 1 ? '' : 'es'})`);
@@ -4703,7 +4703,7 @@ export class TextureFactory {
   /**
    * Assert that an RGBA map really wraps.
    *
-   * Every kernel in this file is periodic by construction — but "by
+   * Every kernel in this file is periodic by construction - but "by
    * construction" is precisely the claim that quietly stops being true when one
    * sprite stamper drops a modulo or a blur radius exceeds the half-period, and
    * a seam on ground that tiles every 2 m is visible from anywhere in the world.
@@ -4711,7 +4711,7 @@ export class TextureFactory {
    * The test: a periodic field's wrap-around column pair is just one more
    * adjacent column pair, so its mean absolute step must be an unremarkable draw
    * from the distribution of all w of them. Comparing it against ONE interior
-   * pair — which is what this did first — is a statistic with 6% noise on each
+   * pair - which is what this did first - is a statistic with 6% noise on each
    * side, and it duly cried seam on a map whose wrap column ranked 202nd of 256
    * and sat below the 95th percentile: the baseline column simply happened to be
    * a smooth one. Comparing against the whole distribution has no such failure
@@ -4804,7 +4804,7 @@ export class TextureFactory {
   }
 
   // -------------------------------------------------------------------------
-  // LEAF 4 — foliage cards
+  // LEAF 4 - foliage cards
   // -------------------------------------------------------------------------
 
   /**
@@ -4880,8 +4880,8 @@ export class TextureFactory {
         const i = y * S + x;
 
         // Composite the petals front-to-back with a plain 'over'. A real
-        // corolla is imbricate — each petal overlaps the next and the last
-        // tucks under the first — so simple ordered compositing is both the
+        // corolla is imbricate - each petal overlaps the next and the last
+        // tucks under the first - so simple ordered compositing is both the
         // correct model and the one that antialiases overlaps for free.
         // Starting from a pale tint rather than black is what keeps the mip
         // chain from dragging darkness into the cutout edge.
@@ -4901,7 +4901,7 @@ export class TextureFactory {
           // the last thing keeping this from reading as a photograph of a
           // flower; real margins are faintly crimped and slightly asymmetric.
           // Two harmonics along the blade, per petal, at about a percent of the
-          // length — enough to break the curve, far too little to change shape.
+          // length - enough to break the curve, far too little to change shape.
           const wob = (Math.sin(t * 9.3 + pPhase[p]) * 0.6 + Math.sin(t * 21.7 + pPhase[p] * 2.3) * 0.4)
             * 0.014 * L * (ly < 0 ? -1 : 1);
           const dist = petalDist(t, ly, L, W, pNotch[p], W * 0.30) + wob;
@@ -4926,7 +4926,7 @@ export class TextureFactory {
           if (wt > 1e-4) {
             // Five equal-width, equal-amplitude Gaussians at rel = 0, ±0.4, ±0.8.
             // Their maximum is always the one nearest the sample, so index it
-            // rather than evaluating five exponentials per texel — which was
+            // rather than evaluating five exponentials per texel - which was
             // 1.3 M transcendentals on a 512² card, and the largest single
             // cost in the blossom bake.
             const rel = ly / wt;
@@ -4946,7 +4946,7 @@ export class TextureFactory {
           const mott = 0.97 + 0.06 * mottle[i];
           r0 *= shade * mott; g0 *= shade * mott; b0 *= shade * mott;
 
-          // Height: the petal is a shallow saddle — dished across, lifted at
+          // Height: the petal is a shallow saddle - dished across, lifted at
           // the tip. Veins ride slightly proud of the blade.
           const across = wt > 1e-4 ? ly / wt : 0;
           const hh = 0.40
@@ -4976,7 +4976,7 @@ export class TextureFactory {
       const cAnth = rgb(0xc9a86a);
       const cAnthD = rgb(0x9d7f45);
       // Stride 5: cos, sin, length, bend, anther radius. Same reason as the
-      // petals — trig belongs outside the pixel loop.
+      // petals - trig belongs outside the pixel loop.
       const FS = 5;
       const fils = new Float32Array(NF * FS);
       for (let f = 0; f < NF; f++) {
@@ -4989,7 +4989,7 @@ export class TextureFactory {
       }
       // One bounding box per filament, not every filament against every texel
       // of the central disc. The old loop was 34 evaluations across ~94k texels
-      // — 3.2 million — where a filament actually covers about 1,800 of them,
+      // - 3.2 million - where a filament actually covers about 1,800 of them,
       // and it was the single most expensive block in the whole file. Drawing
       // them in sequence rather than by maximum alpha is also the more correct
       // model: a stamen in front occludes the one behind it.
@@ -5133,7 +5133,7 @@ export class TextureFactory {
     const veinW = Math.max(px2 * 1.1, 0.020);
     // The height field feathers out five times slower than the alpha does, so
     // the normal is not turning through 90° inside the 1.6 texels the alpha
-    // test cuts through — that is what puts a hard lit rim around a cutout.
+    // test cuts through - that is what puts a hard lit rim around a cutout.
     const hEdge = edge * 5;
     const wobPhase = rand() * TAU;
 
@@ -5189,7 +5189,7 @@ export class TextureFactory {
         const h = 0.42 + c * c * 0.34 * curlDir * 0.5 + c * 0.16 * curlDir
           + smoothstep(0.55, 1.0, t) * 0.08 + vein * 0.05;
 
-        // Bake the curl's own shading — the lifted edge catches more sky.
+        // Bake the curl's own shading - the lifted edge catches more sky.
         const shade = 0.88 + 0.24 * clamp01(0.5 + c * 0.5 * curlDir);
         r *= shade; g *= shade; b *= shade;
 
@@ -5234,7 +5234,7 @@ export class TextureFactory {
   }
 
   /**
-   * Grass blade atlas — four variants in four columns (`userData.atlas`).
+   * Grass blade atlas - four variants in four columns (`userData.atlas`).
    * RGB is the blade's own colour gradient and detail, A is the cutout.
    * Even if the grass system builds real blade geometry, this is the right
    * texture for its LOD billboards and for any single-quad distant fill.
@@ -5276,7 +5276,7 @@ export class TextureFactory {
       const tipCut = 0.90 + 0.09 * rand();
       const creaseOff = (rand() - 0.5) * 0.20;
       const striSeed = rand() * 100;
-      const striN = 5 + (rand() * 4 | 0);      // 5–8 ribs across the blade
+      const striN = 5 + (rand() * 4 | 0);      // 5-8 ribs across the blade
       // Where this blade's tip died back. Almost every blade in a real sward has
       // a browned, frayed or broken tip; four pristine blades is a tell.
       const dieBack = 0.55 + 0.42 * rand();
@@ -5341,14 +5341,14 @@ export class TextureFactory {
           const crease = Math.exp(-(cr * cr) * 22);
           const fold = 1 - Math.abs(cr) * 0.55;
           // A fine pale margin. Grass leaves are thinner and more translucent at
-          // the edge, so they catch light there — it is a small thing that
+          // the edge, so they catch light there - it is a small thing that
           // separates a blade from a painted green sliver.
           const margin = Math.pow(clamp01(Math.abs(across)), 7) * 0.16;
           const shade = (0.80 + 0.30 * fold) * (0.94 + 0.16 * crease) + margin;
 
           // Longitudinal striations: continuous ribs running the length of the
           // blade. The first draft multiplied them by sin(v * 40), which is a
-          // ladder of horizontal bands — a pattern grass does not have and the
+          // ladder of horizontal bands - a pattern grass does not have and the
           // eye finds immediately. The lengthwise variation is now a slow
           // envelope instead, so the ribs stay ribs.
           const stri = 0.965 + 0.045 * Math.cos(across * PI * striN + striSeed)
@@ -5358,7 +5358,7 @@ export class TextureFactory {
 
           cover[i] = alpha;
           colR[i] = r; colG[i] = g; colB[i] = b;
-          // Continuous across the silhouette — a step here draws a hard wire
+          // Continuous across the silhouette - a step here draws a hard wire
           // down both edges of every blade once the normal map is applied.
           const hh = 0.35 + crease * 0.35 + (1 - Math.abs(cr)) * 0.22;
           height[i] = lerp(0.35, hh, clamp01(d / (edge * 4) + 0.5));
@@ -5400,7 +5400,7 @@ export class TextureFactory {
   }
 
   // -------------------------------------------------------------------------
-  // LEAF 4 — sky
+  // LEAF 4 - sky
   // -------------------------------------------------------------------------
 
   /**
@@ -5408,13 +5408,13 @@ export class TextureFactory {
    *
    *  - Magnitudes follow log N ∝ 0.6 m (the real cumulative star count law),
    *    sampled by inverse transform, so the sky is dominated by faint stars
-   *    with a handful of bright ones — not a uniform sprinkle.
+   *    with a handful of bright ones - not a uniform sprinkle.
    *  - Colours come from a B−V distribution converted to effective temperature
    *    with Ballesteros' formula and then through math.js's `kelvinToRGB`.
    *    The result is mostly white-blue with a scattering of amber giants.
    *  - Positions are laid out with `fibonacciSphere` plus jitter, so density is
    *    uniform per solid angle. Splat radii are widened by 1/sin(theta) toward
-   *    the poles to cancel equirectangular stretch — without that, stars turn
+   *    the poles to cancel equirectangular stretch - without that, stars turn
    *    into vertical smears at the zenith, which is the classic tell.
    *  - Perceptual (0.45) magnitude compression keeps 8 faint magnitudes inside
    *    8-bit sRGB while still letting the brightest stars core out to white.
@@ -5457,7 +5457,7 @@ export class TextureFactory {
         const invTwoSig2 = 1 / (2 * SIGMA * SIGMA);
         // BILINEAR, not nearest. The glow field is 256x128 and the canvas is up
         // to 4096x2048, so a nearest tap replicates each source texel into a 16x
-        // block — and the Milky Way is the one thing in the frame that is pure
+        // block - and the Milky Way is the one thing in the frame that is pure
         // low-frequency gradient, which is exactly where a replicated block is
         // visible. It quilted the whole band into 1.4-degree squares of sky, and
         // the squares survived into the mips because they are real signal.
@@ -5569,7 +5569,7 @@ export class TextureFactory {
             const fxn = fxw / sigX;
             const r2 = fxn * fxn + fy * fy;
             if (r2 > 9) continue;
-            // Core plus a wide, weak halo — a pure Gaussian looks like a dot,
+            // Core plus a wide, weak halo - a pure Gaussian looks like a dot,
             // and the halo is what bloom picks up.
             const e = Math.exp(-r2 * 0.5) + 0.11 * Math.exp(-r2 * 0.09);
             const w = amp * e;
@@ -5638,7 +5638,7 @@ export class TextureFactory {
       // near-black field with isolated bright points, and glGenerateMipmap on an
       // SRGB8_ALPHA8 texture is implementation-defined about whether it decodes
       // first. Filtering the *encoded* bytes of a point source overstates the
-      // average by a large factor — the sky washes to grey the moment the dome
+      // average by a large factor - the sky washes to grey the moment the dome
       // is minified, which is exactly when a night sky should be getting darker.
       t.mipmaps = mipChainRGBA(data, W, H, { srgb: true });
       t.generateMipmaps = false;
@@ -5656,11 +5656,11 @@ export class TextureFactory {
   }
 
   /**
-   * Rain streak atlas — eight variants in eight columns (`userData.atlas`).
+   * Rain streak atlas - eight variants in eight columns (`userData.atlas`).
    *
    * A pure intensity mask: all four channels carry the same value, so it works
    * as `map` (additive), as `alphaMap` (three samples `.g`) or as a raw
-   * lookup, without the consumer having to know which. Deliberately untinted —
+   * lookup, without the consumer having to know which. Deliberately untinted - 
    * rain takes the colour of the sky behind it, and baking a blue tint here
    * would fight the atmosphere system at sunset. Tiles vertically
    * (wrapT = Repeat) so a shader can scroll it without a seam.
@@ -5686,7 +5686,7 @@ export class TextureFactory {
         const oscF = 5 + rand() * 9;
         const oscP = rand() * TAU;
         // A falling drop oscillates, so its streak is brighter and dimmer
-        // along its length — but only by a fifth or so. At 0.38 the streak beads
+        // along its length - but only by a fifth or so. At 0.38 the streak beads
         // up into a dotted line, which is a shutter artefact, not rain.
         const oscA = 0.08 + 0.15 * rand();
         const bright = 0.72 + 0.28 * rand();
@@ -5696,7 +5696,7 @@ export class TextureFactory {
         // before it starts writing into the neighbouring variant. The halo has
         // a sigma of about 4 texels and the column is only 32 wide at HIGH, so
         // without this window a bright streak leaves a visible ghost down the
-        // edge of the atlas cell next door — and the ghost survives into the
+        // edge of the atlas cell next door - and the ghost survives into the
         // mips, where the two cells are averaged together anyway.
         const halfCol = (x1 - x0) * 0.5 - 1;
 
@@ -5706,7 +5706,7 @@ export class TextureFactory {
           // leading edge is where the drop actually is and arrives abruptly,
           // while the tail is the exposure trail and dies away slowly. The
           // exponent on the two halves is what encodes that, and `sin^0.42`
-          // both ends — which is what this used to be — reads as a lozenge.
+          // both ends - which is what this used to be - reads as a lozenge.
           const ends = v < headV
             ? Math.pow(clamp01(v / Math.max(headV, 1e-3)), 0.85)
             : Math.pow(clamp01((1 - v) / (1 - headV)), 0.38);
@@ -5762,8 +5762,8 @@ export class TextureFactory {
       const height = new Float32Array(N);
       const alpha = new Float32Array(N);
       const rand = makeRNG(this.seed + 5250);
-      // Two concentric crests — a splash is a primary ring with a weaker
-      // secondary chasing it — plus a slight ellipticity so it is not a stencil.
+      // Two concentric crests - a splash is a primary ring with a weaker
+      // secondary chasing it - plus a slight ellipticity so it is not a stencil.
       const ecc = 1 + (rand() - 0.5) * 0.08;
       for (let y = 0; y < S; y++) {
         const cy = ((y + 0.5) / S) * 2 - 1;
@@ -5929,7 +5929,7 @@ export class TextureFactory {
     // A hand-built chain always wins. `_apply` is called again on rebake with
     // the recipe's stored options, and turning `generateMipmaps` back on for a
     // texture that already carries `mipmaps` makes three ignore the chain and
-    // ask the driver to filter sRGB bytes in the encoded domain — the exact
+    // ask the driver to filter sRGB bytes in the encoded domain - the exact
     // failure SECTION 2b exists to avoid.
     t.generateMipmaps = mips && !(t.mipmaps && t.mipmaps.length > 1);
     t.minFilter = o.minFilter || (mips ? THREE.LinearMipmapLinearFilter : THREE.LinearFilter);
@@ -6041,7 +6041,7 @@ export class TextureFactory {
   /**
    * Accepts either a tier string or the `state.quality` object.
    *
-   * Anything already baked is rebuilt *in place* — the THREE.Texture objects
+   * Anything already baked is rebuilt *in place* - the THREE.Texture objects
    * keep their identity, so every material holding a reference picks up the new
    * resolution without being told. Dropping to LOW genuinely halves the 2D maps
    * and roughly halves the cloud volume's linear size (an 8× memory cut), which
@@ -6078,7 +6078,7 @@ export class TextureFactory {
   /**
    * Rebuild every baked texture at the current tier's sizes, reusing the
    * existing Texture objects. `dispose()` on each first so the driver releases
-   * the old storage before the new upload — three allocates immutable texture
+   * the old storage before the new upload - three allocates immutable texture
    * storage, so an in-place resize without a dispose would be ignored.
    */
   rebake() {
@@ -6091,7 +6091,7 @@ export class TextureFactory {
 
     // A group exposes the same Texture under several keys (`orm`, `roughness`
     // and `ao` are one object) and again through the cache, so without this the
-    // ground ORM was disposed and re-adopted four times per rebake — four
+    // ground ORM was disposed and re-adopted four times per rebake - four
     // redundant GPU deletes and re-uploads of a megabyte.
     const adopted = new Set();
 
@@ -6130,7 +6130,7 @@ export class TextureFactory {
         case 'blossom': rebuilt = this._group('blossom', () => this._buildBlossom(this._size('blossom'))); break;
         case 'petal': rebuilt = this._group('petal', () => this._buildPetal(this._size('petal'))); break;
         case 'grass': rebuilt = this._group('grass', () => this._buildGrass(this._size('grass'))); break;
-        // Rebuilt as a group so the three maps keep their Texture identity —
+        // Rebuilt as a group so the three maps keep their Texture identity - 
         // world/terrain.js holds direct references to all three in `_tex` and
         // never asks for them again after init().
         case 'terrainSurface': rebuilt = this._group('terrainSurface', () => this._buildTerrainSurface(this._size('terrain'))); break;

@@ -1,16 +1,16 @@
 /**
- * main.js — bootstrap and frame loop.
+ * main.js - bootstrap and frame loop.
  *
  * This file owns SYSTEM ORDER and nothing else. Every subsystem is a class that
  * follows the lifecycle contract documented in /CONTRACTS.md:
  *
- *   constructor(ctx)          synchronous, cheap — build objects, no heavy work
- *   async init()              optional — heavy/async setup, may report progress
- *   link(systems)             optional — grab sibling references after all exist
- *   update(dt, state)         optional — per-frame work
- *   resize(width, height)     optional — viewport changed
- *   onQualityChange(quality)  optional — quality tier changed at runtime
- *   dispose()                 optional — release GPU resources
+ *   constructor(ctx)          synchronous, cheap - build objects, no heavy work
+ *   async init()              optional - heavy/async setup, may report progress
+ *   link(systems)             optional - grab sibling references after all exist
+ *   update(dt, state)         optional - per-frame work
+ *   resize(width, height)     optional - viewport changed
+ *   onQualityChange(quality)  optional - quality tier changed at runtime
+ *   dispose()                 optional - release GPU resources
  *
  * Update order below is deliberate and load-bearing. Read the comments before
  * moving anything: several systems consume state written earlier in the same frame.
@@ -86,7 +86,7 @@ async function boot() {
   };
 
   // ---------------------------------------------------------------------------
-  // Construct — order here is irrelevant, only update order matters.
+  // Construct - order here is irrelevant, only update order matters.
   // ---------------------------------------------------------------------------
   const systems = ctx.systems;
   systems.dayNight = new DayNightCycle(ctx);
@@ -146,7 +146,7 @@ async function boot() {
   }
   loading.setProgress(1, 'Ready');
 
-  // Every system now exists and is initialised — safe to grab siblings.
+  // Every system now exists and is initialised - safe to grab siblings.
   for (const system of list) system.link?.(systems);
 
   // ---------------------------------------------------------------------------
@@ -154,7 +154,7 @@ async function boot() {
   // ---------------------------------------------------------------------------
   // A hidden tab, a display:none container, or a document that has not been laid
   // out yet all report a viewport of 0x0. Sizing render targets from that collapses
-  // the post-processing chain to 1x1 and every frame comes out black — permanently,
+  // the post-processing chain to 1x1 and every frame comes out black - permanently,
   // because nothing re-fires once the viewport becomes real. So: fall back to a sane
   // size, and re-measure on every signal that layout may have changed.
   const FALLBACK_W = 1280;
@@ -199,7 +199,7 @@ async function boot() {
   /**
    * Advance and render exactly one frame.
    *
-   * Split out from the rAF driver so a frame can be stepped manually — from
+   * Split out from the rAF driver so a frame can be stepped manually - from
    * devtools, from an automated capture harness, or in a hidden tab where rAF
    * never fires. `window.SAKURA.tick(dt)` is the entry point.
    */

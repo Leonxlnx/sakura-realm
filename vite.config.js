@@ -11,7 +11,7 @@ import { join } from 'node:path';
  *
  *   fetch('/__shot?name=dawn', { method: 'POST', body: canvas.toDataURL('image/png') })
  *
- * Writes to captures/<name>.png. Dev server only — never part of a build.
+ * Writes to captures/<name>.png. Dev server only - never part of a build.
  */
 function captureEndpoint() {
   return {

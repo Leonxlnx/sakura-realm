@@ -1,5 +1,5 @@
 /**
- * tree/branches.js — skeleton generation, swept-tube mesh, shared wind GLSL.
+ * tree/branches.js - skeleton generation, swept-tube mesh, shared wind GLSL.
  *
  * ---------------------------------------------------------------------------
  * WHY IT IS BUILT THIS WAY
@@ -29,9 +29,9 @@
  *     ONE sign change does both, and it is what turns eight limbs into a dome
  *     instead of eight sprays. See CROWN_TROPISM for the mechanism it replaced
  *     and why that one could not produce a dome at any setting.
- *   - The macro structure — a short bole dividing very low into a wide fan of
+ *   - The macro structure - a short bole dividing very low into a wide fan of
  *     heavy limbs, one of them snapped off in some old storm with a crown of
- *     epicormic sprouts around the wound — is hand-authored. Fully procedural
+ *     epicormic sprouts around the wound - is hand-authored. Fully procedural
  *     gives you a *generic* tree; a specific tree needs an author.
  *
  * ---------------------------------------------------------------------------
@@ -46,7 +46,7 @@
  * both the bud-viability test AND the shoot's own termination test, so
  * tightening `taperTo` on thin wood silently killed every fine shoot at half
  * its length and the crown stopped multiplying with depth (845 branches, of
- * which 357 / 251 / 147 at depths 3 / 4 / 5 — CONVERGING); and no shoot had an
+ * which 357 / 251 / 147 at depths 3 / 4 / 5 - CONVERGING); and no shoot had an
  * apical continuation, so every leader in the tree ended in mid-air at a third
  * of its base diameter, which is the flat sawn-off disc on every limb in the
  * renders. Fixing both took the tree to 2 561 branches and 767 m of flowering
@@ -55,7 +55,7 @@
  * 1. THE BOLE WAS A RANDOM WALK. `r *= 1 + 0.09·noise3D(...)` ran once per
  *    segment on top of the taper, so the multiplier COMPOUNDED over the 35
  *    segments of the trunk. Measured: the bole left the ground at 0.54 m
- *    radius and arrived at the first fork at 1.33 m — a cone standing on its
+ *    radius and arrived at the first fork at 1.33 m - a cone standing on its
  *    point, 2.65 m thick at the top. That is the "short fat pollarded stump"
  *    the whole tree read as, and raising TRUNK_RADIUS only made it worse.
  *    Burl is now a BOUNDED modulation of the pipe radius (`storedRadius`),
@@ -64,7 +64,7 @@
  * 2. EVERY LIMB RADIUS WAS CLAMPED FLAT. `LEVELS[k].rMax` was an absolute
  *    constant, and `LEVELS[1].rMax = 0.28` sat far below what the pipe model
  *    handed a primary. Every one of the four primaries came out at EXACTLY
- *    0.280 m however thick the trunk was — so length, which follows from
+ *    0.280 m however thick the trunk was - so length, which follows from
  *    radius, was pinned too, and the crown could not scale with the bole.
  *    The caps are now `rMaxK` FRACTIONS of TRUNK_RADIUS, sized to sit above
  *    what the area rule actually delivers, so they are a safety rail against a
@@ -72,13 +72,13 @@
  *
  * 3. THE CROWN RAN OUT OF BUDS, NOT OUT OF BUDGET. Lateral nodes were spaced
  *    at an ABSOLUTE internode in metres, so a 2 m secondary got three buds and
- *    a 0.4 m twig got none — while `maxChildren` (10/8/7/5) was never once
+ *    a 0.4 m twig got none - while `maxChildren` (10/8/7/5) was never once
  *    reached and BRANCH_BUDGET (5600) was never approached. Measured: 493
  *    branches grown, ONE bud lost to crowding, 249 lost to being too thin.
  *    Raising the budget therefore did nothing at all. Internode is now derived
  *    from the branch's own length and a target NODE COUNT, with a metric
  *    floor, so every shoot carries a full complement of laterals and the
- *    budget becomes the real limit — which is what makes it spendable on crown
+ *    budget becomes the real limit - which is what makes it spendable on crown
  *    twigs.
  *
  * The mesh side welds forks: a child's tube starts on the PARENT'S AXIS (so it
@@ -94,10 +94,10 @@ import * as THREE from 'three';
 import { makeRNG, createNoise, clamp, clamp01, lerp, smoothstep, TAU } from '../core/math.js';
 
 // ===========================================================================
-// Species constants — one specific old Prunus, not a family of trees
+// Species constants - one specific old Prunus, not a family of trees
 // ===========================================================================
 
-/** Area rule exponent. 2.0 is Leonardo's; measured wood lands 2.2–2.6. */
+/** Area rule exponent. 2.0 is Leonardo's; measured wood lands 2.2-2.6. */
 const AREA_EXP = 2.35;
 /** Wood lost to the fork itself, so the tree is not a perfectly conserving pipe. */
 const FORK_LOSS = 0.955;
@@ -107,7 +107,7 @@ const FORK_LOSS = 0.955;
  *
  * THE EXPONENT IS THE CROWN'S DENSITY, and 0.78 was far too high at the thin
  * end. Anchors: a 21 cm primary at 7.1 m, unchanged, and a 2 mm twig at 39 cm
- * — where 0.78 gave it TEN CENTIMETRES. A one-year cherry shoot is 20 to 60 cm
+ * - where 0.78 gave it TEN CENTIMETRES. A one-year cherry shoot is 20 to 60 cm
  * long and 2 to 3 mm thick; the old fit made every twig in the tree a stub, and
  * that is what capped the crown's density however hard the branching ratio was
  * pushed. Measured: at 0.78 the tree carried 1 775 m of wood and the flower
@@ -125,8 +125,8 @@ const ALLO_P = 0.62;
 
 /**
  * Lateral share is drawn as `lerp(lo, hi, u²)`, and the square is the whole
- * point. A cherry does not put a strong lateral at every node — it puts a
- * handful of them and fills the rest of the branch with SPURS: 3–8 cm shoots
+ * point. A cherry does not put a strong lateral at every node - it puts a
+ * handful of them and fills the rest of the branch with SPURS: 3-8 cm shoots
  * that take almost no wood and carry almost all the flowers. Sampling share
  * uniformly gave every node a strong lateral, which over-subscribed the area
  * rule (eleven nodes at a mean 21 % of the parent's cross-section is 236 % of
@@ -141,7 +141,7 @@ const shareSample = (L, u) => lerp(L.share[0], L.share[1], u * u);
 /**
  * Trunk. This is a RADIUS, and it is the number the whole tree is built from:
  * 0.50 measures out at 0.96 m across the bole at breast height once the taper
- * has taken its cut — inside the 0.8–1.1 m the brief asks for — widening to
+ * has taken its cut - inside the 0.8-1.1 m the brief asks for - widening to
  * about 2.2 m across the root buttresses where it meets the grass.
  *
  * Because the per-level radius caps are now fractions of this number and length
@@ -153,7 +153,7 @@ const TRUNK_RADIUS = 0.245;
  * Bole length. 6.15 m built a VASE: the limbs left the bole between 2.15 m and
  * 5.56 m and then had 8 m of their own length to spend, so the crown's mass
  * ended up between 6 m and 14 m and the whole tree was taller than it was wide.
- * A free-standing cherry in the open divides far lower than that — the bole is
+ * A free-standing cherry in the open divides far lower than that - the bole is
  * the part of the tree that is in shade, and in the open there is none.
  *
  * At 3.95 m the eight primaries leave between 1.55 m and 3.55 m, which is what
@@ -177,7 +177,7 @@ const TRUNK_LEAN = 0.016;
 const TRUNK_LEAN_AZIMUTH = 3.9;
 
 /**
- * Bounded burl amplitude by depth. NOT accumulated into the pipe radius — it
+ * Bounded burl amplitude by depth. NOT accumulated into the pipe radius - it
  * modulates the STORED radius only, so the bole can be lumpy without the taper
  * drifting. See note 1 in the header for what happens when it is not bounded.
  */
@@ -191,17 +191,17 @@ const BURL = [0.105, 0.055];
  * A free-standing cherry fills a broad oblate dome: wider than it is tall, with
  * its widest band LOW and a skirt that sweeps down and out below it. That shape
  * is not decoration, it is the surface at which a shoot stops being able to
- * hold leaves — outside it a shoot is unsupported, wind-stripped and shaded by
+ * hold leaves - outside it a shoot is unsupported, wind-stripped and shaded by
  * nothing, so it gains nothing by being there.
  *
  * These four numbers ARE that surface, as an ellipsoid with two vertical radii
  * so the underside can be much shallower than the top:
  *
  *   widest band   y = CROWN_Y0         13.7 m across
- *   crown floor   y = Y0 - RY_DOWN      2.10 m — you can walk under the skirt
+ *   crown floor   y = Y0 - RY_DOWN      2.10 m - you can walk under the skirt
  *   crown top     y = Y0 + RY_UP       11.50 m
  *   extent        9.4 m tall by 13.7 m wide, ratio 1.46
- *   widest point  (Y0 - floor) / extent = 0.31 — the lower third
+ *   widest point  (Y0 - floor) / extent = 0.31 - the lower third
  *
  * WHY THIS EXISTS AT ALL. The silhouette used to be decided by three tropisms
  * pulling against each other with no term that knew what shape the crown was
@@ -211,7 +211,7 @@ const BURL = [0.105, 0.055];
  * to, the answer was a narrow upright vase whose widest point was near its top,
  * because three of the four rewarded height and only one opposed it. Suppressing
  * the vertical on two of them (see the tropism blocks below) stopped them
- * fighting gravity but could not on its own produce a dome — nothing in the
+ * fighting gravity but could not on its own produce a dome - nothing in the
  * file wanted one. This does, and it does it with one sign change: `1 - q` is
  * positive inside the envelope and negative outside, so the same expression
  * fills the crown and then caps it.
@@ -239,7 +239,7 @@ const CROWN_CLIMB = 0.92;
  * over.
  */
 const CROWN_PRUNE = 1.10;
-/** Scratch for the envelope gradient — build time only, but keeps shapes flat. */
+/** Scratch for the envelope gradient - build time only, but keeps shapes flat. */
 const _env = { x: 0, y: 0, z: 0 };
 
 /**
@@ -248,7 +248,7 @@ const _env = { x: 0, y: 0, z: 0 };
  * which points from the crown's core toward the nearest piece of sky.
  *
  * The gradient is the gradient of q², which differs from ∇q only by the
- * positive factor 1/(2q) — and since every consumer normalises it, that factor
+ * positive factor 1/(2q) - and since every consumer normalises it, that factor
  * cancels and the divide is not worth doing.
  */
 function envelopeQ(x, y, z, out) {
@@ -283,8 +283,8 @@ function envelopeRadiusAt(y) {
  * The structural limbs of a cherry occupy the inner two thirds to three
  * quarters of the crown; the outer quarter is one- and two-year wood, and that
  * is what carries the flowers that make the rim. Letting a limb run all the way
- * to the envelope surface — which is what it did, because nothing stopped it
- * before the surface — is why long bare dark limbs stood clear of the flower
+ * to the envelope surface - which is what it did, because nothing stopped it
+ * before the surface - is why long bare dark limbs stood clear of the flower
  * mass in every render: a secondary budding off the tip of such a limb starts
  * AT q = 1.0, is pruned within half a metre of leaving, and the last two metres
  * of the limb end up clothed in nothing.
@@ -298,7 +298,7 @@ const PRIMARY_REACH = 0.86;
 
 /**
  * Bud scoring against the envelope. Light lives at the crown surface, so a bud
- * that carries its shoot out toward it is worth more — but only up to the
+ * that carries its shoot out toward it is worth more - but only up to the
  * surface. Past it the penalty rises quadratically, which is what keeps the
  * outline a smooth convex arc instead of a spray of escapees.
  *
@@ -319,7 +319,7 @@ function envelopeScore(x, y, z) {
 
 /**
  * Gravity curvature coefficient. Fixed by requiring a primary limb to turn
- * 0.3–0.7 rad over its whole length depending on how heavy it is — the
+ * 0.3-0.7 rad over its whole length depending on how heavy it is - the
  * difference between a limb that leaves the bole at +20° and arrives at its
  * tip at -6°, which is the whole "sweeps out and gently down" read.
  *
@@ -329,7 +329,7 @@ function envelopeScore(x, y, z) {
  * and the crowding escape vector points away from the mass of wood below a
  * limb, so it pushes up. Measured on the old tuning, gravity was pulling a
  * primary down by 0.66 rad while crowding pushed it up by 0.79 and gnarl by
- * another 0.38 — which is why limbs climbed to the top of the tree instead of
+ * another 0.38 - which is why limbs climbed to the top of the tree instead of
  * spreading, whatever this constant was set to. Both are now suppressed in the
  * vertical on structural wood; see the tropism blocks below.
  */
@@ -339,13 +339,13 @@ const MAX_CURVATURE = 0.75;
  * Total curvature any one shoot may accumulate, in radians. The per-segment
  * clamp above is not enough on its own: a 3 mm twiglet is so compliant that
  * MAX_CURVATURE over its whole length would coil it into a watch spring. This
- * caps the INTEGRAL instead, which is the physically meaningful quantity — a
+ * caps the INTEGRAL instead, which is the physically meaningful quantity - a
  * branch deflects, it does not orbit.
  */
 const TURN_BUDGET = 3.4;
 
 /**
- * Nothing but the trunk lives below this — the browse line of a grazed field.
+ * Nothing but the trunk lives below this - the browse line of a grazed field.
  * It is also the crown FLOOR, and the envelope's underside is authored to sit
  * just above it (2.10 m against 1.80 m) so the skirt hangs to about head height
  * without the outermost twigs being amputated by the browse test.
@@ -362,12 +362,12 @@ const PREVAILING_Z = 0.33;
  * with depth, so it is effectively radius-ordered: were the cap to bite it
  * would trim twiglets, not limbs.
  *
- * On the shipping seed it does NOT bite — 4 734 shoots are queued against this
+ * On the shipping seed it does NOT bite - 4 734 shoots are queued against this
  * 7 000, of which 2 561 survive the radius floor. It stays because it is the
  * only thing standing between a pathological seed and a generation pass that
  * runs for a minute, and because it is cheap: one comparison per bud. Anyone
  * tuning the tree upward should know that raising this number ALONE does
- * nothing, which is exactly the trap the previous author fell into — see
+ * nothing, which is exactly the trap the previous author fell into - see
  * header note 3.
  *
  * RAISED 5 200 -> 7 000 -> 34 000. The dome needs a genuine cloud of fine wood
@@ -380,13 +380,13 @@ const PREVAILING_Z = 0.33;
 const BRANCH_BUDGET = 320000;
 
 /**
- * Crowding thresholds, in the units `PointGrid.crowd` returns — a weighted
+ * Crowding thresholds, in the units `PointGrid.crowd` returns - a weighted
  * count of foreign skeleton points inside the probe, where a twig point is
  * worth about 0.6 and a limb point about 2.
  *
  * STEER is the working number: it fires constantly through the crown and is
  * what keeps two limbs out of the same metre of air. ABORT is now doing a
- * second job as well — the bud score it is compared against carries the
+ * second job as well - the bud score it is compared against carries the
  * envelope terms (see `envelopeScore`), so a bud aimed well outside the crown
  * fails this test even in completely empty air, which is what stops the crown's
  * outline from growing whiskers. The comparison is shifted by ENV_LIGHT_GAIN at
@@ -401,7 +401,7 @@ const CROWD_ABORT = 2.8;
 
 /**
  * Deepest level that pays for collision testing. Below this, wood is 5 mm
- * across and buried under blossom — interpenetration is invisible, and the
+ * across and buried under blossom - interpenetration is invisible, and the
  * test is the single most expensive thing in generation. Raising the shoot
  * count eightfold is only affordable because of this line.
  */
@@ -423,7 +423,7 @@ const COLLIDE_MAX_DEPTH = 3;
  *
  * and a shoot that dies at half length never reaches most of its own lateral
  * nodes, because `nextNode` is scheduled against `maxLen`. Measured: the crown
- * held 357 tertiaries, 251 twigs and 147 twiglets — a branching ratio of 0.70
+ * held 357 tertiaries, 251 twigs and 147 twiglets - a branching ratio of 0.70
  * and then 0.59, i.e. the tree was CONVERGING with depth where a real crown
  * multiplies. That is why 41 000 flowers looked like clumps on bare sticks:
  * there were only 2 947 places to hang them.
@@ -437,7 +437,7 @@ const TIP_RADIUS_FLOOR = 0.00028;
 
 /**
  * Apical continuation. A shoot that reaches the end of its allometric length
- * does not stop existing — next season its apical bud extends it as thinner
+ * does not stop existing - next season its apical bud extends it as thinner
  * wood, which is why a real limb thins continuously from bole to twig instead
  * of ending in mid-air at a third of its base diameter.
  *
@@ -445,7 +445,7 @@ const TIP_RADIUS_FLOOR = 0.00028;
  * had reached: measured, the eight primaries ended at a median 33 % of their
  * base radius, i.e. a 15 cm flat disc hanging in the sky, and the secondaries
  * at 3.7 cm. Those are the blunt ends visible on every limb in the renders, and
- * no amount of tip taper fixes them because the taper had already done its job —
+ * no amount of tip taper fixes them because the taper had already done its job - 
  * the limb was simply the wrong length for its thickness.
  *
  * The continuation is the same limb, so it inherits the parent's heading and
@@ -460,7 +460,7 @@ const CONTINUE_TAPER = 0.93;
 /**
  * Per-depth growth character.
  *
- *   taperTo   fraction of base radius left at the tip from taper ALONE —
+ *   taperTo   fraction of base radius left at the tip from taper ALONE - 
  *             forks remove more on top of it.
  *   nodes     how many lateral buds this shoot tries to place along itself.
  *             A COUNT, not a spacing: that is what makes short shoots branch.
@@ -473,7 +473,7 @@ const CONTINUE_TAPER = 0.93;
  *
  * THE BRANCHING RATIO IS THE WHOLE OF CROWN DENSITY, and it used to CONVERGE.
  * Measured on the shipping tree: 8 primaries, 88 secondaries, 583 tertiaries,
- * 1 621 twigs, 260 twiglets — ratios 11.0, 6.6, 2.8, then 0.16. Level 5 had
+ * 1 621 twigs, 260 twiglets - ratios 11.0, 6.6, 2.8, then 0.16. Level 5 had
  * `nodes: 0` and `maxChildren: 0`, so the tree simply STOPPED two levels above
  * the wood that actually carries flowers, and the 260 twiglets that existed
  * were apical continuations rather than branches. A crown that stops
@@ -484,19 +484,19 @@ const CONTINUE_TAPER = 0.93;
  * Levels 4 and 5 now branch and level 6 exists, `firstNode` comes in hard at
  * the structural levels so laterals start near the bole rather than a third of
  * the way out, and the ratios run 11 / 8 / 5 / 3.5 / 2.5. That multiplies
- * flowering wood roughly threefold — and flowering wood is exactly what
+ * flowering wood roughly threefold - and flowering wood is exactly what
  * blossoms.js has to hang a solid crown on. It is the real lever: more sites
  * beats more flowers per site every single time.
  */
 const LEVELS = [
-  // 0 — trunk: heavy, sinuous, no droop, gnarl strongest near the ground
+  // 0 - trunk: heavy, sinuous, no droop, gnarl strongest near the ground
   {
     segLen: 0.16, taperTo: 0.62, gnarl: 0.052, gnarlFreq: 0.42, droop: 0.05,
     photo: 0.02, rMin: 0.02, rMaxK: 1.30, sweep: 0.009, maxChildren: 0,
     divergence: [0.5, 0.9], nodes: 0, nodeMin: 1, firstNode: 0.3, share: [0.2, 0.3],
     envelope: 0,
   },
-  // 1 — primary limbs: long, spreading, real sag
+  // 1 - primary limbs: long, spreading, real sag
   //
   // firstNode 0.30 -> 0.11. A third of the way along an 8 m limb is 2.6 m of
   // bare wood leaving the bole in every direction, and it is the single reason
@@ -510,21 +510,21 @@ const LEVELS = [
     nodes: 44, nodeMin: 0.10, firstNode: 0.07, share: [0.11, 0.42], maxChildren: 46,
     divergence: [0.66, 1.16], envelope: 1.45,
   },
-  // 2 — secondary: the scaffold of the crown, and where the weeping starts
+  // 2 - secondary: the scaffold of the crown, and where the weeping starts
   {
     segLen: 0.145, taperTo: 0.52, gnarl: 0.086, gnarlFreq: 0.95, droop: 0.92,
     photo: 0.28, rMin: 0.0075, rMaxK: 0.40, sweep: 0.044,
     nodes: 32, nodeMin: 0.058, firstNode: 0.08, share: [0.10, 0.44], maxChildren: 32,
     divergence: [0.56, 1.06], envelope: 1.30,
   },
-  // 3 — tertiary: the flowering wood starts here
+  // 3 - tertiary: the flowering wood starts here
   {
     segLen: 0.100, taperTo: 0.34, gnarl: 0.112, gnarlFreq: 1.5, droop: 1.02,
     photo: 0.46, rMin: 0.0034, rMaxK: 0.185, sweep: 0.058,
     nodes: 27, nodeMin: 0.026, firstNode: 0.09, share: [0.095, 0.46], maxChildren: 27,
     divergence: [0.48, 0.98], envelope: 0.88,
   },
-  // 4 — twigs. `nodes` was 6 with maxChildren 8 and it branched; the level
+  // 4 - twigs. `nodes` was 6 with maxChildren 8 and it branched; the level
   // BELOW it did not, so this was the last multiplication in the tree.
   {
     segLen: 0.068, taperTo: 0.24, gnarl: 0.128, gnarlFreq: 2.4, droop: 0.86,
@@ -532,7 +532,7 @@ const LEVELS = [
     nodes: 22, nodeMin: 0.016, firstNode: 0.09, share: [0.060, 0.40], maxChildren: 22,
     divergence: [0.42, 0.88], envelope: 0.70,
   },
-  // 5 — twiglets: two-year spur wood. This is where a cherry's flowers live, so
+  // 5 - twiglets: two-year spur wood. This is where a cherry's flowers live, so
   // it has to be a THICKET, not a terminal level.
   {
     segLen: 0.048, taperTo: 0.20, gnarl: 0.132, gnarlFreq: 3.6, droop: 0.70,
@@ -540,10 +540,10 @@ const LEVELS = [
     nodes: 17, nodeMin: 0.012, firstNode: 0.10, share: [0.090, 0.44], maxChildren: 17,
     divergence: [0.36, 0.78], envelope: 0.55,
   },
-  // 6 — spurs: last season's growth, upturned, terminal.
+  // 6 - spurs: last season's growth, upturned, terminal.
   //
   // Terminal wood tapers hard to a point. At 0.55 a twiglet ended at more than
-  // half its base radius, which rasterises as a flat sawn-off stub — the single
+  // half its base radius, which rasterises as a flat sawn-off stub - the single
   // most artificial thing about the crown at close range. Real terminal growth
   // narrows to a bud. rMin drops with it so the taper is not immediately
   // clamped back to a stub by the radius floor.
@@ -570,7 +570,7 @@ for (const L of LEVELS) L.rMax = L.rMaxK * TRUNK_RADIUS;
  * THE AZIMUTHS ARE NEARLY EVEN, and that is a correction. The old table put
  * them at deliberately irregular compass angles "so the crown has no axis of
  * symmetry" and then let them drift: two limbs ended up 0.16 rad apart and
- * there was a 1.14 rad — sixty-five degree — sector with nothing in it but the
+ * there was a 1.14 rad - sixty-five degree - sector with nothing in it but the
  * broken stub. Rendered from that side the crown had a bite out of it that no
  * amount of blossom density could fill, because there was no wood there to
  * flower on. Irregularity belongs in the growth (gnarl, bud choice, crowding
@@ -579,7 +579,7 @@ for (const L of LEVELS) L.rMax = L.rMaxK * TRUNK_RADIUS;
  * are spaced 0.47 to 0.62 rad apart, which is even enough to have no hole and
  * uneven enough to have no axis.
  *
- * RE-AUTHORED FOR A DOME. The previous table was a three-tier VASE — two limbs
+ * RE-AUTHORED FOR A DOME. The previous table was a three-tier VASE - two limbs
  * leaving at 0.21 and 0.30 rad, three at 0.58 to 0.76, and a terminal leader at
  * 1.10 rad taking everything that was left at 5.56 m up the bole. That
  * structure cannot make a dome at any tropism setting, because half its wood
@@ -587,7 +587,7 @@ for (const L of LEVELS) L.rMax = L.rMaxK * TRUNK_RADIUS;
  * leader is a spire by construction. Read the elevations here as a fan: nothing
  * leaves the bole above 0.62 rad (35°), the two lowest go out at 6 and 9
  * degrees and hold the skirt, and the limb that continues the bole is
- * `crown` at 0.62 — steep enough to reach 11 m once the envelope has arced it
+ * `crown` at 0.62 - steep enough to reach 11 m once the envelope has arced it
  * over, shallow enough that it is a limb and not a mast.
  *
  * `vigor` is the other half of the width. It multiplies the allometric length,
@@ -602,7 +602,7 @@ for (const L of LEVELS) L.rMax = L.rMaxK * TRUNK_RADIUS;
  * the crown has no axis of symmetry and no two limbs shadow each other.
  */
 const PRIMARIES = [
-  // Attach heights were 1.75–3.58 m on a 3.95 m bole, which put the lowest limb
+  // Attach heights were 1.75-3.58 m on a 3.95 m bole, which put the lowest limb
   // at head height and gave the tree a squat, spreading, left-to-right
   // silhouette. On the taller 6.3 m bole they start at 3.3 m, so there is a
   // clean length of trunk before the crown opens, and every elevation is
@@ -618,8 +618,8 @@ const PRIMARIES = [
   { key: 'mid', at: 4.46, azimuth: 2.98, elevation: 0.73, share: 0.24, vigor: 1.34, droop: 0.70, photo: 0.95 },
   { key: 'inner', at: 4.30, azimuth: 4.10, elevation: 0.92, share: 0.36, vigor: 1.72, droop: 0.76, photo: 1.00 },
   { key: 'upper', at: 4.50, azimuth: 1.36, elevation: 1.20, share: 0.38, vigor: 1.78, droop: 0.62, photo: 1.05 },
-  // Two steep limbs, not one. The crown's top-centre — the column of air
-  // directly over the bole between 7 m and 10 m — is reached by nothing else:
+  // Two steep limbs, not one. The crown's top-centre - the column of air
+  // directly over the bole between 7 m and 10 m - is reached by nothing else:
   // the envelope tropism pushes every shoot inside the crown radially outward,
   // so a single terminal leader is carried off the axis within a couple of
   // metres and the dome comes out with a V-shaped notch in the middle of its
@@ -649,7 +649,7 @@ const SWAY_CARRY = 0.4;
 
 /**
  * Radius classes. Mesh detail is chosen by how THICK a branch is, not by how
- * deep it sits in the hierarchy — an epicormic sprout at depth 2 and a twig at
+ * deep it sits in the hierarchy - an epicormic sprout at depth 2 and a twig at
  * depth 4 can be the same 8 mm across and deserve the same three radial
  * segments. Keying off depth spent a twelve-sided tube on both.
  */
@@ -664,10 +664,10 @@ function radiusClass(r) {
  * Mesh detail per quality tier, indexed by radius class. `stride` decimates
  * skeleton points into rings.
  *
- * `maxBranches` is the LOW/MEDIUM cost dial. Draw order is thickest-first —
+ * `maxBranches` is the LOW/MEDIUM cost dial. Draw order is thickest-first - 
  * and a child's base radius is strictly smaller than its parent's under the
- * area rule, so a prefix of that order is always a connected sub-tree — which
- * means the branches it drops are the 2–4 mm twiglets at the very outside of
+ * area rule, so a prefix of that order is always a connected sub-tree - which
+ * means the branches it drops are the 2-4 mm twiglets at the very outside of
  * the crown. That is exactly the wood buried under blossom cards several times
  * its own width. The blossoms still grow on them, which is the point: out
  * there the flowers are what the eye reads, and paying for a twelve-triangle
@@ -684,7 +684,7 @@ function radiusClass(r) {
  *
  * The `maxBranches` numbers came DOWN even though the tree has six times the
  * wood, and that is the whole reason the rebuild fits in the frame budget: HIGH
- * costs 30 165 triangles against the old table's 25 956 — 16 % more — on a
+ * costs 30 165 triangles against the old table's 25 956 - 16 % more - on a
  * crown that carries five times the flowering wood. The 13 500 branches HIGH
  * does not draw are all under 9 mm ACROSS and every one of them is buried under
  * a flower cloud that is now genuinely opaque, which was not true before and is
@@ -693,22 +693,22 @@ function radiusClass(r) {
  * Note the interaction with the terminal-bud cap. Draw order is thickest-first,
  * so a tier's undrawn set is overwhelmingly the apical continuations, and every
  * limb whose continuation is dropped needs a cap of its own or it rasterises as
- * an open tube — a flat sawn-off disc. See `apicalDrawn` in
+ * an open tube - a flat sawn-off disc. See `apicalDrawn` in
  * buildBranchGeometry, and do not replace it with the skeleton's `hasApical`.
  *
- * The wood was never the expensive half of this asset — the 103 000
+ * The wood was never the expensive half of this asset - the 103 000
  * double-sided alpha-tested blossom cards are, and that is where the tiers do
  * their real work (see TIERS in blossoms.js).
  */
 export const LOD_TIERS = {
   // maxBranches is the number of shoots that actually reach the MESH, selected
   // thickest-first. The skeleton grows BRANCH_BUDGET (34 000) of them, so at
-  // 1750 the HIGH tier was meshing five percent of the tree — and because the
+  // 1750 the HIGH tier was meshing five percent of the tree - and because the
   // selection is thickest-first, the five percent it kept was the trunk and the
   // primary limbs while every twig was discarded. The result rendered as long
   // bare spokes with blossoms floating in clumps along them, since blossoms are
   // placed from the SKELETON's twig sites and those twigs existed everywhere the
-  // mesh did not. Fine wood is cheap — a spur is 3 radial segments and 2 rings —
+  // mesh did not. Fine wood is cheap - a spur is 3 radial segments and 2 rings - 
   // so the honest budget is an order of magnitude higher.
   low: { radial: [8, 6, 4, 3, 3, 3], stride: [1, 2, 3, 5, 6, 7], maxDepth: 6, maxBranches: 26000 },
   medium: { radial: [10, 7, 5, 3, 3, 3], stride: [1, 2, 3, 4, 5, 6], maxDepth: 6, maxBranches: 62000 },
@@ -720,7 +720,7 @@ export const LOD_TIERS = {
 const BARK_TILE = 0.52;
 
 // ===========================================================================
-// Small helpers — build time only, so allocation here is free
+// Small helpers - build time only, so allocation here is free
 // ===========================================================================
 
 const allometricLength = (r) => ALLO_K * Math.pow(Math.max(r, 1e-5), ALLO_P);
@@ -771,7 +771,7 @@ class PointGrid {
   /**
    * Weighted count of foreign points near (x,y,z); `out` receives the escape
    * direction (unnormalised). Thick wood repels harder than a twig, but only
-   * ~4x harder — an earlier 24x weighting made a single trunk point veto every
+   * ~4x harder - an earlier 24x weighting made a single trunk point veto every
    * bud within half a metre of the bole and the tree came out nearly bare.
    */
   crowd(x, y, z, radius, selfId, parentId, out) {
@@ -838,11 +838,11 @@ class PointGrid {
  * and every quality tier.
  *
  * Costs roughly 480 ms once, at init, up from 150 ms before the crown-envelope
- * rebuild — the tree grows 15 200 shoots where it grew 2 561. It is behind the
+ * rebuild - the tree grows 15 200 shoots where it grew 2 561. It is behind the
  * loading screen and it is the whole silhouette of the hero asset, so the trade
  * is deliberate; the twig walk adds 35 ms and blossom placement 190 ms on top,
  * for about 730 ms of total build. If it has to come down, the first dial is
- * COLLIDE_MAX_DEPTH and the second is `insertEvery` — between them they are
+ * COLLIDE_MAX_DEPTH and the second is `insertEvery` - between them they are
  * most of the cost, and neither changes the crown's outline.
  *
  * @returns {object} skeleton
@@ -851,7 +851,7 @@ export function generateSkeleton({ seed = 0x5ce4a1 } = {}) {
   const rng = makeRNG(seed);
   const nz = createNoise(seed ^ 0x2f1d3b);
   const grid = new PointGrid(0.5);
-  /** Subsampled occluder set for the AO pass — AO is a smooth field, so a
+  /** Subsampled occluder set for the AO pass - AO is a smooth field, so a
    *  third of the occluders is indistinguishable and three times cheaper. */
   const aoGrid = new PointGrid(0.5);
 
@@ -914,7 +914,7 @@ export function generateSkeleton({ seed = 0x5ce4a1 } = {}) {
 
     /**
      * Termination radius. A shoot is entitled to complete the taper it was
-     * authored with, so this sits BELOW `r0 * taperTo` — the 0.55 leaves room
+     * authored with, so this sits BELOW `r0 * taperTo` - the 0.55 leaves room
      * for the wood the forks take on top of the taper without ending the shoot
      * the moment a heavy lateral is placed. `TIP_RADIUS_FLOOR` is the only
      * absolute limit, and it is a rasterisation limit, not a botanical one.
@@ -973,7 +973,7 @@ export function generateSkeleton({ seed = 0x5ce4a1 } = {}) {
      * refitted, a 2 mm twig is 39 cm rather than 10 cm, and gravity's curvature
      * on wood that thin is enormous (κ ∝ 1/r⁴, so it saturates the per-segment
      * clamp on every step). A flat 3.4 rad budget let such a shoot deflect more
-     * than half a full circle before it ran out — a watch spring, not a twig.
+     * than half a full circle before it ran out - a watch spring, not a twig.
      * A branch deflects in proportion to how long a lever it is; 1.2 rad per
      * metre, floored so even the shortest spur can nod and capped at the old
      * value for a structural limb, is that statement.
@@ -1004,7 +1004,7 @@ export function generateSkeleton({ seed = 0x5ce4a1 } = {}) {
         // Apical vigour: the same bud is worth more wood the further out along
         // the parent it sits. Without it the pipe model hands the biggest
         // children to the laterals nearest the bole, whose subtrees then pile
-        // up against the trunk — the crown came out solid in the middle and
+        // up against the trunk - the crown came out solid in the middle and
         // thin at the rim, which is backwards for a cherry. Clamped because a
         // share at or above 1 would take the parent's entire cross-section.
         const share = clamp(shareSample(L, brng()) * (0.72 + 0.85 * (s / maxLen)), 0.01, 0.82);
@@ -1018,7 +1018,7 @@ export function generateSkeleton({ seed = 0x5ce4a1 } = {}) {
           const div = lerp(L.divergence[0], L.divergence[1], brng());
           const chosen = chooseShootDir(x, y, z, dir, phyllo, div, childR);
           if (chosen) {
-            // Only now does the parent give up the wood — an aborted bud costs
+            // Only now does the parent give up the wood - an aborted bud costs
             // the branch nothing, exactly as in a real tree.
             r *= Math.pow(1 - share, 1 / AREA_EXP);
             const vig = 0.74 + 0.54 * brng();
@@ -1086,7 +1086,7 @@ export function generateSkeleton({ seed = 0x5ce4a1 } = {}) {
       const stiff = r * r * r * r;                // I ∝ r⁴
       let kappa = (GRAVITY_K * load) / (stiff + 1e-12);
       kappa = Math.min(kappa, turnCap) * L.droop * req.droop;
-      // Only the component of gravity perpendicular to the shoot bends it —
+      // Only the component of gravity perpendicular to the shoot bends it - 
       // a vertical trunk carries its load in pure compression and does not sag.
       const dotUp = dir.y;
       gvec.x = -dir.x * dotUp;
@@ -1103,13 +1103,13 @@ export function generateSkeleton({ seed = 0x5ce4a1 } = {}) {
       // The one term in this file that knows what shape the crown is supposed
       // to be. `1 - q` is positive inside the envelope and negative outside, so
       // a single expression grows the crown out to its surface and then caps
-      // it — which is what turns a fan of limbs into a dome instead of a spray.
+      // it - which is what turns a fan of limbs into a dome instead of a spray.
       //
       // The two branches are NOT symmetric, and the asymmetry cost a whole
       // iteration to find. INSIDE the envelope the gradient is the WRONG
       // vector to follow: below the widest band it points down and out, so a
       // shoot obeying it digs for the skirt instead of climbing, and the first
-      // build of this tropism produced a 6.6 m tree — every limb ran out
+      // build of this tropism produced a 6.6 m tree - every limb ran out
       // sideways at the height it left the bole and nothing reached 11 m.
       // A shaded shoot inside a crown does not grow toward the nearest surface,
       // it grows toward the LIGHT, and the light is out and UP. So inside, the
@@ -1129,7 +1129,7 @@ export function generateSkeleton({ seed = 0x5ce4a1 } = {}) {
           // The radial push is what evacuates the crown's CORE. Applied at full
           // strength everywhere inside, it drives every shoot away from the axis,
           // and the measured result was zero twig sites within 2.2 m of the
-          // trunk — a crown that reads as two lobes with a hole through the
+          // trunk - a crown that reads as two lobes with a hole through the
           // middle from above, however many flowers the tree is given. A real
           // cherry's interior is thinner than its shell, not empty: shoots near
           // the axis are shaded from the side but wide open to the sky, so they
@@ -1148,7 +1148,7 @@ export function generateSkeleton({ seed = 0x5ce4a1 } = {}) {
           // Quadratic, not linear, in the overshoot. A shoot 30 cm outside the
           // envelope is merely exposed; one two metres outside is a cantilever
           // with nothing above it and gets stripped by the first gale. A linear
-          // response left the outline soft — measured, the 95th percentile of
+          // response left the outline soft - measured, the 95th percentile of
           // the flower cloud sat 28 % beyond the envelope radius and the crown
           // had the ragged spray outline the reference does not have. Stiffening
           // it is what makes the silhouette a smooth convex arc.
@@ -1163,7 +1163,7 @@ export function generateSkeleton({ seed = 0x5ce4a1 } = {}) {
       // --- tropism 3: phototropism, thin shoots only ------------------------
       // Cut by roughly two thirds across every level. It used to run to 2.20 at
       // the twiglets and, gated only by thinness, it applied over the whole
-      // length of every fine shoot in the tree — 0.87 rad of accumulated lift
+      // length of every fine shoot in the tree - 0.87 rad of accumulated lift
       // on a single 58 cm tertiary. That is the fan of upward sprays visible on
       // the end of every limb in the renders. What survives here is the real
       // effect it stands for: the last few centimetres of a cherry shoot flick
@@ -1184,7 +1184,7 @@ export function generateSkeleton({ seed = 0x5ce4a1 } = {}) {
       const gAmt = L.gnarl * seg * gnarlScale * 3.2;
       dir.x += (e1.x * gA + e2.x * gB) * gAmt;
       // Gnarl is spatially COHERENT noise, so over the thirty segments of a
-      // primary it is not a wobble that cancels — it integrates, and it was
+      // primary it is not a wobble that cancels - it integrates, and it was
       // contributing up to +0.38 rad of lift against gravity's -0.66. On
       // structural wood the vertical is decided by the beam equation and
       // nothing else; the gnarl stays as the lateral meander you actually see
@@ -1195,7 +1195,7 @@ export function generateSkeleton({ seed = 0x5ce4a1 } = {}) {
       // --- tropism 5: the branch's own arc ----------------------------------
       // Structural wood arcs HORIZONTALLY. Letting the arc run in a random
       // plane perpendicular to the shoot made it the dominant vertical tropism
-      // on a primary — 0.9 radians of accumulated tilt against gravity's 0.6 —
+      // on a primary - 0.9 radians of accumulated tilt against gravity's 0.6 - 
       // so whether a limb swept low across the field or climbed to the top of
       // the tree came down to one coin flip per limb, and the crown came out
       // lopsided in a different way on every seed. Gravity owns the vertical
@@ -1243,7 +1243,7 @@ export function generateSkeleton({ seed = 0x5ce4a1 } = {}) {
           // Same argument as the gnarl above, and it mattered more: with the
           // crown now eight times denser, the escape vector points away from
           // the mass of wood BELOW a limb, and it was pushing the primaries up
-          // by +0.79 rad — more than gravity was pulling them down. A limb
+          // by +0.79 rad - more than gravity was pulling them down. A limb
           // routing around its neighbour turns sideways; it does not levitate.
           const vSuppress = depth <= 2 ? 0.30 : 1.0;
           dir.x += (escape.x / el) * push;
@@ -1269,15 +1269,15 @@ export function generateSkeleton({ seed = 0x5ce4a1 } = {}) {
        *
        * It is here for a visible reason. The blossom layer flowers on a Beer's
        * law depth measured from this same envelope, so wood outside it carries
-       * almost nothing — and the tree was growing two 7 m primaries straight
+       * almost nothing - and the tree was growing two 7 m primaries straight
        * through the outline and out the other side, which rendered as bare dark
        * whips sticking a metre and a half clear of the flower mass with a small
        * tuft on the end. Nothing in the reference photographs looks like that.
        * The tropism above bends a shoot back; this ends the ones it cannot.
        */
       // The GRACE is why this is not simply `depth >= 1`. A primary leaves the
-      // bole at 1.75 m, which is below the envelope's own floor at 1.90 — it is
-      // on its way up into the crown, not escaping from it — and testing it
+      // bole at 1.75 m, which is below the envelope's own floor at 1.90 - it is
+      // on its way up into the crown, not escaping from it - and testing it
       // from its first segment killed the lowest limb outright. The tree came
       // out with a ten-limb fan and a hole where its signature low limb should
       // have been, and nothing said why: a shoot that dies at three points is
@@ -1286,7 +1286,7 @@ export function generateSkeleton({ seed = 0x5ce4a1 } = {}) {
       // A metre and a half of grace covers the climb and nothing else: measured,
       // every primary is inside q = 0.91 by then. Exempting the limbs entirely,
       // which is what this did first, left six of them running a metre and a
-      // half clear of the flower mass as bare dark whips — by far the most
+      // half clear of the flower mass as bare dark whips - by far the most
       // conspicuous defect in the render, and the reason to look at the wood as
       // well as the blossom when judging the silhouette.
       // depth >= 1 is not optional either: the bole runs from y = -0.55, which
@@ -1335,7 +1335,7 @@ export function generateSkeleton({ seed = 0x5ce4a1 } = {}) {
     }
 
     // A snapped limb heals by throwing a crown of vertical epicormic sprouts
-    // around the wound — the most recognisable feature of a veteran cherry.
+    // around the wound - the most recognisable feature of a veteran cherry.
     if (req.broken) {
       const tip = px.length - 1;
       queueEpicormics(px[tip], py[tip], pz[tip], dir, pr[tip], req.id, branches.length);
@@ -1391,7 +1391,7 @@ export function generateSkeleton({ seed = 0x5ce4a1 } = {}) {
         // The envelope term is evaluated at EVERY depth, including the ones too
         // deep to pay for a collision query. It is four multiplies and a square
         // root, and it is what decides whether the outer half of the crown is a
-        // dome or a hedgehog — leaving the deep levels to take the raw
+        // dome or a hedgehog - leaving the deep levels to take the raw
         // phyllotactic direction, as this used to, is why the twig cloud had no
         // outline of its own and simply inherited whatever its limb was doing.
         let score = envelopeScore(tx, ty, tz);
@@ -1451,7 +1451,7 @@ export function generateSkeleton({ seed = 0x5ce4a1 } = {}) {
     //
     // `hasApical` is SKELETON truth and is deliberately NOT what decides the end
     // cap. Whether a limb needs a terminal bud is a question about the drawn
-    // mesh, and every tier below ULTRA drops some continuations — see
+    // mesh, and every tier below ULTRA drops some continuations - see
     // `apicalDrawn` in buildBranchGeometry, and do not reintroduce this flag
     // there.
     if (b.continuation) { p.hasApical = true; continue; }
@@ -1462,7 +1462,7 @@ export function generateSkeleton({ seed = 0x5ce4a1 } = {}) {
   }
 
   // The budget is a safety rail against a pathological seed, and a rail that
-  // fires silently is a trap — when it bites it simply stops budding, so the
+  // fires silently is a trap - when it bites it simply stops budding, so the
   // crown comes out quietly thin on whichever side the breadth-first walk
   // reached last and nothing says why. It sat at 91 % of the old cap once
   // already. One comparison, at build time.
@@ -1585,7 +1585,7 @@ function computeSway(branches) {
  *
  * The crown now carries thousands of twigs rather than hundreds, and this pass
  * is O(points x neighbours), so thin wood is sampled at three points along the
- * branch and interpolated. A 40 cm twiglet occupies one cell of a 0.5 m grid —
+ * branch and interpolated. A 40 cm twiglet occupies one cell of a 0.5 m grid - 
  * the field genuinely is that smooth at its scale, and the saving is roughly
  * three quarters of the pass.
  */
@@ -1612,7 +1612,7 @@ function computeSkeletonAO(branches, aoGrid) {
 }
 
 /**
- * Canopy centroid and radii from the outer twig cloud — for petals, fog, the
+ * Canopy centroid and radii from the outer twig cloud - for petals, fog, the
  * ground-litter ring and the god-ray occluder radius.
  *
  * The 90th percentile is deliberate: the mean would be dragged in by the dense
@@ -1646,7 +1646,7 @@ function measureCanopy(branches) {
    * `canopyRadius` is published to world/grass.js (which thins the sward under
    * the tree), world/terrain.js (the fallen-petal litter ring), world/scatter.js,
    * weather/precipitation.js (rain shelter), weather/atmosfx.js and the HUD's
-   * framing — all of which mean by it "how far does the crown reach". A 90th
+   * framing - all of which mean by it "how far does the crown reach". A 90th
    * percentile of the twig cloud stopped answering that question once the crown
    * was filled through its volume rather than skinned: the cloud's mass moved
    * inward, and the percentile fell from 6.5 m to 4.6 m on a crown that had
@@ -1682,7 +1682,7 @@ const _prevTan = { x: 0, y: 0, z: 0 };
  * Wood thinner than this at the tip is left alone: a 1.5 mm twig end is under a
  * pixel from anywhere you can stand, so a bud on it would be pure cost, and the
  * apex cap that comes with it would be too. Everything thicker DOES read, and
- * an uncapped swept tube is an open hole showing the inside of the branch —
+ * an uncapped swept tube is an open hole showing the inside of the branch - 
  * which, on a primary ending at 7.6 cm radius, is the flat sawn-off disc
  * visible on every limb in the renders.
  */
@@ -1700,7 +1700,7 @@ const BUD_MIN_RADIUS = 0.0015;
 function tipProfile(b, hasDrawnApical) {
   // A limb that carries on past this point has no tip here.
   // depth 0: the trunk always ends by forking into the terminal primary, and
-  // that fork sits exactly on its last point — necking the bole into a bud
+  // that fork sits exactly on its last point - necking the bole into a bud
   // underneath the crown limb's collar would pinch the top of the trunk.
   if (hasDrawnApical || b.depth === 0) return null;
   const rT = b.r[b.n - 1];
@@ -1717,7 +1717,7 @@ function tipProfile(b, hasDrawnApical) {
 /**
  * Surface radius of the swept tube at ring `i` in outward direction `o`.
  * Includes the fork shoulder, the root flare and the terminal bud, so one
- * function feeds both the vertex position and its analytic normal — they can
+ * function feeds both the vertex position and its analytic normal - they can
  * never disagree.
  */
 function surfaceRadius(b, i, ox, oy, oz, roots, tip) {
@@ -1748,7 +1748,7 @@ function surfaceRadius(b, i, ox, oy, oz, roots, tip) {
   /**
    * Terminal bud. Real terminal growth does two things a pure taper does not:
    * it NECKS behind the bud, and then the bud itself is fatter than the wood
-   * carrying it. Both halves matter — a cone to nothing rasterises as a
+   * carrying it. Both halves matter - a cone to nothing rasterises as a
    * flickering sliver and a plain stop rasterises as a flat disc, and the
    * silhouette that reads as a shoot rather than as a cut stick is the
    * narrow-then-round one.
@@ -1779,7 +1779,7 @@ function tangentAt(b, i, out) {
 }
 
 /**
- * Builds every stick of wood in the tree as ONE geometry — one draw call.
+ * Builds every stick of wood in the tree as ONE geometry - one draw call.
  *
  * @param {object} skel  from generateSkeleton()
  * @param {string} tier  key into LOD_TIERS
@@ -1808,7 +1808,7 @@ export function buildBranchGeometry(skel, tier = 'high') {
   for (let bi = 0; bi < nb; bi++) {
     if (!use[bi]) continue;
     const b = branches[bi];
-    // Detail follows thickness, not hierarchy depth — see RADIUS_CLASS.
+    // Detail follows thickness, not hierarchy depth - see RADIUS_CLASS.
     const cls = radiusClass(b.baseRadius);
     const stride = T.stride[Math.min(cls, T.stride.length - 1)];
     const seg = T.radial[Math.min(cls, T.radial.length - 1)];
@@ -1823,7 +1823,7 @@ export function buildBranchGeometry(skel, tier = 'high') {
   /**
    * Which branches still have an apical continuation ONCE THIS TIER HAS THINNED
    * THE TREE. `b.hasApical` is a property of the skeleton, and `maxBranches`
-   * drops the thinnest wood — which is overwhelmingly the continuations, since
+   * drops the thinnest wood - which is overwhelmingly the continuations, since
    * a continuation is by construction thinner than the limb it extends. Reading
    * the skeleton flag here therefore withheld the end cap from limbs whose
    * continuation was NOT drawn, leaving a swept tube open at the tip: a hole
@@ -1832,7 +1832,7 @@ export function buildBranchGeometry(skel, tier = 'high') {
    * exists to remove.
    *
    * It was not a rare corner either. Measured on the shipping seed: 343 open
-   * tubes at LOW — half of the 700 branches that tier draws — 277 at MEDIUM and
+   * tubes at LOW - half of the 700 branches that tier draws - 277 at MEDIUM and
    * 90 at HIGH, the largest 6.6 mm in radius, i.e. 13 mm across and squarely
    * visible. ULTRA draws every shoot, so it was the one tier that looked right,
    * and it is the one tier this laptop GPU will never run.
@@ -1854,7 +1854,7 @@ export function buildBranchGeometry(skel, tier = 'high') {
     const idx = ringIdx[bi];
     const seg = ringSeg[bi];
     // One apex vertex and one triangle fan closes the tube. Only wood thick
-    // enough for the hole to be visible pays for it — see BUD_MIN_RADIUS.
+    // enough for the hole to be visible pays for it - see BUD_MIN_RADIUS.
     const tip = tipProfile(branches[bi], apicalDrawn[bi] === 1);
     ringTip[bi] = tip;
     vertCount += idx.length * (seg + 1) + (tip ? 1 : 0);
@@ -1945,7 +1945,7 @@ export function buildBranchGeometry(skel, tier = 'high') {
       // An apical continuation is NOT a fork. It leaves its parent's last point
       // along its parent's own heading at 93 % of its radius, so the 1.55x
       // lateral collar would put a knuckle a third fatter than the limb in the
-      // middle of a smooth taper — the one place the eye reads a limb as
+      // middle of a smooth taper - the one place the eye reads a limb as
       // continuous wood. A bud scar is a faint ring, and that is all it gets.
       let collar = 1;
       if (b.depth > 0) {
@@ -2016,7 +2016,7 @@ export function buildBranchGeometry(skel, tier = 'high') {
         // Upward faces see sky; undersides sit in their own shadow.
         bark[o2 + 1] = clamp01(b.ao[i] * (0.70 + 0.30 * (ny * 0.5 + 0.5)));
         // The apex sits on the axis, so its height above the last ring has to
-        // come from that ring's actual radius — including the bud swelling and
+        // come from that ring's actual radius - including the bud swelling and
         // any fork shoulder still in range. Summed over the seam-duplicated
         // vertex too; one extra sample out of seg+1 shifts the mean by under a
         // percent and is not worth a branch inside the hot loop.
@@ -2028,7 +2028,7 @@ export function buildBranchGeometry(skel, tier = 'high') {
     // --- terminal bud cap ----------------------------------------------------
     // A swept tube is open at both ends. The base end is buried in the parent's
     // wood by the collar, but the tip end is a hole looking straight down the
-    // inside of the branch — with FrontSide culling that reads as a flat disc
+    // inside of the branch - with FrontSide culling that reads as a flat disc
     // punched out of the silhouette, which is exactly the "sawn-off" end.
     //
     // One apex vertex and one fan closes it. The apex stands off along the
@@ -2086,8 +2086,8 @@ export function buildBranchGeometry(skel, tier = 'high') {
       //
       // These two triangles used to be emitted as (a+k, c+k, a+k+1) and
       // (a+k+1, c+k, c+k+1). Ring vertices run counter-clockwise around the
-      // branch axis when viewed from the tip looking back down it — i.e.
-      // CLOCKWISE from outside — so that order made every outward face a back
+      // branch axis when viewed from the tip looking back down it - i.e.
+      // CLOCKWISE from outside - so that order made every outward face a back
       // face. With side: FrontSide the entire outer surface of the tree was
       // culled and what rendered was the inside of the far wall: branches read
       // as flat, hollow, pale ribbons, and the near side of the trunk was
@@ -2128,7 +2128,7 @@ export function buildBranchGeometry(skel, tier = 'high') {
 
 /**
  * Walks the flowering wood and returns evenly spaced sites along it, each
- * carrying the EXACT sway data of the twig it sits on — so a blossom and the
+ * carrying the EXACT sway data of the twig it sits on - so a blossom and the
  * twig holding it are displaced by identical shader maths and never separate.
  */
 export function collectTwigSites(skel, { minDepth = 3, spacing = 0.075, maxRadius = 0.028 } = {}) {
@@ -2144,12 +2144,12 @@ export function collectTwigSites(skel, { minDepth = 3, spacing = 0.075, maxRadiu
      * visiting the points themselves.
      *
      * The old loop could never place a site closer together than the skeleton's
-     * own point spacing, and on flowering wood that is 92 mm at depth 3 — four
+     * own point spacing, and on flowering wood that is 92 mm at depth 3 - four
      * times the 22 mm `spacing` it was being asked for, so the parameter was
      * inert and the real site pitch was set by `segLen` in the LEVELS table.
      * With a blossom card about 65 mm across, sites 92 mm apart leave a bare
      * stripe of wood between every umbel, and no amount of piling more flowers
-     * onto each site closes it — that only builds the flowers UPWARD into the
+     * onto each site closes it - that only builds the flowers UPWARD into the
      * pom-poms the crown was reading as. Sites at the flower's own pitch is
      * what makes the canopy continuous, and interpolation is free: it happens
      * once, at build time, and adds no wood and no draw calls.
@@ -2194,7 +2194,7 @@ export function collectTwigSites(skel, { minDepth = 3, spacing = 0.075, maxRadiu
 }
 
 // ===========================================================================
-// Shared wind GLSL — bark, blossoms and both depth materials use this
+// Shared wind GLSL - bark, blossoms and both depth materials use this
 // ===========================================================================
 
 /**
@@ -2204,7 +2204,7 @@ export function collectTwigSites(skel, { minDepth = 3, spacing = 0.075, maxRadiu
  *   `sakuraBend` is a POSITION FIELD, so it rotates normals and a blossom
  *     card's corners bend around a limb exactly like the wood does.
  *   `sakuraOsc` is a pure TRANSLATION for a given weight set, so evaluating it
- *     twice for a finite-difference normal is pointless — it cancels. That is
+ *     twice for a finite-difference normal is pointless - it cancels. That is
  *     why the normal correction costs two cheap bend evaluations and zero
  *     extra trigonometry.
  */

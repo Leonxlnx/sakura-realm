@@ -1,5 +1,5 @@
 /**
- * input.js — keyboard / mouse / pointer-lock aggregation.
+ * input.js - keyboard / mouse / pointer-lock aggregation.
  *
  * Systems poll this rather than binding their own listeners, so key handling
  * stays in one place and the HUD can steal focus without fighting the game.
@@ -16,9 +16,9 @@ export class Input {
 
     /** Currently-held physical keys, by KeyboardEvent.code. */
     this.keys = new Set();
-    /** Keys that went down this frame — cleared by endFrame(). */
+    /** Keys that went down this frame - cleared by endFrame(). */
     this.pressed = new Set();
-    /** Keys that came up this frame — cleared by endFrame(). */
+    /** Keys that came up this frame - cleared by endFrame(). */
     this.released = new Set();
 
     /** Accumulated mouse delta since last frame, in pixels. */
@@ -71,7 +71,7 @@ export class Input {
     return this.buttons.has(button);
   }
 
-  /** True if any of the given codes is held — for WASD-or-arrows style bindings. */
+  /** True if any of the given codes is held - for WASD-or-arrows style bindings. */
   anyDown(...codes) {
     for (const c of codes) if (this.isDown(c)) return true;
     return false;

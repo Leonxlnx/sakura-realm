@@ -1,5 +1,5 @@
 /**
- * hud.js — the readout, the settings panel and the cinematic tools.
+ * hud.js - the readout, the settings panel and the cinematic tools.
  *
  * Design brief: the scene is the point. A HUD that announces itself destroys a
  * quiet landscape faster than any rendering bug, so this one is built to be
@@ -17,7 +17,7 @@
  * time-lapse of a whole day.
  *
  * ---------------------------------------------------------------------------
- * PERFORMANCE — why this file looks paranoid
+ * PERFORMANCE - why this file looks paranoid
  * ---------------------------------------------------------------------------
  * update() runs inside the same 16.6 ms budget as the renderer, and a naive HUD
  * is genuinely capable of costing more than the grass:
@@ -49,14 +49,14 @@
  *    `_detectExternalEdits()` watches only `adaptive` and `resolutionScale`, so
  *    the effect booleans are unclaimed between tier switches. We write the flag
  *    and then emit EVENTS.QUALITY_CHANGED, which main.js fans out to every
- *    system's onQualityChange() — the same delivery path a tier switch uses, so
+ *    system's onQualityChange() - the same delivery path a tier switch uses, so
  *    consumers need no second code path.
  *  - `state.wind.strength`, and only once the user has switched the wind off
  *    "Auto". weather/wind.js recomputes strength every frame from the weather
  *    profile with a slow damp, so a one-shot write would decay away; the manual
  *    pin is re-asserted each frame (a sub-1% steady-state error against that
  *    damp, invisible) and stops the instant Auto comes back on. If WindField
- *    ever grows a real setter we prefer it — see `_applyWind()`.
+ *    ever grows a real setter we prefer it - see `_applyWind()`.
  *
  * `state.debug.hideUI` and `state.debug.showStats` are owned here and honoured
  * here: set either from anywhere and the HUD reacts on the next frame.
@@ -69,7 +69,7 @@
  * hidden: post/pipeline.js refuses several effects below a given tier (its
  * TIERS `allow*` flags, mirrored by EFFECT_FLOOR below), and it force-disables
  * ambient occlusion outright behind a module-private constant. The AO case
- * cannot be imported, so it is *observed* — see `_probeAO()`. Either way the
+ * cannot be imported, so it is *observed* - see `_probeAO()`. Either way the
  * row disables itself and says why.
  *
  * Markup/class contract for this file and for loading.js lives at the top of
@@ -94,7 +94,7 @@ const REVEAL_DELAY = 0.7;
  *  order of magnitude more often than anything on this surface can change. */
 const READOUT_PERIOD = 1 / 8;
 const READOUT_PERIOD_LOW = 1 / 4;
-/** Frame counters are noisy — a slower refresh reads calmer and costs less. */
+/** Frame counters are noisy - a slower refresh reads calmer and costs less. */
 const PERF_PERIOD = 1 / 3;
 /** How often an open panel re-reads the world to keep its controls honest. */
 const PANEL_SYNC_PERIOD = 1 / 4;
@@ -104,12 +104,12 @@ const TIMELAPSE_SECONDS = 20;
 
 /** Controls hint: seconds of sustained movement that dismisses it, the hard
  *  timeout for a viewer who never touches the keyboard, and the speed² above
- *  which the player counts as "moving" (0.6 m/s — slower than a walk). */
+ *  which the player counts as "moving" (0.6 m/s - slower than a walk). */
 const HINT_MOVE_SECONDS = 0.8;
 const HINT_TIMEOUT = 16;
 const HINT_SPEED_SQ = 0.35;
 
-/** Orbit: radians/second — one revolution every ~140 s. Slow enough that a
+/** Orbit: radians/second - one revolution every ~140 s. Slow enough that a
  *  still frame grabbed at any moment is composed rather than smeared. */
 const ORBIT_RATE = 0.045;
 /** Exponential rate of the eased hand-over between player camera and orbit. */
@@ -136,7 +136,7 @@ const TIER_RANK = Object.freeze({ low: 0, medium: 1, high: 2, ultra: 3 });
 /**
  * Lowest tier at which each effect switch actually reaches something.
  *
- * These mirror the `allow*` flags in post/pipeline.js's TIERS table — that file
+ * These mirror the `allow*` flags in post/pipeline.js's TIERS table - that file
  * is owned by someone else and its table is not exported, so this is a copy and
  * is marked as one. It is used for LABELLING ONLY: the flag is still written and
  * announced exactly as before, so if the pipeline's policy changes the worst
@@ -158,7 +158,7 @@ const EFFECT_FLOOR = Object.freeze({
 const PROBE_FRAME = 4;
 
 // ---------------------------------------------------------------------------
-// Module scratch — update() must not allocate
+// Module scratch - update() must not allocate
 // ---------------------------------------------------------------------------
 
 const _playerPos = new Vector3();
@@ -252,11 +252,11 @@ export class HUD {
       clock: '',
       phase: '',
       weather: '',
-      /** Wind speed in tenths of a m/s — a number, so no string is built to
+      /** Wind speed in tenths of a m/s - a number, so no string is built to
        *  discover that nothing changed. */
       wind: -1,
       meter: -1,
-      /** UNWRAPPED heading last written to the vane — see _updateReadout. */
+      /** UNWRAPPED heading last written to the vane - see _updateReadout. */
       vaneDeg: 0,
       fps: -1,
       band: '',
@@ -287,10 +287,10 @@ export class HUD {
     this._orbitCenter = new Vector3(0, 6, 0);
     this._orbitRadius = 16;
     /** World Y of the trunk base. The framing is measured from here, not from
-     *  y = 0 — world/terrain.js raises its clearing, so the two differ. */
+     *  y = 0 - world/terrain.js raises its clearing, so the two differ. */
     this._orbitBase = 0;
     this._hiddenApplied = null;
-    /** Last seen value of state.debug.hideUI — tracked separately from
+    /** Last seen value of state.debug.hideUI - tracked separately from
      *  `_hiddenApplied` because the two edges are not the same edge. */
     this._hideUIApplied = false;
     this._photoNoteTimer = 0;
@@ -322,7 +322,7 @@ export class HUD {
 
     /** Panel control synchronisers, registered by the builders below. */
     this._sync = [];
-    /** Control the pointer is currently dragging — never fight the user. */
+    /** Control the pointer is currently dragging - never fight the user. */
     this._liveControl = null;
     this._bloomPinned = false;
     this._toastTimer = 0;
@@ -441,7 +441,7 @@ export class HUD {
       statRow('tris', this._elTris),
       this._elCosts
     );
-    /** Fixed row pool — the cost table must not churn nodes at 3 Hz. */
+    /** Fixed row pool - the cost table must not churn nodes at 3 Hz. */
     this._costRows = [];
 
     perf.append(perfLine, this._elPerfDetail);
@@ -546,8 +546,8 @@ export class HUD {
       this._refreshGate();
     });
     // pointerenter only fires when the pointer CROSSES the boundary. Opening the
-    // panel underneath a stationary cursor — which is what happens every time
-    // someone reaches for Tab without moving the mouse — never crosses anything,
+    // panel underneath a stationary cursor - which is what happens every time
+    // someone reaches for Tab without moving the mouse - never crosses anything,
     // so the gate would stay open and the first WASD press would walk the player
     // away behind the sheet. The first move over the panel repairs it. Guarded,
     // so the steady state is one boolean test per pointermove and nothing else.
@@ -587,7 +587,7 @@ export class HUD {
   /**
    * Label left, control right.
    *
-   * The hint span is created for `''` as well as for real text — a row whose
+   * The hint span is created for `''` as well as for real text - a row whose
    * caption can change later (the effect switches say why they are unavailable)
    * needs the node to exist from the start so no layout ever has to be inserted.
    * Pass `null`/`undefined` for a row whose caption is permanently absent.
@@ -620,12 +620,12 @@ export class HUD {
    *
    * Roving tabindex: exactly one chip per group is in the tab ring, and the
    * arrow keys move between them. Without it, Tab through this panel is 30-odd
-   * stops — seven of them just to cross the weather strip — and the focus ring
+   * stops - seven of them just to cross the weather strip - and the focus ring
    * jumps around a control that reads visually as one object.
    *
    * Deliberate deviation from the ARIA radiogroup pattern: arrowing moves focus
-   * but does NOT select. Selection here is not free — a tier chip rebuilds the
-   * post stack and every shadow cascade — and arrowing across four of them to
+   * but does NOT select. Selection here is not free - a tier chip rebuilds the
+   * post stack and every shadow cascade - and arrowing across four of them to
    * reach the one you want would rebuild three times on the way. Space/Enter
    * commits, which is the "manual activation" variant of the same pattern.
    *
@@ -678,7 +678,7 @@ export class HUD {
       e.stopPropagation();
       // Move the tab stop with the focus, immediately. Leaving it on the
       // selected chip would put focus on a tabIndex -1 element, and the panel's
-      // Tab trap only recognises elements that are in the tab ring — the very
+      // Tab trap only recognises elements that are in the tab ring - the very
       // next Tab would walk straight out of the sheet into the browser chrome.
       for (let i = 0; i < buttons.length; i++) {
         const want = i === next ? 0 : -1;
@@ -699,7 +699,7 @@ export class HUD {
           b.setAttribute('aria-checked', on ? 'true' : 'false');
         }
       }
-      // The tab stop follows the selection — unless the keyboard is already
+      // The tab stop follows the selection - unless the keyboard is already
       // parked on a different chip, in which case moving it out from under the
       // user would drop them out of the tab ring mid-decision. With nothing
       // selected at all (the Moments strip whenever the clock is between two
@@ -769,7 +769,7 @@ export class HUD {
     input.step = String(opts.step);
     input.setAttribute('aria-label', label);
     const out = el('output', 'slider__value', '');
-    // <output> carries an implicit role="status" — i.e. it IS a polite live
+    // <output> carries an implicit role="status" - i.e. it IS a polite live
     // region, with no attribute here saying so. Two of the five readouts in this
     // panel track a number the world moves on its own (Render scale under the
     // adaptive controller, Wind speed while the weather owns it), and the 4 Hz
@@ -818,7 +818,7 @@ export class HUD {
       }
       paint(landed);
       // A refusal larger than one step means the owner really did move the
-      // value somewhere else — take the thumb with it rather than leaving it
+      // value somewhere else - take the thumb with it rather than leaving it
       // parked under the cursor at a setting that is not in effect. Every
       // slider here is monotonic over its whole range (the clock stops at 23:59
       // precisely so it cannot wrap), so this can only ever be a clamp.
@@ -839,7 +839,7 @@ export class HUD {
   }
 
   // -------------------------------------------------------------------------
-  // Effect switches — the only controls that can be overruled from outside
+  // Effect switches - the only controls that can be overruled from outside
   // -------------------------------------------------------------------------
 
   /**
@@ -847,7 +847,7 @@ export class HUD {
    * truth about itself.
    *
    * `read()` reports the flag AND the availability, so an overruled effect
-   * shows OFF rather than showing ON while doing nothing — which is the exact
+   * shows OFF rather than showing ON while doing nothing - which is the exact
    * failure this whole mechanism exists to prevent.
    */
   _buildEffectRow(group, label, key, hint) {
@@ -887,7 +887,7 @@ export class HUD {
    * read says the pass should exist and it does not, AO has been overruled.
    *
    * Only conclusive while the flag is on and the tier permits it, and only once
-   * the stack has had a few frames to configure itself — before that, a null
+   * the stack has had a few frames to configure itself - before that, a null
    * pass means "not built yet", not "refused". Inconclusive leaves the verdict
    * at null and the row alone, so a future build that re-enables AO is described
    * correctly with no change here.
@@ -918,7 +918,7 @@ export class HUD {
         const need = TIER_PRESETS[TIER_ORDER[r.floor]];
         reason = `Needs ${need ? need.label : 'a higher tier'} or above`;
       } else if (r.key === 'ao' && this._aoLive === false) {
-        reason = 'Off in this build — it lifts the black point';
+        reason = 'Off in this build - it lifts the black point';
       }
 
       if (reason !== r.reason) {
@@ -938,7 +938,7 @@ export class HUD {
   }
 
   // -------------------------------------------------------------------------
-  // Panel content — built in link(), once every sibling exists
+  // Panel content - built in link(), once every sibling exists
   // -------------------------------------------------------------------------
 
   _populatePanel() {
@@ -954,7 +954,7 @@ export class HUD {
         TIER_ORDER.map((t) => ({
           value: t,
           label: TIER_PRESETS[t].label,
-          title: `${TIER_PRESETS[t].label} — targets ${TIER_PRESETS[t].targetFps} fps`,
+          title: `${TIER_PRESETS[t].label} - targets ${TIER_PRESETS[t].targetFps} fps`,
         })),
         () => q.tier,
         (v) => {
@@ -1053,7 +1053,7 @@ export class HUD {
         presets.map((p) => ({
           value: p.key,
           label: p.label,
-          title: `${p.label} — ${hourToClock(p.hour)}`,
+          title: `${p.label} - ${hourToClock(p.hour)}`,
         })),
         () => {
           // Light a chip only when the clock is genuinely standing on it;
@@ -1244,7 +1244,7 @@ export class HUD {
     const gKeys = this._group('Keys');
     const keys = el('dl', 'keys');
     const KEYMAP = [
-      ['W A S D', 'Walk — hold Shift to run'],
+      ['W A S D', 'Walk - hold Shift to run'],
       ['Space C', 'Jump and crouch (fly: up and down)'],
       ['F', 'Toggle walking and flying'],
       ['Tab', 'Settings'],
@@ -1345,7 +1345,7 @@ export class HUD {
     }
 
     // Visibility is a two-line boolean, but the class write must not happen
-    // every frame — toggling a class dirties style for the whole subtree.
+    // every frame - toggling a class dirties style for the whole subtree.
     const hideUI = !!state.debug.hideUI;
     const hidden = hideUI || this._photo;
     if (hidden !== this._hiddenApplied) {
@@ -1358,7 +1358,7 @@ export class HUD {
       }
     }
 
-    // "Hide the UI" means all of it, panel included — and this has to watch
+    // "Hide the UI" means all of it, panel included - and this has to watch
     // hideUI's OWN edge, not `hidden`'s. `hidden` is a disjunction: with photo
     // mode already on it is true before H is pressed and true after, so hanging
     // the close off it would silently do nothing in exactly the case where
@@ -1444,8 +1444,8 @@ export class HUD {
     // therefore has to be a transform.
     const wind = state.wind;
     // A NaN that reached state.wind would otherwise be laundered straight into
-    // the DOM ("NaN m/s", `scaleX(NaN)`, `rotate(NaNdeg)`) and — worse for the
-    // vane — into our own cache, where it would latch permanently because every
+    // the DOM ("NaN m/s", `scaleX(NaN)`, `rotate(NaNdeg)`) and - worse for the
+    // vane - into our own cache, where it would latch permanently because every
     // subsequent comparison against NaN is false.
     const mean = Number.isFinite(wind.strength) ? wind.strength : 0;
     // Compare the ROUNDED number, not the formatted string: the mean flow moves
@@ -1483,7 +1483,7 @@ export class HUD {
     if (!Number.isFinite(deg)) return;
     // The angle written to the element is CONTINUOUS, not the wrapped value in
     // (-180,180]. .wind__vane transitions `transform` linearly, and CSS
-    // interpolates the number, not the direction — so writing 179deg and then
+    // interpolates the number, not the direction - so writing 179deg and then
     // -179deg makes the dart travel 358 degrees the wrong way round. That wrap
     // is not an edge case here: the bearing is view-relative, so it is crossed
     // every single time the player turns their head past the wind's back
@@ -1499,7 +1499,7 @@ export class HUD {
     const c = this._cache;
     const perf = state.perf;
 
-    // state.debug.showStats is public — anything may flip it, not just our own
+    // state.debug.showStats is public - anything may flip it, not just our own
     // switch. This early-returns when it is already in sync.
     this._applyStats();
 
@@ -1507,7 +1507,7 @@ export class HUD {
     // one is permanent damage of exactly the kind the wind readout is already
     // protected from: `NaN !== NaN` is true, so the change-gate stops gating and
     // this block rewrites textContent three times a second for the rest of the
-    // session — and `NaN >= x` is false, so the fps band latches to red. Not
+    // session - and `NaN >= x` is false, so the fps band latches to red. Not
     // theoretical: perf.fps and perf.avgFrameMs are both divisions, and
     // resolutionScale is written by an adaptive controller that also divides.
     // -1 is the sentinel: it can never collide with a real reading, and it
@@ -1571,7 +1571,7 @@ export class HUD {
 
   /**
    * Per-system cost table. Rows are pooled and reused, and each cell is written
-   * only when its value changes — a stable breakdown costs nothing to keep up.
+   * only when its value changes - a stable breakdown costs nothing to keep up.
    */
   _updateCosts() {
     const q = this.quality;
@@ -1621,7 +1621,7 @@ export class HUD {
 
   _applyStats() {
     const on = !!this.state.debug.showStats;
-    // Already in sync — `hidden` is the negation of `on` by definition, so this
+    // Already in sync - `hidden` is the negation of `on` by definition, so this
     // is the no-op test, not a mismatch test. Called at 3 Hz; it must not write.
     if (this._elPerfDetail.hidden === !on) return;
     this._elPerfDetail.hidden = !on;
@@ -1648,7 +1648,7 @@ export class HUD {
       this._hintMoveTime = Math.max(0, this._hintMoveTime - dt * 0.5);
     }
 
-    // A hint the user asked for waits for movement only — no timeout, because
+    // A hint the user asked for waits for movement only - no timeout, because
     // they explicitly opened it.
     const moveLimit = this._hintPinned ? HINT_MOVE_SECONDS * 2 : HINT_MOVE_SECONDS;
     if (this._hintMoveTime >= moveLimit) {
@@ -1692,7 +1692,7 @@ export class HUD {
 
     if (v) {
       this._elPanel.hidden = false;
-      // The panel is unusable under pointer lock — the cursor is captured.
+      // The panel is unusable under pointer lock - the cursor is captured.
       this.input?.exitPointerLock?.();
       this.showHint(false);
       this._syncPanel(true);
@@ -1765,7 +1765,7 @@ export class HUD {
 
   /**
    * Effect toggles. state.quality is shared with every system, so the flag is
-   * written and then announced — main.js fans EVENTS.QUALITY_CHANGED out to
+   * written and then announced - main.js fans EVENTS.QUALITY_CHANGED out to
    * every system's onQualityChange(), which is exactly how a tier switch is
    * delivered, so consumers need no second code path.
    */
@@ -1785,7 +1785,7 @@ export class HUD {
   }
 
   /**
-   * Manual wind speed. A real setter is preferred if WindField ever grows one —
+   * Manual wind speed. A real setter is preferred if WindField ever grows one - 
    * a system-owned setter can damp toward the value instead of being overwritten
    * by its own update() a frame later.
    * @param {number|null} value null restores weather-driven wind
@@ -1914,7 +1914,7 @@ export class HUD {
     // Measured from hours actually travelled, not from wall-clock seconds, so
     // the run covers exactly one cycle however the speed ramp behaves. Falls
     // back to the commanded speed if the sibling does not publish the measured
-    // one — a missing `factors` must not throw inside the frame loop.
+    // one - a missing `factors` must not throw inside the frame loop.
     const measured = this.dayNight?.factors?.hoursPerSecond;
     const hps = Number.isFinite(measured) ? Math.abs(measured) : L.setSpeed;
     L.hours += hps * dt;
@@ -1955,7 +1955,7 @@ export class HUD {
    * Slow orbit of the tree.
    *
    * Runs from HUD.update(), which main.js schedules AFTER the player controller
-   * and BEFORE the render — so the camera transform found here is exactly what
+   * and BEFORE the render - so the camera transform found here is exactly what
    * the player wanted this frame, and whatever is left is what gets rendered.
    * Blending between the two means neither entering nor leaving is a cut, and
    * the controller keeps running untouched underneath the whole time.
@@ -1983,7 +1983,7 @@ export class HUD {
     const rise = Math.max(0, centre.y - base);
 
     // Radius and height breathe on slow, mutually incommensurate periods so the
-    // path never visibly repeats — a perfect circle is the tell that gives away
+    // path never visibly repeats - a perfect circle is the tell that gives away
     // every automatic turntable ever shipped.
     const r = this._orbitRadius * (1 + 0.06 * Math.sin(t * 0.083));
     const h = base + rise * 0.7 + 2.6 + 1.7 * Math.sin(t * 0.061 + 1.1);
@@ -2033,7 +2033,7 @@ export class HUD {
    * The renderer is created with `preserveDrawingBuffer: false`, so the pixels
    * are only readable between the draw and the compositor's swap. main.js
    * queues its next frame at the TOP of the current one, which means any
-   * callback registered now lands after it in the same rAF batch — i.e. after
+   * callback registered now lands after it in the same rAF batch - i.e. after
    * post.render() has run and before the buffer is presented. That is the only
    * window in which this works, and it is a reliable one.
    */
@@ -2152,7 +2152,7 @@ export class HUD {
 
     switch (e.code) {
       case 'Tab':
-        // Inside the panel, Tab belongs to the focus ring — but it must not walk
+        // Inside the panel, Tab belongs to the focus ring - but it must not walk
         // out of the sheet into the browser chrome, or the next Tab would close
         // the panel from under a keyboard user.
         if (this._panelOpen && this._elPanel.contains(document.activeElement)) {
@@ -2165,7 +2165,7 @@ export class HUD {
       case 'Escape':
         // The panel wins whenever the keyboard is actually inside it. Photo mode
         // deliberately no longer closes the panel (the photo switch lives on it),
-        // so "photo on AND panel open" is now a reachable state — and under the
+        // so "photo on AND panel open" is now a reachable state - and under the
         // plain orbit -> photo -> panel order, a user typing in the sheet who
         // pressed Esc got photo mode dismissed behind them while the sheet they
         // were looking at stayed put. Esc, from inside a sheet, closes the sheet.
@@ -2202,7 +2202,7 @@ export class HUD {
     }
     // Nor anywhere inside the open panel. A keyboard user stepping through the
     // switches is on <button>s, not inputs, so the test above lets them through
-    // — and P would drop them into photo mode, H would blank the readout, and O
+    // - and P would drop them into photo mode, H would blank the readout, and O
     // would take the camera away, all from a keystroke that was meant for the
     // control under their finger.
     if (this._panelOpen && t && this._elPanel.contains(t)) return;

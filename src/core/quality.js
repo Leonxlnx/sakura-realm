@@ -1,17 +1,17 @@
 /**
- * quality.js — quality tiers, adaptive resolution, and performance instrumentation.
+ * quality.js - quality tiers, adaptive resolution, and performance instrumentation.
  *
  * Owns `state.quality.*` and `state.perf.*` (see core/state.js).
  *
  * Three responsibilities, deliberately kept in one file because they share the
  * same per-frame timing data:
  *
- *   1. TIERS — four presets (low/medium/high/ultra) that write every quality
+ *   1. TIERS - four presets (low/medium/high/ultra) that write every quality
  *      field, plus a GPU sniff at startup so the first frame is already sane.
  *      Tier changes emit EVENTS.QUALITY_CHANGED; main.js fans that out to every
  *      system's onQualityChange(quality).
  *
- *   2. ADAPTIVE RESOLUTION — moves `state.quality.resolutionScale` inside
+ *   2. ADAPTIVE RESOLUTION - moves `state.quality.resolutionScale` inside
  *      [minResolutionScale, maxResolutionScale] to hold the tier's target
  *      framerate. Deliberately NOT emitted as QUALITY_CHANGED: a tier change
  *      makes systems rebuild geometry and render targets, and doing that in the
@@ -20,7 +20,7 @@
  *      `state.quality.resolutionScale` each frame (cheap, one float compare) or
  *      subscribe via `quality.onResolutionChange(fn)`.
  *
- *   3. INSTRUMENTATION — fps / raw / smoothed frame time, renderer.info counters,
+ *   3. INSTRUMENTATION - fps / raw / smoothed frame time, renderer.info counters,
  *      and a `registerCost(label, ms)` hook so any system can publish its own
  *      cost for the HUD breakdown.
  *
@@ -187,7 +187,7 @@ function ladderIndexFor(scale) {
  * Pull whatever identity strings the browser will give us.
  * WEBGL_debug_renderer_info is the good one; Chrome also returns a useful
  * (ANGLE-decorated) string from plain GL_RENDERER now, and Firefox with
- * privacy.resistFingerprinting returns nothing at all — hence the fallbacks.
+ * privacy.resistFingerprinting returns nothing at all - hence the fallbacks.
  */
 function readGPUStrings(renderer) {
   const out = { vendor: '', renderer: '', maxTexture: 0, maxSamples: 0, webgl2: false, hasContext: false };
@@ -207,7 +207,7 @@ function readGPUStrings(renderer) {
       out.vendor = String(gl.getParameter(ext.UNMASKED_VENDOR_WEBGL) || '');
     }
   } catch (err) {
-    /* extension blocked by privacy settings — fall through */
+    /* extension blocked by privacy settings - fall through */
   }
   try {
     if (!out.renderer) out.renderer = String(gl.getParameter(gl.RENDERER) || '');
@@ -238,14 +238,14 @@ function numAfter(str, re) {
  * Map a GPU description onto a starting tier.
  *
  * Rule from the art/perf brief: an INTEGRATED part (Radeon iGPU, Iris, UHD)
- * lands on MEDIUM or HIGH and never ULTRA — those chips have no VRAM and this
+ * lands on MEDIUM or HIGH and never ULTRA - those chips have no VRAM and this
  * scene is fill-rate bound. Only a known-strong discrete part earns ULTRA.
  * Anything we cannot identify gets MEDIUM: adaptive resolution and the settings
  * panel can move from there, and a wrong guess upward is far more painful than
  * a wrong guess downward.
  */
 export function classifyGPU(info) {
-  // ANGLE decorates names with "(R)" / "(TM)" — strip them and collapse runs of
+  // ANGLE decorates names with "(R)" / "(TM)" - strip them and collapse runs of
   // whitespace so "Intel(R) Iris(R) Xe Graphics" matches a plain "iris xe" probe.
   const s = `${info.renderer} ${info.vendor}`
     .toLowerCase()
@@ -391,7 +391,7 @@ export class QualityManager {
     this._minIndex = 0;
     this._maxIndex = SCALE_LADDER.length - 1;
     // Highest rung not yet proven too expensive. Learned instantly from a failed
-    // up-step, forgotten slowly — this is what stops the controller pacing back
+    // up-step, forgotten slowly - this is what stops the controller pacing back
     // and forth across a cost boundary.
     this._learnedMaxIndex = SCALE_LADDER.length - 1;
     this._ceilingLearnedAt = 0;
@@ -483,7 +483,7 @@ export class QualityManager {
   set(tier, opts) {
     const key = normalizeTier(tier);
     if (!key) {
-      console.warn(`[quality] unknown tier "${tier}" — ignored`);
+      console.warn(`[quality] unknown tier "${tier}" - ignored`);
       return false;
     }
     // Tolerate set(tier, null) / set(tier, true) from UI code without throwing.
@@ -551,7 +551,7 @@ export class QualityManager {
 
     // rAF-to-rAF interval is the honest frame time: it includes vsync wait and
     // whatever the GPU was still chewing on. `now` is the same value main.js
-    // hands to endFrame(), so we can never derive duration from the argument —
+    // hands to endFrame(), so we can never derive duration from the argument - 
     // we measure the CPU span ourselves below.
     this._rafDelta = this._lastStamp > 0 ? stamp - this._lastStamp : -1;
     this._lastStamp = stamp;
@@ -581,7 +581,7 @@ export class QualityManager {
 
     if (this._rafDelta <= 0) {
       // First frame of the session, or the first after a reset. There is no
-      // interval to measure yet, and the CPU span is NOT a frame time — feeding
+      // interval to measure yet, and the CPU span is NOT a frame time - feeding
       // it in drags the vsync-floor estimate below the real refresh period,
       // after which the controller thinks it can never do better and stops
       // restoring resolution forever. Publish the cheap counters and bail.
@@ -623,7 +623,7 @@ export class QualityManager {
 
     // --- Vsync floor estimate ------------------------------------------------
     // Falls fast toward any quick frame, creeps back up glacially, so it converges
-    // on the FLOOR of observed frame times rather than their mean — that floor is
+    // on the FLOOR of observed frame times rather than their mean - that floor is
     // the display period, and "avg == floor" is how we know we are vsync-limited
     // rather than GPU-limited. Snapped to a real refresh period so the slow creep
     // can never drift into a value no monitor has.
@@ -701,7 +701,7 @@ export class QualityManager {
 
   /**
    * Sorted view of the cost table for the HUD: [{label, ms, peak, share}, ...],
-   * heaviest first. Reuses its objects — do not hold references across calls.
+   * heaviest first. Reuses its objects - do not hold references across calls.
    * Not a hot path (the HUD refreshes a few times a second), but still no-alloc
    * once the label set is stable.
    */
@@ -811,7 +811,7 @@ export class QualityManager {
     perf.tier = this.state.quality.tier;
   }
 
-  /** The frame time we are trying to hold, in ms. Cached — read every frame. */
+  /** The frame time we are trying to hold, in ms. Cached - read every frame. */
   get _targetMs() {
     return this._target;
   }
@@ -864,7 +864,7 @@ export class QualityManager {
       idx -= 1;
       reason += ' (small max texture)';
     }
-    // Only trust this when we actually got a context — "we could not ask" must
+    // Only trust this when we actually got a context - "we could not ask" must
     // never be read as "the answer is no".
     if (this.gpu.hasContext && !this.gpu.webgl2 && idx > 0) {
       idx = 0;
@@ -885,7 +885,7 @@ export class QualityManager {
         if (adaptiveParam !== null) this._adaptiveOverride = adaptiveParam !== '0' && adaptiveParam !== 'false';
       }
     } catch (err) {
-      /* exotic environment without URL parsing — ignore */
+      /* exotic environment without URL parsing - ignore */
     }
     if (forced) return forced;
     try {
@@ -893,7 +893,7 @@ export class QualityManager {
         return normalizeTier(localStorage.getItem('sakura.quality') || '');
       }
     } catch (err) {
-      /* storage blocked (private mode / file://) — detection stands */
+      /* storage blocked (private mode / file://) - detection stands */
     }
     return null;
   }
@@ -902,7 +902,7 @@ export class QualityManager {
     try {
       if (typeof localStorage !== 'undefined') localStorage.setItem('sakura.quality', tier);
     } catch (err) {
-      /* storage blocked — the tier still applies for this session */
+      /* storage blocked - the tier still applies for this session */
     }
   }
 
@@ -917,7 +917,7 @@ export class QualityManager {
       q[k] = preset[k];
     }
 
-    // Adaptive is a user preference, not a tier property — a tier change must
+    // Adaptive is a user preference, not a tier property - a tier change must
     // not silently re-enable something the player turned off.
     q.adaptive = this._adaptiveOverride === null ? true : this._adaptiveOverride;
     this._lastSeenAdaptive = q.adaptive;
@@ -1056,7 +1056,7 @@ export class QualityManager {
    *   - Learned ceiling + exponential backoff: if an up-step is followed by a
    *     down-step we sit on a cost boundary, so that rung is marked too expensive
    *     and the next attempt needs proportionally longer stability. Without this
-   *     the controller paces across the boundary forever — the classic visible
+   *     the controller paces across the boundary forever - the classic visible
    *     "breathing" that makes dynamic resolution obvious and hateful.
    *   - CPU veto: if our own JS span already exceeds the whole budget, pixels
    *     are not the bottleneck and cutting them only costs sharpness.
@@ -1064,7 +1064,7 @@ export class QualityManager {
    * What this controller deliberately does NOT do is judge a step by whether the
    * frame time improved. Under vsync every frame is quantised to a multiple of
    * the refresh period, so a step from 32 ms to 17 ms of real GPU work shows up
-   * as no change at all (33.3 ms both times) — "did that help?" is unanswerable
+   * as no change at all (33.3 ms both times) - "did that help?" is unanswerable
    * without a GPU timer query, and acting on the answer produces exactly the
    * oscillation the rest of this design exists to prevent.
    */
@@ -1102,12 +1102,12 @@ export class QualityManager {
     if (now - this._lastChangeAt < this._cooldownMs) return;
 
     // --- Down ---------------------------------------------------------------
-    // 12 samples ≈ 0.2 s at 60 fps, ≈ 0.4 s at 30 fps — fast enough to feel
+    // 12 samples ≈ 0.2 s at 60 fps, ≈ 0.4 s at 30 fps - fast enough to feel
     // responsive, slow enough that a two-frame hiccup never triggers it.
     if (this._overStreak >= 12 && this._ladderIndex > this._minIndex) {
       if (displayLimited) return;
       // Fewer pixels cannot fix a frame whose JS span alone already exceeds the
-      // whole budget — that is a direct measurement, unlike "did the last step
+      // whole budget - that is a direct measurement, unlike "did the last step
       // help?", which vsync quantisation makes unanswerable (a 17 ms frame and a
       // 32 ms frame both read as exactly 33.3 ms, so real progress looks like
       // none). Threshold is the full budget, not a fraction of it: when the CPU
@@ -1115,7 +1115,7 @@ export class QualityManager {
       if (this.state.perf.cpuMs > target) return;
       // Single rungs by default, for the same quantisation reason: a
       // "proportional" step is guesswork that overshoots, and overshooting costs
-      // a visible bounce back up — worse than converging a second slower. Two
+      // a visible bounce back up - worse than converging a second slower. Two
       // rungs only past 2.5x target, where we have missed at least three
       // refreshes and the overrun is unambiguous.
       const stepSize = avg > target * 2.5 ? 2 : 1;
@@ -1124,7 +1124,7 @@ export class QualityManager {
     }
 
     // --- Up -----------------------------------------------------------------
-    // A rung that failed once is not forbidden forever — the scene's cost swings
+    // A rung that failed once is not forbidden forever - the scene's cost swings
     // with time of day and weather, so hand one rung back after a long stretch of
     // healthy frames and let the controller re-probe it.
     //
@@ -1135,7 +1135,7 @@ export class QualityManager {
     // boundary stops probing, while one that really did get cheaper is found
     // within a minute and a half and resets the interval.
     // An up-step that survived its whole cooldown while staying under budget
-    // proves the learned ceiling wrong — the workload really did get cheaper
+    // proves the learned ceiling wrong - the workload really did get cheaper
     // (a storm passed, the sun set, the player walked out of the grass). Drop
     // the ceiling entirely so the normal up-streak can climb rung by rung
     // instead of crawling back one rung per relax interval.
@@ -1185,7 +1185,7 @@ export class QualityManager {
     this._cooldownMs = isUp ? 1600 : 600;
     this._overStreak = 0;
     this._underStreak = 0;
-    // The next few frames pay for target reallocation — do not judge them.
+    // The next few frames pay for target reallocation - do not judge them.
     this._avgFast.reset();
   }
 
@@ -1208,7 +1208,7 @@ export class QualityManager {
   }
 }
 
-/** Hoisted comparator — a closure here would allocate on every HUD refresh. */
+/** Hoisted comparator - a closure here would allocate on every HUD refresh. */
 function descendingMs(a, b) {
   return b.ms - a.ms;
 }

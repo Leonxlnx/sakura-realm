@@ -1,4 +1,4 @@
-# Sakura Realm — Build Contracts
+# Sakura Realm - Build Contracts
 
 Read this fully before writing a line. Every module is built in parallel by a
 different author; these contracts are the only thing keeping them integrable.
@@ -19,15 +19,15 @@ A browser-based, AAA-looking real-time sakura landscape:
 - Everything runs in a browser at a locked framerate.
 
 Art direction: *quiet, cinematic, slightly melancholy*. Think Ghost of Tsushima's
-pampas fields and Sekiro's sakura — not a bright cartoon. Prefer soft light,
+pampas fields and Sekiro's sakura - not a bright cartoon. Prefer soft light,
 strong atmospheric perspective, low-saturation greens, and pink that reads as
 **pale and desaturated**, never candy/hot-pink.
 
 ---
 
-## 2. Hard constraints — read twice
+## 2. Hard constraints - read twice
 
-**Target GPU is an AMD Radeon 780M — an integrated laptop GPU.** This is the single
+**Target GPU is an AMD Radeon 780M - an integrated laptop GPU.** This is the single
 most important engineering constraint in the project. It has no dedicated VRAM and
 roughly the fill rate of a 2016 midrange discrete card.
 
@@ -45,7 +45,7 @@ Non-negotiable consequences:
 
 **No external asset downloads.** There is no network fetch of textures or models.
 Every texture is **generated procedurally at runtime** (canvas 2D or a GPU pass)
-via `core/textures.js`, and every mesh is generated in code. This is a hard rule —
+via `core/textures.js`, and every mesh is generated in code. This is a hard rule - 
 the project must run from `file://`-adjacent local dev with zero assets on disk.
 
 ---
@@ -55,13 +55,13 @@ the project must run from `file://`-adjacent local dev with zero assets on disk.
 | Thing | Value |
 |---|---|
 | three.js | **0.180.0** (`import * as THREE from 'three'`) |
-| postprocessing | **6.39.4** (pmndrs — merged effect passes, much faster than three's EffectComposer on iGPU) |
+| postprocessing | **6.39.4** (pmndrs - merged effect passes, much faster than three's EffectComposer on iGPU) |
 | n8ao | **1.10.3** (`N8AOPostPass`) |
 | bundler / dev server | Vite 6 (`npm run dev` → http://localhost:5173) |
 | module system | native ESM, bare imports resolved by Vite |
 
 Addons import from the deep path, e.g.
-`import { CSM } from 'three/addons/csm/CSM.js'` is **not** available in 0.180 —
+`import { CSM } from 'three/addons/csm/CSM.js'` is **not** available in 0.180 - 
 verify any addon exists in `node_modules/three/examples/jsm/` before importing it.
 When in doubt, implement it yourself rather than importing something that may not exist.
 
@@ -100,16 +100,16 @@ export class MySystem {
 { canvas, uiRoot, renderer, scene, camera, state, bus, input, quality, textures, systems }
 ```
 
-- `state` — the world state object from `core/state.js`. **Read the file.** It is the contract.
-- `bus` — `EventBus` from `core/state.js`. Use `EVENTS.*` constants, never raw strings.
-- `textures` — `TextureFactory`, the only place procedural textures are created/cached.
-- `systems` — sibling registry, only safe to use from `link()` onward.
+- `state` - the world state object from `core/state.js`. **Read the file.** It is the contract.
+- `bus` - `EventBus` from `core/state.js`. Use `EVENTS.*` constants, never raw strings.
+- `textures` - `TextureFactory`, the only place procedural textures are created/cached.
+- `systems` - sibling registry, only safe to use from `link()` onward.
 
 ### State ownership
 
 `core/state.js` marks every field with `@owner`. **Write only the fields you own.**
 Reading anything is always fine. If you need to influence a field you do not own,
-call the owner's method — do not write it behind their back.
+call the owner's method - do not write it behind their back.
 
 ---
 
@@ -141,7 +141,7 @@ contract in this document and assume it will exist.
 | `post/pipeline.js` | `PostPipeline` | postprocessing stack, exposes `render(dt, state)` |
 | `ui/hud.js` | `HUD` | HUD, settings panel, keybind help |
 | `ui/loading.js` | `LoadingScreen` | loading screen (`show/setProgress/hide/fail`) |
-| `ui/styles.css` | — | all CSS |
+| `ui/styles.css` | - | all CSS |
 
 Shared, already written, **do not edit**: `core/state.js`, `core/math.js`,
 `core/input.js`, `src/main.js`, `index.html`, `vite.config.js`.
@@ -149,7 +149,7 @@ Shared, already written, **do not edit**: `core/state.js`, `core/math.js`,
 `core/math.js` gives you: `createNoise(seed)` → `{noise2D, noise3D, fbm2D, fbm3D,
 ridged2D, billow2D, curl2D, curl3D}`, plus `worley2D/3D`, `makeRNG`, `halton`,
 `fibonacciSphere/Disc`, `clamp/lerp/smoothstep/damp/remap`, `kelvinToRGB`,
-`RollingAverage`, `Easing`. **Use it — do not reimplement noise.**
+`RollingAverage`, `Easing`. **Use it - do not reimplement noise.**
 
 ---
 
@@ -198,7 +198,7 @@ post.registerGodRayLight(object3D)           // sun mesh for volumetric light sh
 
 - Write GLSL as tagged template strings or plain string constants inside the module.
   Do not add a GLSL loader plugin.
-- GLSL ES 3.0 is available (three r180 uses WebGL2). Use `#version 300 es`? **No** —
+- GLSL ES 3.0 is available (three r180 uses WebGL2). Use `#version 300 es`? **No** - 
   three injects its own version directive. Write GLSL1-style three shaders and let
   three transpile, OR use `glslVersion: THREE.GLSL3` on `RawShaderMaterial` if you
   need `textureLod`/`texture()` explicitly. Be consistent within a file.
@@ -220,7 +220,7 @@ post.registerGodRayLight(object3D)           // sun mesh for volumetric light sh
 4. Reuse geometries and materials. One material per visual family.
 5. Frustum-cull manually for instanced chunks; set correct `boundingSphere`.
 6. Render targets: allocate once, resize on `resize()`, never per frame.
-7. Prefer `HalfFloatType` render targets over `FloatType` — the 780M pays for float.
+7. Prefer `HalfFloatType` render targets over `FloatType` - the 780M pays for float.
 
 ---
 
@@ -231,7 +231,7 @@ post.registerGodRayLight(object3D)           // sun mesh for volumetric light sh
   one-line intuition, not a restatement of the code.
 - No placeholder comments (`// TODO: implement`), no stub functions, no truncation.
   **Ship complete, working code.** If a feature is too expensive, implement a
-  cheaper real version — never an empty one.
+  cheaper real version - never an empty one.
 - Guard against WebGL context loss and missing extensions where cheap to do so.
 - Keep files under ~900 lines; split helpers into a sibling file **that you own**
   (declare it in your task) if a module gets larger.
@@ -241,7 +241,7 @@ post.registerGodRayLight(object3D)           // sun mesh for volumetric light sh
 ## 10. Definition of done for a module
 
 - It runs without console errors.
-- It looks demonstrably better than a naive implementation — that is the entire
+- It looks demonstrably better than a naive implementation - that is the entire
   point of this project.
 - It responds correctly to time of day, weather, and wind where relevant.
 - It has all four quality tiers wired and LOW genuinely reduces cost.

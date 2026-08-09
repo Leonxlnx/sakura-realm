@@ -1,5 +1,5 @@
 /**
- * tree/petals.js — falling sakura petals: aerodynamics, rendering, lifecycle.
+ * tree/petals.js - falling sakura petals: aerodynamics, rendering, lifecycle.
  *
  * A petal does not drop, it *flutters*. The whole system is built around that:
  *
@@ -9,7 +9,7 @@
  *    force is not aligned with the velocity, lift falls out for free: a tilted
  *    petal darts sideways, an edge-on petal knifes down and accelerates, a
  *    face-on petal stalls and hangs. The quadratic drag is integrated with its
- *    closed-form solution u' = u / (1 + k|u|dt), which is unconditionally stable —
+ *    closed-form solution u' = u / (1 + k|u|dt), which is unconditionally stable - 
  *    explicit Euler rings and then explodes at these coefficients and a 20 fps dt.
  *
  *  - Orientation is a rocking + tumbling model whose RATE scales with air-relative
@@ -19,8 +19,8 @@
  *    is still emergent, never scripted: the zig-zag, the stall, the sideways glide
  *    and the terminal speed all come out of the force model.
  *
- *  - Turbulence is an ABC (Arnold–Beltrami–Childress) flow: exactly
- *    divergence-free — a genuine curl field — for 12 sines instead of the 12
+ *  - Turbulence is an ABC (Arnold-Beltrami-Childress) flow: exactly
+ *    divergence-free - a genuine curl field - for 12 sines instead of the 12
  *    simplex evaluations that differentiating noise into a curl would cost. It is
  *    evaluated in the frame drifting with the mean wind (Taylor's frozen
  *    turbulence hypothesis), so eddies travel downwind instead of being nailed to
@@ -40,7 +40,7 @@ import { TAU, clamp, clamp01, smoothstep, makeRNG, noise } from '../core/math.js
 const GRAVITY = 9.81;
 
 /**
- * Broadside terminal velocity, m/s — the single tuned number in the force model.
+ * Broadside terminal velocity, m/s - the single tuned number in the force model.
  * The drag coefficient follows from it (mg = ½ρC_dAv² ⇒ k = g / v_term²) and is
  * independent of petal size, because mass and area both scale with area. A
  * fluttering petal averages ~2.6x this since it spends much of each cycle
@@ -84,7 +84,7 @@ const TIER = {
 };
 
 // ---------------------------------------------------------------------------
-// Module scratch — never allocate in update()
+// Module scratch - never allocate in update()
 // ---------------------------------------------------------------------------
 
 const _v3a = new THREE.Vector3();
@@ -111,7 +111,7 @@ function petalHalfWidth(y) {
   return (HALF_W * Math.pow(t, 0.45) * (1 - 0.3 * smoothstep(0.55, 1, t))) / HALF_W_NORM;
 }
 
-/** Upper edge of the petal at width-offset x — this carves the tip cleft. */
+/** Upper edge of the petal at width-offset x - this carves the tip cleft. */
 function petalTipY(x) {
   const q = x / NOTCH_WIDTH;
   return 1 - NOTCH_DEPTH * Math.exp(-q * q);
@@ -359,7 +359,7 @@ export class PetalSystem {
     uniforms.uSkyUp = { value: new THREE.Color(0.18, 0.36, 0.72) };
     uniforms.uSkyDown = { value: new THREE.Color(0.22, 0.24, 0.2) };
     uniforms.uAmbient = { value: 1 };
-    // Pale, desaturated, slightly warm — sakura is closer to white than to pink.
+    // Pale, desaturated, slightly warm - sakura is closer to white than to pink.
     uniforms.uPale = { value: new THREE.Color('#f4e7e3') };
     uniforms.uDeep = { value: new THREE.Color('#e0b7c1') };
     uniforms.uAged = { value: new THREE.Color('#c3ac9e') };
@@ -410,7 +410,7 @@ export class PetalSystem {
       this.texture.needsUpdate = true;
     }
 
-    // Petals the new tier can no longer afford fade out instead of vanishing —
+    // Petals the new tier can no longer afford fade out instead of vanishing - 
     // dropping several hundred petals in one frame is extremely visible.
     for (let i = this.capacity; i < prev; i++) {
       if (this.phaseOf[i] !== FREE) {
@@ -797,7 +797,7 @@ export class PetalSystem {
         this.ny[i] = nyi * c + (szi * nxi - sxi * nzi) * s;
         this.nz[i] = nzi * c + (sxi * nyi - syi * nxi) * s;
 
-        // The tumble axis swings horizontal and across the drift — exactly what a
+        // The tumble axis swings horizontal and across the drift - exactly what a
         // falling leaf does. Damped, so a gust turns petals instead of snapping them.
         const hs = Math.sqrt(ux * ux + uz * uz);
         if (hs > 0.25) {
@@ -882,7 +882,7 @@ export class PetalSystem {
       const nrm = t.getNormal(this.px[i], this.pz[i], _v3b);
       if (nrm && nrm.y === nrm.y) { gx = nrm.x; gy = nrm.y; gz = nrm.z; }
     }
-    // Petals do not lie perfectly flat on grass — tilt each one a little, or the
+    // Petals do not lie perfectly flat on grass - tilt each one a little, or the
     // carpet reads as a decal sheet.
     const r = this.rng;
     gx += r.gaussian(0, 0.16); gy += r.gaussian(0, 0.05); gz += r.gaussian(0, 0.16);
@@ -1085,7 +1085,7 @@ export class PetalSystem {
  * fully transparent and still cost a blend. The alpha map then only has to soften
  * the last couple of texels of the edge.
  *
- * cols = rows = 2 degenerates to the far-LOD quad — two triangles, because a
+ * cols = rows = 2 degenerates to the far-LOD quad - two triangles, because a
  * 5-pixel petal made of 48 triangles is pure quad-overshading.
  */
 function buildPetalGeometry(cols, rows) {
@@ -1127,7 +1127,7 @@ function buildPetalGeometry(cols, rows) {
 }
 
 // ---------------------------------------------------------------------------
-// Shaders — GLSL1 style, three transpiles for WebGL2
+// Shaders - GLSL1 style, three transpiles for WebGL2
 // ---------------------------------------------------------------------------
 
 const PETAL_VERT = /* glsl */ `

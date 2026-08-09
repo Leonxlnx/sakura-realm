@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Ultra-realistic browser-based sakura landscape — volumetric sky, dynamic weather, endless grass, procedural sakura tree.",
+  "description": "Ultra-realistic browser-based sakura landscape - volumetric sky, dynamic weather, endless grass, procedural sakura tree.",
   "scripts": {
     "dev": "vite --host --port 5174",
     "build": "vite build",

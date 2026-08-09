@@ -1,12 +1,12 @@
 /**
- * tree/blossoms.js — the corolla layer: 122 400 instanced blossom cards.
+ * tree/blossoms.js - the corolla layer: 122 400 instanced blossom cards.
  *
  * ---------------------------------------------------------------------------
  * WHY IT IS BUILT THIS WAY
  * ---------------------------------------------------------------------------
  * A cherry in full bloom is a CLOUD of flowers with real thickness, and this
- * file used to say the opposite — "not a cloud of flowers, it is a SHELL of
- * them" — and was built accordingly, on a `smoothstep` window in a normalised
+ * file used to say the opposite - "not a cloud of flowers, it is a SHELL of
+ * them" - and was built accordingly, on a `smoothstep` window in a normalised
  * ellipsoid radius. That is where the hollow-bubble crown came from, and it is
  * worth being precise about why it is wrong, because the shell story is
  * plausible and it survived several passes.
@@ -14,15 +14,15 @@
  * It is right that flowers open where light reached. It is wrong that "where
  * light reached" is a surface. Light entering a canopy is attenuated
  * EXPONENTIALLY with the depth of foliage it has crossed, so the flowering rate
- * is a smooth function with a length scale of a couple of metres — strong for
+ * is a smooth function with a length scale of a couple of metres - strong for
  * the outer two, half strength 1.6 m in, an eighth of it four metres in. That
  * is a cloud several metres thick over a bare interior, and it is what the
  * reference photographs show: an opaque mass with only the dark main limbs
  * visible near the trunk.
  *
  * The shell test also had a second, non-obvious failure that the depth model
- * fixes for free. The twig cloud is not uniform — it carries roughly 360 sites
- * per cubic metre halfway out and 32 at the rim — so a rule that put flowers on
+ * fixes for free. The twig cloud is not uniform - it carries roughly 360 sites
+ * per cubic metre halfway out and 32 at the rim - so a rule that put flowers on
  * the surface still produced a crown that was DENSEST in the middle, where a
  * view ray crosses 13 m of it, and thinnest at the rim where a ray crosses
  * four. Measured coverage of the crown's own outline was 52 %, essentially all
@@ -34,8 +34,8 @@
  *     in mid-air and every one of them inherits the EXACT sway weights of the
  *     twig holding it. Blossom and wood are displaced by identical shader
  *     maths, so they cannot separate however hard the wind blows.
- *   - Density per site is Beer's law along TWO paths — up through the crown to
- *     the sky and sideways out through the flank — against the crown envelope
+ *   - Density per site is Beer's law along TWO paths - up through the crown to
+ *     the sky and sideways out through the flank - against the crown envelope
  *     branches.js grew the wood against. Both paths are needed: with the
  *     horizontal one alone, the skirt (where the crown is only 3 m across)
  *     scored as fully lit everywhere and 54 % of the whole canopy piled into
@@ -59,7 +59,7 @@
  *   - Shading is Lambert, not Standard. Petals are matte; the entire reason
  *     they are beautiful is TRANSMISSION, which no BRDF in three provides, so
  *     the GGX lobe would be pure cost. The saved instructions buy the
- *     subsurface term instead — and on the 780M, a canopy that can fill the
+ *     subsurface term instead - and on the 780M, a canopy that can fill the
  *     screen is exactly where a cheap fragment shader pays.
  *
  * One InstancedBufferGeometry, one draw call, one static upload at build time.
@@ -89,7 +89,7 @@ export const BLOSSOM_STRIDE = 22;
 /**
  * Ceiling for the one-time scratch buffer. The shipping skeleton generates
  * 122 400 across 145 000 twig sites; the headroom exists so a future skeleton
- * change cannot SILENTLY truncate the canopy — hitting this cap does not throw,
+ * change cannot SILENTLY truncate the canopy - hitting this cap does not throw,
  * it simply stops placing flowers, and the first symptom is a bald patch on
  * whichever side of the tree the site list happened to reach last. The buffer
  * is transient: the mesh gets an exact-size copy.
@@ -98,7 +98,7 @@ export const BLOSSOM_STRIDE = 22;
  * during the crown-envelope rebuild, and every time the run before the warning
  * was read had a visibly lopsided canopy. There is now only 10 % of clearance,
  * so ANY change that adds flowering wood must be paired with a look at
- * CLUSTER_RATE. Do not answer a bare-looking crown by raising this — read the
+ * CLUSTER_RATE. Do not answer a bare-looking crown by raising this - read the
  * note on CLUSTER_RATE first, and then the one on TWIG_SPACING in sakura.js.
  */
 const HARD_MAX = 520000;
@@ -107,8 +107,8 @@ const SPAWN_MAX = 1600;
 
 /**
  * Per-tier canopy budget. `fraction` is how many of the generated flowers the
- * tier draws — the instance order is shuffled at build time, so ANY prefix is
- * an even thinning of the whole canopy, no rebuild and no popping region — and
+ * tier draws - the instance order is shuffled at build time, so ANY prefix is
+ * an even thinning of the whole canopy, no rebuild and no popping region - and
  * `boost` grows the survivors so it does not simply go bald.
  *
  * FILL COST GOES AS `fraction * boost^2`, and that product is the number to
@@ -132,8 +132,8 @@ const SPAWN_MAX = 1600;
  *
  * Read that table as the whole cost story of this pass. HIGH buys 27 % more
  * fill and 54 % more instances, and it is spent on a crown that is a third
- * wider and genuinely opaque rather than on bigger flowers. LOW and MEDIUM —
- * the tiers the 780M will actually sit on — come DOWN by two thirds and a half,
+ * wider and genuinely opaque rather than on bigger flowers. LOW and MEDIUM - 
+ * the tiers the 780M will actually sit on - come DOWN by two thirds and a half,
  * which is where the extra HIGH fill is paid for, along with a wood mesh that
  * draws 1 750 branches out of 15 200 and a distance LOD that now starts at 22 m
  * instead of 30.
@@ -141,7 +141,7 @@ const SPAWN_MAX = 1600;
  * `boost` used to be DERIVED as sqrt(count/active), i.e. exact area
  * compensation, capped at 1.45. Two things were wrong with that. The cap only
  * bit below fraction 0.48, so MEDIUM came out at 93 % of ULTRA's fill while
- * drawing 44 % of the triangles — the tier that this laptop GPU will actually
+ * drawing 44 % of the triangles - the tier that this laptop GPU will actually
  * sit on was barely a degradation at all. And because exact compensation makes
  * projected area INVARIANT to `fraction`, the obvious remediation dial ("turn
  * the fraction down") moved triangle count and nothing else, which is not what
@@ -157,7 +157,7 @@ const SPAWN_MAX = 1600;
 const TIERS = {
   low: { fraction: 0.13, boost: 1.30, shadow: false, receive: false },
   medium: { fraction: 0.28, boost: 1.12, shadow: true, receive: true },
-  // Coverage was never short of instances — it was short of PLACES. 41 461
+  // Coverage was never short of instances - it was short of PLACES. 41 461
   // flowers stacked fourteen deep on 2 947 twig points read as pom-poms on bare
   // wire; the same crown spread over 145 000 sites at less than one umbel each
   // is continuous. See CLUSTER_RATE, and SIZE_MIN for why card AREA is the
@@ -170,15 +170,15 @@ const TIERS = {
 const CARD_DISH = 0.15;
 
 /**
- * Beer's-law extinction lengths for the FLOWERING rate, in metres of canopy —
+ * Beer's-law extinction lengths for the FLOWERING rate, in metres of canopy - 
  * one for light arriving from the sky above, one for light through the open
  * flank. `SKY_SHARE` splits the two: most of the irradiance on a crown comes
  * down through it, which is why the deep interior of a cherry is bare however
  * close the flank happens to be.
  *
  * These are set by the shape the reference photographs show: a flower mass with
- * real thickness — strong for the outer two metres, half strength 1.6 m in, an
- * eighth of it four metres in — over an interior that is bare wood and shadow.
+ * real thickness - strong for the outer two metres, half strength 1.6 m in, an
+ * eighth of it four metres in - over an interior that is bare wood and shadow.
  * Halve them and the crown is a skin over a void again (that is the failure the
  * old shell test had); double them and the flowers spread evenly through the
  * whole volume, which costs a third more instances and puts them where nothing
@@ -196,15 +196,15 @@ const INV_SIDE_DEPTH = 1 / 4.10;
 const INV_SHADE_SKY = 1 / 4.6;
 const INV_SHADE_SIDE = 1 / 3.4;
 /**
- * Umbels per site at full bloom rate. This is a SCALE and nothing else — the
- * radial shape lives in the exponentials above — so it sets the instance count
+ * Umbels per site at full bloom rate. This is a SCALE and nothing else - the
+ * radial shape lives in the exponentials above - so it sets the instance count
  * and, through it, the canopy's cost. See HARD_MAX and TIERS.
  *
  * Below 1, which is the thing to understand about it: the tree offers 145 000
  * sites and places 122 000 flowers in umbels of three to five, so fewer than
  * one site in four gets an umbel at all and the fractional part is resolved by
  * a coin flip per site. The site walk is therefore no longer "where a flower
- * goes" — it is a fine sampling of the wood, and the acceptance turns it into a
+ * goes" - it is a fine sampling of the wood, and the acceptance turns it into a
  * stochastic scatter along every twig. That is why the pitch in sakura.js can
  * be finer than the flower without wasting anything.
  */
@@ -227,7 +227,7 @@ const GLOW_SKY = 1.95;
  * This is the fix for the canopy going rust at golden hour, and it is a real
  * effect rather than a look dial: as the sun approaches the horizon its beam
  * loses most of its energy to air mass while the sky keeps scattering, so the
- * DIFFUSE fraction of the irradiance on a crown rises steeply — by late golden
+ * DIFFUSE fraction of the irradiance on a crown rises steeply - by late golden
  * hour it is the majority of it. Building the glow from a beam that has
  * bottomed out at (1.0, 0.17, 0.065) can only ever produce orange, however pale
  * the petal is, which is exactly what the renders showed.
@@ -237,9 +237,9 @@ const GLOW_SKY_LOW = 0.85;
 /**
  * Flower diameter is ~1.8x the card half-size once the alpha margin is gone.
  * At HIGH the mean half-size lands at 33.7 mm, a 6.1 cm corolla against a real
- * Somei-Yoshino's 3–4 cm, so one card stands in for about two real flowers.
+ * Somei-Yoshino's 3-4 cm, so one card stands in for about two real flowers.
  *
- * These went UP by 18 % on the linear measure — 40 % on area — and that is a
+ * These went UP by 18 % on the linear measure - 40 % on area - and that is a
  * deliberate reversal of the previous pass, which cut them. Card area is the
  * canopy's whole cost on this GPU and it is quadratic in this number, so it is
  * the single most dangerous constant in the file. But it is also the ONLY lever
@@ -249,7 +249,7 @@ const GLOW_SKY_LOW = 0.85;
  * needing to read as opaque from 20 m, taking the coverage in area rather than
  * in count was the cheaper half of the trade.
  *
- * Do not push further. At 11.5 cm — which is where this sat two passes ago —
+ * Do not push further. At 11.5 cm - which is where this sat two passes ago - 
  * the canopy is visibly built out of individual blobs, and the coral-like
  * clumps in the old close renders were exactly that, not a shading problem.
  */
@@ -257,13 +257,13 @@ const SIZE_MIN = 0.0300;
 const SIZE_MAX = 0.0505;
 
 /**
- * Transmission lobe shape — the y and z of `uBSss`. See BLOSSOM_SSS.
+ * Transmission lobe shape - the y and z of `uBSss`. See BLOSSOM_SSS.
  *
  * These live here, as named constants, because they used to be written TWICE:
  * once in the uniform's initialiser and again, with different values, in
  * `update()`. `update()` runs on every frame including the first, so the
  * initialiser lost every time and the shipping build ran the OLD tight lobe
- * (power 3.2, rim 0.5) that the whole golden-hour pass existed to widen — the
+ * (power 3.2, rim 0.5) that the whole golden-hour pass existed to widen - the
  * forward-scatter term carries 0.85 of the two-lobe sum, so that silently threw
  * away most of the fix. Only the wetness-dependent SCALE belongs in `update()`.
  */
@@ -271,7 +271,7 @@ const SSS_POWER = 1.8;
 const SSS_RIM = 0.55;
 
 // ===========================================================================
-// Placement — pure, deterministic, testable without a GL context
+// Placement - pure, deterministic, testable without a GL context
 // ===========================================================================
 
 /**
@@ -293,7 +293,7 @@ export function generateBlossomInstances(skel, sites, opts = {}) {
    * The crown envelope the WOOD was grown against, straight off the skeleton.
    *
    * This used to be re-derived here from `canopyRadius` / `canopyRadiusY`,
-   * which are 90th percentiles of the twig cloud — so the flower mass and the
+   * which are 90th percentiles of the twig cloud - so the flower mass and the
    * wood disagreed about where the crown was, by however much the percentile
    * happened to move that seed. One envelope, one definition, published by
    * branches.js. The fallback keeps this function usable against a skeleton
@@ -344,7 +344,7 @@ export function generateBlossomInstances(skel, sites, opts = {}) {
      *
      * A shell test says a flower is either on the surface or not. What decides
      * whether a bud opens is how much light reaches it, and light entering a
-     * canopy is attenuated exponentially with the depth of foliage it crossed —
+     * canopy is attenuated exponentially with the depth of foliage it crossed - 
      * a smooth function of position with a real length scale, not a window.
      * Written this way the flowering band has DEPTH: strong for the outer two
      * metres, half strength 1.6 m in, an eighth of it four metres in. The crown
@@ -354,7 +354,7 @@ export function generateBlossomInstances(skel, sites, opts = {}) {
      * of this measured depth as `(1 - rad) · envelopeRadius`, i.e. horizontally,
      * and that is wrong wherever the envelope is narrow: down in the skirt the
      * crown is only 3 m across, so every site there came out "0.3 m from the
-     * surface" and flowered at full rate — including the ones a metre from the
+     * surface" and flowered at full rate - including the ones a metre from the
      * bole with eight metres of crown stacked over them. Measured, that put
      * 54 % of the entire canopy into the two bands between 2 m and 3 m, a dense
      * shelf round the trunk with the flanks above it left thin. Light arrives
@@ -365,7 +365,7 @@ export function generateBlossomInstances(skel, sites, opts = {}) {
      * because it is not obvious and it is the measurement that drove the pass.
      * The twig cloud is not uniform: it carries 85 sites per cubic metre at 40 %
      * of the crown radius and 13 at the rim, a 6.5:1 fall. Card area per cubic
-     * metre under the old shell model therefore fell from 0.50 to 0.11 outward —
+     * metre under the old shell model therefore fell from 0.50 to 0.11 outward - 
      * the crown was DENSEST in the middle, where a view ray crosses 13 m of it,
      * and thinnest at the rim where a ray crosses four. Coverage came out at
      * 52 %, essentially all of the loss at the edges, which is exactly what the
@@ -374,7 +374,7 @@ export function generateBlossomInstances(skel, sites, opts = {}) {
      */
     const hr = Math.sqrt(eh);
     const ht = hr / envR;
-    // Height of the crown's own upper surface directly above this site — the
+    // Height of the crown's own upper surface directly above this site - the
     // sky path, and the one that decides whether the interior is bare.
     const yTop = envY0 + envRyUp * Math.sqrt(Math.max(0, 1 - ht * ht));
     const dUp = yTop > s.y ? yTop - s.y : 0;
@@ -387,7 +387,7 @@ export function generateBlossomInstances(skel, sites, opts = {}) {
     );
     /**
      * The ragged outer margin. Everything the reference shows of the sky is
-     * here — a soft edge one crown-radius-eighth wide — and it is the one place
+     * here - a soft edge one crown-radius-eighth wide - and it is the one place
      * a cherry is genuinely see-through. Beyond 1.30 nothing flowers at all,
      * which is also what stops the handful of shoots that escaped the envelope
      * from reading as whiskers.
@@ -405,15 +405,15 @@ export function generateBlossomInstances(skel, sites, opts = {}) {
      * Baked crown occlusion, carried into the instance stream. Until this
      * existed the canopy had NO ambient occlusion of any kind: a flower buried
      * a metre inside the crown was lit exactly as brightly as one on the rim
-     * the moment the sun stopped casting into it, and at LOW — where
-     * `receiveShadow` is off — that is every flower, all the time.
+     * the moment the sun stopped casting into it, and at LOW - where
+     * `receiveShadow` is off - that is every flower, all the time.
      *
      * Same depth measure as the bloom rate, with a LONGER extinction: what
      * reaches a shaded flower is diffuse skylight forward-scattered through the
      * petals in front of it, and petals are thin enough that a great deal gets
      * through. The rim saturates at 1.0 by construction, so the flowers that
      * carry the silhouette keep their full brightness and only the interior
-     * darkens — otherwise this is a global exposure change rather than
+     * darkens - otherwise this is a global exposure change rather than
      * occlusion.
      */
     const openness = clamp01(
@@ -422,7 +422,7 @@ export function generateBlossomInstances(skel, sites, opts = {}) {
     );
 
     let w = lit * margin * (0.80 + 0.20 * young) * (0.82 + 0.18 * tip) * (0.86 + 0.14 * light);
-    // Blossom is patchy at the metre scale — one bough goes over before its
+    // Blossom is patchy at the metre scale - one bough goes over before its
     // neighbour opens. Without this the canopy reads as a uniform spray.
     const patch = hashPatch(s.x, s.y, s.z);
     w *= 0.72 + 0.52 * patch;
@@ -443,7 +443,7 @@ export function generateBlossomInstances(skel, sites, opts = {}) {
      * EVERY ONE OF THOSE STEPS MADE IT WORSE. This is worth writing down because
      * it is the trap this file is built around. `clusters` is how DEEP the
      * flowers pile at one point on one twig, and the crown was not short of
-     * depth — at 5.6 it was carrying fourteen flowers on each of 2 947 twig
+     * depth - at 5.6 it was carrying fourteen flowers on each of 2 947 twig
      * points, which is a string of pom-poms, and every extra flower went into
      * making the pom-poms bigger while the 92 mm of bare wood between them
      * stayed exactly as bare. That is precisely the "clumps on bare sticks" the
@@ -508,16 +508,16 @@ export function generateBlossomInstances(skel, sites, opts = {}) {
       /**
        * THE SPUR. A cherry does not flower on its twigs, it flowers on short
        * lateral shoots that stand 3 to 9 cm clear of them, and the umbel opens
-       * at the end of that. Modelling it as a point on the wood — which is what
-       * this did — is the single largest reason the crown could not be made
+       * at the end of that. Modelling it as a point on the wood - which is what
+       * this did - is the single largest reason the crown could not be made
        * opaque without absurd instance counts.
        *
        * The measurement: a flowered twig is a TUBE, and what a view ray hits is
        * the tube, not the wood. Flowers pinned to the twig gave a tube 14 cm
        * across; twigs run broadly parallel inside a spray, so those tubes
        * overlapped each other and the sprays read as fingers with sky between
-       * them. Nominal optical depth through the crown was 3.2 — which would be
-       * 96 % coverage if the wood were spread evenly — while measured coverage
+       * them. Nominal optical depth through the crown was 3.2 - which would be
+       * 96 % coverage if the wood were spread evenly - while measured coverage
        * was 53 %, i.e. a clumping factor of 4.3. Standing the flowers off the
        * wood widens the tube to about 26 cm, and because the widening is
        * ISOTROPIC around each twig it fills the space BETWEEN neighbours rather
@@ -531,9 +531,9 @@ export function generateBlossomInstances(skel, sites, opts = {}) {
       // The site is on the twig's AXIS, so the wood's own radius has to be
       // cleared before the spur starts or the umbel opens inside the branch.
       // It cost nothing while flowering was confined to 3 mm twiglets; now that
-      // spurs are allowed out onto 5 cm wood — which is where they grow on a
+      // spurs are allowed out onto 5 cm wood - which is where they grow on a
       // real cherry, and which is the only thing that clothes the outer half of
-      // a limb — it is the difference between a flowered bough and a bough with
+      // a limb - it is the difference between a flowered bough and a bough with
       // flowers buried in it.
       const spurU = rng();
       const spur = s.r + 0.020 + 0.115 * spurU * spurU;
@@ -541,7 +541,7 @@ export function generateBlossomInstances(skel, sites, opts = {}) {
       const uy0 = by + axY * spur;
       const uz0 = bz + axZ * spur;
 
-      // Shaded clusters are still in bud — a real tree is never uniformly open,
+      // Shaded clusters are still in bud - a real tree is never uniformly open,
       // and the decision belongs to the UMBEL, not the flower: one bud opens
       // its three-to-five flowers within a day of each other. Clusters of buds
       // among open clusters is what a cherry mid-bloom actually looks like; a
@@ -570,13 +570,13 @@ export function generateBlossomInstances(skel, sites, opts = {}) {
         let dyf = axY * cc2 + (u1y * cz2 + u2y * sz2) * sc;
         let dzf = axZ * cc2 + (u1z * cz2 + u2z * sz2) * sc;
 
-        // Pedicel: 2–5 cm on a Somei-Yoshino, and it sags under the flower.
+        // Pedicel: 2-5 cm on a Somei-Yoshino, and it sags under the flower.
         const ped = 0.018 + 0.034 * rng();
         const px2 = ux0 + dxf * ped;
         const py2 = uy0 + dyf * ped - ped * 0.30;
         const pz2 = uz0 + dzf * ped;
 
-        // The flower faces along its pedicel, nodding slightly downward — the
+        // The flower faces along its pedicel, nodding slightly downward - the
         // droop is why a cherry canopy reads as heavy rather than as a spray.
         let nx = dxf * 0.70 + ox * 0.30 + (rng() - 0.5) * 0.55;
         let ny = dyf * 0.70 + oy * 0.30 + (rng() - 0.5) * 0.55 - 0.20;
@@ -610,7 +610,7 @@ export function generateBlossomInstances(skel, sites, opts = {}) {
 
         // Pigment.
         //
-        // This used to be `rng()*rng()`, a distribution with a mean of 0.25 —
+        // This used to be `rng()*rng()`, a distribution with a mean of 0.25 - 
         // three quarters of the canopy sat within a quarter of the way from
         // near-white to blush, and since the CARD TEXTURE is itself near-white
         // (#fbf5f5 at the petal tip), the two whites multiplied and the tree
@@ -620,7 +620,7 @@ export function generateBlossomInstances(skel, sites, opts = {}) {
         //
         // The bough-scale patch field feeds the hue as well as the density,
         // because on a real tree the limb that opened first is also the limb
-        // whose flowers have faded palest — colour and phase are the same
+        // whose flowers have faded palest - colour and phase are the same
         // signal, and driving both from one field is what stops the canopy
         // from looking like one flower stamped forty thousand times.
         const u = rng();
@@ -656,21 +656,21 @@ export function generateBlossomInstances(skel, sites, opts = {}) {
       `[Blossoms] instance cap reached (${maxInstances}). The canopy is ` +
       'TRUNCATED and will look bald on one side. Lower the cluster multiplier ' +
       'in generateBlossomInstances or TWIG_SPACING in sakura.js, or raise ' +
-      'HARD_MAX — but read the note on HARD_MAX first: more flowers per site is ' +
+      'HARD_MAX - but read the note on HARD_MAX first: more flowers per site is ' +
       'almost never the fix.'
     );
   }
 
   // --- thinning order ------------------------------------------------------
   // The instances are written out in a shuffled order so that ANY prefix is an
-  // unbiased sample of the whole canopy — which is what lets a quality tier or
+  // unbiased sample of the whole canopy - which is what lets a quality tier or
   // a distance LOD just lower `instanceCount` and get an even thinning instead
   // of a bald hemisphere. The size term biases the shuffle very slightly so the
   // smallest flowers go first: they contribute the least silhouette per draw.
   //
   // The sort is done on ONE packed Float64Array with no comparator, because
   // V8's comparator-free numeric TypedArray sort is roughly six times faster
-  // than sorting indices through a closure — 20 ms instead of 550 ms at this
+  // than sorting indices through a closure - 20 ms instead of 550 ms at this
   // count, which is a fifth of the tree's whole build budget. The key occupies
   // the high bits and the index the low 17, so ordering by the packed value is
   // exactly ordering by the key.
@@ -707,7 +707,7 @@ export function generateBlossomInstances(skel, sites, opts = {}) {
   let sn = 0;
   // Clamped against `n`, not just floored at 1. With n = 0 the old `max(1, …)`
   // walked one step into a zero-length `data`, read undefined for x/y/z, and
-  // published a spawn point at (NaN, NaN, NaN) — and the ellipsoid test cannot
+  // published a spawn point at (NaN, NaN, NaN) - and the ellipsoid test cannot
   // reject it, because `NaN < 0.50` is false. petals.js seeds its instance
   // buffer straight from these points, and one NaN there is permanent for the
   // session. A tree with no flowers must publish no spawn points.
@@ -779,7 +779,7 @@ let _px = 0, _py = 0, _pz = 0;
 
 /**
  * Exactly perpendicular unit vector to (x,y,z), via the cross product with
- * whichever cardinal axis the input is LEAST aligned with — so the result is
+ * whichever cardinal axis the input is LEAST aligned with - so the result is
  * both orthogonal to machine precision and never ill-conditioned. (The usual
  * "swap two components" trick is only approximately orthogonal near the
  * degenerate axis, and here the result is used directly as a card axis, where
@@ -799,7 +799,7 @@ function perp(x, y, z) {
 }
 
 /**
- * Smooth value field at BOUGH scale — wavelengths of 2.5 to 4 metres, so one
+ * Smooth value field at BOUGH scale - wavelengths of 2.5 to 4 metres, so one
  * limb can be a week ahead of the one beside it. Three sines is plenty for a
  * field that is only ever a multiplier, and it costs nothing at build time.
  * (Deliberately not `noise.fbm2D`: this has to be a smooth 3D field, and three
@@ -930,16 +930,16 @@ export class BlossomField {
       map,
       color: 0xffffff,
       // Near-field cutoff. The fragment patch relaxes it with distance to
-      // undo mip-averaged alpha erosion — see BLOSSOM_ALPHATEST.
+      // undo mip-averaged alpha erosion - see BLOSSOM_ALPHATEST.
       // 0.50 -> 0.42. The card's alpha is a five-pointed star, not a disc, and a
-      // half cutoff eats the outer third of every petal's width — measured, the
+      // half cutoff eats the outer third of every petal's width - measured, the
       // crown rasterised visibly lacier than a placement model that gives each
       // card the SAME total area as a solid shape, which is the discrepancy that
       // sent this pass looking for more instances it did not need. Relaxing the
       // cutoff widens every petal by a texel or two. It costs surviving
       // fragments, not processed ones: the quad, the vertex work and the texture
       // fetch are identical either way, so it is by a wide margin the cheapest
-      // coverage in this file. It cannot go much further — below about 0.35 the
+      // coverage in this file. It cannot go much further - below about 0.35 the
       // mip-blurred margin starts showing as a halo.
       alphaTest: 0.42,
       transparent: false,
@@ -955,13 +955,13 @@ export class BlossomField {
       // Petal ramp: pale centre -> blush -> unopened bud. The first pass sat at
       // #f7efee/#ecd2d6/#d9a3ae, which is very nearly white and washed out
       // entirely under a bright sky. Pushed toward a clear sakura pink while
-      // staying well short of candy — the blush is the colour that carries the
+      // staying well short of candy - the blush is the colour that carries the
       // canopy at distance, so it does most of the work.
       // Measured against renders: with the tint distribution now centred near
       // 0.66 and pigment absorption applied on top, the previous ramp
       // (#f2b3c2 blush, #d4788d bud) came out SALMON at noon and near-maroon
-      // under a low warm sun. Both are pulled cooler and lighter — away from
-      // red, slightly toward magenta — so warm light lands on them as pink
+      // under a low warm sun. Both are pulled cooler and lighter - away from
+      // red, slightly toward magenta - so warm light lands on them as pink
       // rather than as rust. Somei-Yoshino is barely chromatic in reality; the
       // colour has to survive being multiplied by a 2000 K sun.
       // Pulled lighter and markedly less chromatic again, because the pigment
@@ -969,7 +969,7 @@ export class BlossomField {
       // the card texture already ramps from #fbf5f5 at the petal tip to #dcaeb8
       // at the claw, then this ramp multiplies it, then uBThroat multiplies the
       // middle again. Measured through the whole chain, the old palette put the
-      // card centre at a linear (0.57, 0.15, 0.22) — g/r = 0.26, which is not a
+      // card centre at a linear (0.57, 0.15, 0.22) - g/r = 0.26, which is not a
       // cherry blossom, it is a dark rose. Multiply that by a low sun's
       // (1.0, 0.17, 0.065) and no shading model can produce anything but rust.
       // A real Somei-Yoshino petal is barely chromatic; the colour has to come
@@ -980,18 +980,18 @@ export class BlossomField {
       // treating a symptom: the crown was dark because the transmission term
       // was worth 0.07 of the illuminant, not because the pigment was strong.
       // Now that the multiple-scattering term carries the canopy (see
-      // BLOSSOM_SSS) the flowers can hold real colour and still read as light —
+      // BLOSSOM_SSS) the flowers can hold real colour and still read as light - 
       // which is the combination the brief asks for and the one a Somei-Yoshino
       // actually has. These are LIGHT colours with genuine chroma: the blush is
       // 0.98/0.72/0.81 in linear, so g/r is 0.73 rather than the 0.26 of the
       // dark rose that produced the rust, and the blue stays ABOVE the green so
       // a warm sun lands on it as pink rather than as salmon.
       // Pushed toward the reference photograph, which is a genuinely CHROMATIC
-      // pink — not the near-white of a Somei-Yoshino at peak. The blush carries
+      // pink - not the near-white of a Somei-Yoshino at peak. The blush carries
       // the canopy at distance, so it does most of the work and gets the most
       // saturation; the pale is the sunlit face of a petal and stays light so
       // the crown still has internal range instead of reading as one flat wash.
-      // Measured: the canopy renders [219,208,219] — near white — because a
+      // Measured: the canopy renders [219,208,219] - near white - because a
       // bright sky ambient washes the pink out of it. The tint distribution was
       // already blush-weighted (mean 0.68), so the fix is chroma in the palette
       // itself, not more of it. Even the PALE end carries pink now, because on a
@@ -1001,14 +1001,14 @@ export class BlossomField {
       uBBud: { value: new THREE.Color('#d64d8b') },
       /**
        * Throat. Multiplied into the middle of the card, where the five claws
-       * meet — the one part of a cherry flower that is reliably, visibly pink.
+       * meet - the one part of a cherry flower that is reliably, visibly pink.
        *
        * It is here rather than in the vertex tint because a per-instance tint
        * is a FLAT colour: it can only slide the whole flower along the
        * pale→blush ramp, and sliding it far enough to read as pink from twenty
        * metres makes it read as a plastic azalea from two. A gradient inside
        * the card gives the eye a saturated core against a pale margin, which is
-       * what it actually uses to judge the colour of a flower — and unlike a
+       * what it actually uses to judge the colour of a flower - and unlike a
        * flat tint it SURVIVES MINIFICATION, because the mip average of a card
        * with a pink centre is pinker than the card's own margin. That is the
        * whole reason the canopy can read as pink at distance while individual
@@ -1018,14 +1018,14 @@ export class BlossomField {
       uBWet: { value: 0 },
       uBKeyDir: { value: new THREE.Vector3(0, 0, 1) },
       /**
-       * TRANSMISSION ILLUMINANT — the beam PLUS skylight, not the beam alone.
+       * TRANSMISSION ILLUMINANT - the beam PLUS skylight, not the beam alone.
        *
        * This uniform used to be the directional key colour and nothing else,
        * and that is the single largest reason the canopy went rust at golden
        * hour. What you see through a petal is not the sun; it is whatever is
        * behind the petal, and for a canopy that is overwhelmingly SKY with the
        * sun's beam threaded through it. `sun.color` is a pure transmittance
-       * ratio that bottoms out at (1.0, 0.17, 0.065) — a darkroom lamp — so
+       * ratio that bottoms out at (1.0, 0.17, 0.065) - a darkroom lamp - so
        * building the glow from it alone can only ever produce orange, however
        * pale the petal is. Skylight restores the green and blue that a real
        * back-lit canopy is full of at sunset, and it costs one vector add on
@@ -1034,7 +1034,7 @@ export class BlossomField {
       uBKeyColor: { value: new THREE.Color(0, 0, 0) },
       // scale, forward-lobe power, rim. Shape from the constants; only x moves.
       uBSss: { value: new THREE.Vector3(1.0, SSS_POWER, SSS_RIM) },
-      // Distance window over which the alpha cutoff is relaxed. Not a fade —
+      // Distance window over which the alpha cutoff is relaxed. Not a fade - 
       // mip compensation. See BLOSSOM_ALPHATEST.
       uBFade: { value: new THREE.Vector2(10, 65) },
     };
@@ -1054,7 +1054,7 @@ export class BlossomField {
 
   /**
    * Wind-displaced geometry needs a depth material that displaces IDENTICALLY,
-   * or the canopy's shadow stands still while the canopy moves — the single
+   * or the canopy's shadow stands still while the canopy moves - the single
    * most obvious tell there is.
    */
   _makeDepthMaterial() {
@@ -1062,14 +1062,14 @@ export class BlossomField {
       depthPacking: THREE.RGBADepthPacking,
       map: this._textures(),
       // 0.50 -> 0.42. The card's alpha is a five-pointed star, not a disc, and a
-      // half cutoff eats the outer third of every petal's width — measured, the
+      // half cutoff eats the outer third of every petal's width - measured, the
       // crown rasterised visibly lacier than a placement model that gives each
       // card the SAME total area as a solid shape, which is the discrepancy that
       // sent this pass looking for more instances it did not need. Relaxing the
       // cutoff widens every petal by a texel or two. It costs surviving
       // fragments, not processed ones: the quad, the vertex work and the texture
       // fetch are identical either way, so it is by a wide margin the cheapest
-      // coverage in this file. It cannot go much further — below about 0.35 the
+      // coverage in this file. It cannot go much further - below about 0.35 the
       // mip-blurred margin starts showing as a halo.
       alphaTest: 0.42,
       side: THREE.DoubleSide,
@@ -1099,10 +1099,10 @@ export class BlossomField {
       : 0;
     this.activeCount = active;
     this.geometry.instanceCount = active;
-    // Partial mass compensation, authored per tier rather than derived — see
+    // Partial mass compensation, authored per tier rather than derived - see
     // TIERS for why exact sqrt compensation made `fraction` a dead dial.
     // NOTE: this compensates the TIER thinning only. The distance thinning in
-    // sakura.js deliberately gets no size boost — there, the relaxed alpha
+    // sakura.js deliberately gets no size boost - there, the relaxed alpha
     // cutoff already gives each card more coverage, and doing both would turn
     // a distant canopy into a solid pink blob.
     this.tierBoost = t.boost;
@@ -1126,7 +1126,7 @@ export class BlossomField {
     // Every value below lands in a uniform that multiplies the whole canopy.
     // `clamp01(NaN)` is NaN and `Math.max(0, NaN)` is NaN, so one bad frame out
     // of a sibling system would put NaN into uBKeyColor and the entire crown
-    // would rasterise to garbage — 67 000 cards, no recovery until that system
+    // would rasterise to garbage - 67 000 cards, no recovery until that system
     // produced a finite number again. sakura.js sanitises every one of its wind
     // inputs for exactly this reason; this path had no guard at all.
     const overcast = smoothstep(0.42, 0.96, clamp01(fin(state.clouds.coverage, 0)));
@@ -1148,7 +1148,7 @@ export class BlossomField {
     //
     // Deliberately NOT camera.matrixWorldInverse: the renderer only refreshes
     // that inside post.render(), which runs after every system's update(), so
-    // reading it here would be one frame behind the camera — and the identity
+    // reading it here would be one frame behind the camera - and the identity
     // matrix on the very first frame. three computes its own light directions
     // during render with the CURRENT view matrix, so a stale key here makes the
     // transmission lobe swim behind the diffuse lighting under fast mouse look.
@@ -1166,7 +1166,7 @@ export class BlossomField {
     // the whole point of that guard undone: `sun.color` is written by
     // sky/celestial.js and one NaN component there reaches `uBKeyColor`
     // unfiltered, and `outgoingLight += ... * uBKeyColor * ...` turns every one
-    // of the 67 000 cards into NaN — which rasterises as whatever the hardware
+    // of the 67 000 cards into NaN - which rasterises as whatever the hardware
     // does with a NaN colour and does not recover until that system produces a
     // finite number again.
     let gr = fin(sun.color.r, 0) * si + fin(moon.color.r, 0) * mi;
@@ -1212,7 +1212,7 @@ export class BlossomField {
     const wet = clamp01(fin(state.weather.wetness, 0));
     u.uBWet.value = wet;
     // ONLY the scale is per-frame. The lobe SHAPE is authored once, at
-    // SSS_POWER / SSS_RIM — writing it here as well is how the widened
+    // SSS_POWER / SSS_RIM - writing it here as well is how the widened
     // forward-scatter peak got reverted to the old tight one on every frame.
     u.uBSss.value.x = 1.0 - 0.28 * wet;
   }
@@ -1247,8 +1247,8 @@ export class BlossomField {
  * the same constant on all four: the quad is exactly PLANAR, and the `dish`
  * term in the vertex shader is a rigid push-off along the face normal that
  * lifts the flower clear of its twig. What actually produces the "catches
- * light across its width" read is the NORMAL — n = normalize(-∂z/∂x, -∂z/∂y, 1)
- * of the paraboloid z = D(x²+y²) — which splays outward at each corner and
+ * light across its width" read is the NORMAL - n = normalize(-∂z/∂x, -∂z/∂y, 1)
+ * of the paraboloid z = D(x²+y²) - which splays outward at each corner and
  * interpolates to face-on at the centre. Two triangles carry that perfectly
  * well; adding geometry would only buy silhouette, and the alpha cutout is
  * already the silhouette.
@@ -1364,13 +1364,13 @@ float tintT = aBParam.y;
 vec3 bTint = mix( uBPale, uBBlush, tintT );
 // 0.8 pushed too much of the canopy all the way to the bud colour. Combined
 // with the raised tint distribution it made the crown read dark rust at golden
-// hour — measurably DARKER than the sunlit grass behind it, which no blossom
+// hour - measurably DARKER than the sunlit grass behind it, which no blossom
 // should ever be.
 bTint = mix( bTint, uBBud, bud * 0.5 );
 bTint *= 1.0 - 0.13 * uBWet;
 // Pigment ABSORBS. A pink petal is not a white petal wearing a filter: it
 // reflects less total light, and the deeper the pigment the less it reflects.
-// Skipping this is why the blush washed out under a bright sky — the pinkest
+// Skipping this is why the blush washed out under a bright sky - the pinkest
 // flowers were also the brightest, ACES clipped the red channel first, and the
 // hue slid to white exactly where the colour was supposed to be strongest. Six
 // percent of reflectance buys the whole canopy its colour back at noon, and
@@ -1379,10 +1379,10 @@ bTint *= 1.0 - 0.13 * uBWet;
 // the palette it was written against was far more chromatic than the one above:
 // with the blush this pale there is much less pigment to absorb, and at 0.07 it
 // was still taking more light out of the canopy than a warm evening sun could
-// put back — which is the wrong direction for the one asset in the scene that
+// put back - which is the wrong direction for the one asset in the scene that
 // must never be darker than the field behind it.
 bTint *= 1.0 - 0.035 * tintT;
-// Baked crown occlusion. Deliberately shallow — a flower inside a cherry still
+// Baked crown occlusion. Deliberately shallow - a flower inside a cherry still
 // sees a great deal of sky through the shell above it, so this is contact
 // shading that gives the crown depth, not a light well. The shell sits at 1.0
 // by construction (see openness in generateBlossomInstances), so the
@@ -1390,7 +1390,7 @@ bTint *= 1.0 - 0.035 * tintT;
 bTint *= mix( 0.74, 1.0, aBShade );
 // Thin pale petals transmit; a tight bud is five layers thick and does not.
 // A buried flower transmits less as well: the light that would have back-lit
-// it was already spent on the shell in front of it — but only partly, because
+// it was already spent on the shell in front of it - but only partly, because
 // what it spent is largely what the shell TRANSMITTED, and this is the one
 // term that must not be allowed to put the crown's interior in the dark.
 vBlossom = vec4( bTint, ( 1.0 - 0.78 * bud ) * ( 1.0 - 0.22 * tintT ) * ( 0.78 + 0.22 * aBShade ) );
@@ -1413,7 +1413,7 @@ uniform vec3 uBThroat;
  *
  * The window starts at 0.10 rather than 0.0 so the very centre is a flat plate
  * of colour instead of a point singularity that aliases, and ends at 0.34,
- * which is where the claws of the five petals give way to the blades — the
+ * which is where the claws of the five petals give way to the blades - the
  * texture's own pigment ramp turns over at the same place, so the two
  * reinforce instead of fighting.
  *
@@ -1423,7 +1423,7 @@ uniform vec3 uBThroat;
  * cue that is universal.
  *
  * Injected AFTER the alpha test, not before it. Neither this nor the instance
- * tint touches `diffuseColor.a`, so nothing about the cutout depends on them —
+ * tint touches `diffuseColor.a`, so nothing about the cutout depends on them - 
  * and the blossom card's silhouette covers only about a third of its own quad,
  * so running the pigment chain ahead of the discard spent it on roughly two
  * fragments in three. This is the one material in the scene that can fill the
@@ -1437,11 +1437,11 @@ diffuseColor.rgb *= vBlossom.rgb;
 	// 0.80 -> 0.42. The card texture ALREADY ramps to #dcaeb8 at the claw, so
 	// this was a second full-strength throat multiplied over the first one and
 	// the centre of every flower came out a dark rose. The gradient still does
-	// its job — survive minification, give the eye a saturated core against a
-	// pale margin — at half the depth.
+	// its job - survive minification, give the eye a saturated core against a
+	// pale margin - at half the depth.
 	// 0.45 -> 0.52 with a markedly pinker throat colour. The gradient is where
-	// the canopy's colour survives minification — the mip average of a card with
-	// a pink centre is pinker than its own margin — so it is the cheapest place
+	// the canopy's colour survives minification - the mip average of a card with
+	// a pink centre is pinker than its own margin - so it is the cheapest place
 	// to buy "reads as clearly pink from twenty metres" without making an
 	// individual flower look like a plastic azalea at two.
 	diffuseColor.rgb *= mix( vec3( 1.0 ), uBThroat, bThroat * 0.52 );
@@ -1449,21 +1449,21 @@ diffuseColor.rgb *= vBlossom.rgb;
 `;
 
 /**
- * Alpha-test mip compensation — a TRIM, not a rebuild.
+ * Alpha-test mip compensation - a TRIM, not a rebuild.
  *
  * The usual failure this guards against is real: the blossom card's silhouette
  * covers about a third of its own texture, so a naively mipped card loses its
  * rim to a fixed 0.5 cutoff and the canopy is half gone by 40 m.
  *
  * But `textures.blossomCard()` already bakes its chain with
- * `{ alphaWeighted: true, preserveCoverage: true, alphaTest: 0.5 }` — every
+ * `{ alphaWeighted: true, preserveCoverage: true, alphaTest: 0.5 }` - every
  * level is rescaled so that thresholding it at 0.5 reproduces level 0's
  * coverage. Compensating a second time here is what turns a distant canopy into
  * a solid pink blob: dropping the cutoff to 0.18 pushes the silhouette out by
  * the full width of the mip-blurred alpha gradient on top of a chain that was
  * already coverage-correct. What is left to correct is only the residual
  * softening from anisotropic filtering and the bilinear tap between levels,
- * which is worth a few hundredths — hence 0.36 rather than 0.18. Still paired
+ * which is worth a few hundredths - hence 0.36 rather than 0.18. Still paired
  * with the distance thinning in sakura.js over roughly the same window.
  */
 const BLOSSOM_ALPHATEST = /* glsl */ `
@@ -1488,7 +1488,7 @@ const BLOSSOM_ALPHATEST = /* glsl */ `
  * RECIPROCAL_PI is not cosmetic. `uBKeyColor` is built to be exactly three's
  * `directionalLight.color` (engine.js applies the same horizon gate and
  * overcast transmit before setting sunLight.intensity), and three's diffuse
- * lobe is `irradiance * BRDF_Lambert( diffuseColor )` — which carries the 1/PI.
+ * lobe is `irradiance * BRDF_Lambert( diffuseColor )` - which carries the 1/PI.
  * Without it this term is PI times the diffuse lobe, so a back-lit petal came
  * out around 4.7x the radiance of a fully front-lit one and ACES clipped it to
  * white: the exact opposite of a pale, desaturated pink. With it the back-lit
@@ -1508,7 +1508,7 @@ const BLOSSOM_SSS = /* glsl */ `
   // every back-lit flower in the crown a steady glow from any viewpoint. Its
   // absence is most of why the canopy only lit up when you stood in one spot.
   //
-  // bFwd is the forward-scattered peak — the hot rim you get looking into the
+  // bFwd is the forward-scattered peak - the hot rim you get looking into the
   // sun through a petal. Frostbite's approximate translucency: the lobe sits
   // opposite the light, bent by the normal so it wraps around the petal's edge.
   // The half-vector is NORMALISED now; unnormalised, its length varied with the
@@ -1525,7 +1525,7 @@ const BLOSSOM_SSS = /* glsl */ `
   //
   // Its absence is measurable and it is exactly the reported defect. With only
   // the two lobes below, the transmission averaged over a crown came to about
-  // 0.07 of the illuminant — a rounding error next to the diffuse term — so
+  // 0.07 of the illuminant - a rounding error next to the diffuse term - so
   // under a low sun the canopy was left with three's Lambert lobe times a beam
   // colour that bottoms out at (1.0, 0.17, 0.065), and it went rust and ended
   // up DARKER than the sunlit grass behind it. This term is view- and
@@ -1549,13 +1549,13 @@ const BLOSSOM_SSS = /* glsl */ `
   // is back-lit precisely when it is facing away from the sun, which is exactly
   // when the shadow map reports it as occluded. Gating transmission on the
   // shadow test therefore switched the glow off in every case it exists for.
-  // It is also why the defect was specific to low sun — at noon the beam comes
+  // It is also why the defect was specific to low sun - at noon the beam comes
   // down through the crown and lights its top surface unoccluded, so the canopy
   // read correctly, while at golden hour the shadow ray runs the long way
   // through the crown and essentially every flower comes back shadowed.
   //
   // A shadowed petal is not unlit, it is one or more petals deep, and what
-  // reaches it is what those petals transmitted — most of it, for tissue this
+  // reaches it is what those petals transmitted - most of it, for tissue this
   // thin. So the shadow only takes a third here, and the real depth grading
   // comes from the baked crown occlusion already carried in vBlossom.a.
   float bShadow = 1.0;
@@ -1566,12 +1566,12 @@ const BLOSSOM_SSS = /* glsl */ `
   // Transmitted light is far LESS pigmented than reflected light: reflection
   // off a pigmented layer is many internal bounces, so its chroma compounds,
   // while transmission is a single pass through 0.1 mm of tissue. Using the
-  // fully compounded albedo — throat gradient and all — is what made the glow
+  // fully compounded albedo - throat gradient and all - is what made the glow
   // itself rust-coloured under a warm sun. It is also why a back-lit cherry
   // looks brighter than a front-lit one rather than merely differently
   // coloured. A third of the way to white keeps enough pigment that the glow is
   // still pink; half way, which is where this landed first, washed the canopy
-  // to a flat grey at noon — measurably, HSV saturation 0.06.
+  // to a flat grey at noon - measurably, HSV saturation 0.06.
   vec3 bTrans = mix( diffuseColor.rgb, vec3( 1.0 ), 0.32 );
 
   outgoingLight += bTrans * uBKeyColor * ( lt * RECIPROCAL_PI ) * ( 1.0 + uBSss.z * bRim ) * bShadow;
@@ -1604,7 +1604,7 @@ function patchBlossomFragment(src) {
   if (typeof src !== 'string' || src.indexOf('vBlossom') !== -1) return src;
   let out = src.replace('#include <common>', `#include <common>\n${BLOSSOM_FRAG_PARS}`);
   // `bFar` has to exist before the cutoff, because the cutoff is what it is for.
-  // The pigment does not, so it goes after — see BLOSSOM_PIGMENT.
+  // The pigment does not, so it goes after - see BLOSSOM_PIGMENT.
   out = out.replace(
     '#include <color_fragment>',
     '#include <color_fragment>' +
@@ -1620,7 +1620,7 @@ function patchBlossomFragment(src) {
     `#include <specularmap_fragment>\n${BLOSSOM_PIGMENT}`
   );
   // Injected BEFORE opaque_fragment, which is where outgoingLight is consumed,
-  // and deliberately NOT into lights_fragment_begin — the engine's cascaded
+  // and deliberately NOT into lights_fragment_begin - the engine's cascaded
   // shadow patch owns that chunk and consuming it would silently unshadow the
   // whole canopy.
   out = out.replace('#include <opaque_fragment>', `${BLOSSOM_SSS}\n\t#include <opaque_fragment>`);

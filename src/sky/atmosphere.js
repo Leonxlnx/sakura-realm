@@ -1,18 +1,18 @@
 /**
- * atmosphere.js — physically based sky: Rayleigh + Mie + ozone single scattering
+ * atmosphere.js - physically based sky: Rayleigh + Mie + ozone single scattering
  * with a multiple-scattering approximation, plus the CPU-side mirror of the same
  * model that the rest of the world uses for fog and ambient tinting.
  *
  * ARCHITECTURE (this is the part that makes it affordable on a 780M):
  *
- *   transmittance LUT    256x64   RGBA16F  — depends only on the medium; rebuilt
+ *   transmittance LUT    256x64   RGBA16F - depends only on the medium; rebuilt
  *                                            when the medium parameters change.
- *   multi-scattering LUT  32x32   RGBA16F  — Hillaire 2020 second-order + geometric
+ *   multi-scattering LUT  32x32   RGBA16F - Hillaire 2020 second-order + geometric
  *                                            series; also medium-only.
- *   sky-view LUT        192x108   RGBA16F  — the whole sky, raymarched. Rebuilt
+ *   sky-view LUT        192x108   RGBA16F - the whole sky, raymarched. Rebuilt
  *                                            every N frames (N from the quality
  *                                            tier), never per pixel.
- *   fullscreen pass                        — one bilinear fetch + phase functions.
+ *   fullscreen pass - one bilinear fetch + phase functions.
  *
  * The trick that keeps the low-res sky-view LUT from smearing the solar aureole is
  * storing the Mie in-scatter *without* its phase function in the alpha channel and
@@ -34,7 +34,7 @@ import * as THREE from 'three';
 import { clamp, clamp01, smoothstep, lerp } from '../core/math.js';
 
 // ---------------------------------------------------------------------------
-// Medium constants — Earth, in km / km^-1. Hillaire's reference values.
+// Medium constants - Earth, in km / km^-1. Hillaire's reference values.
 // ---------------------------------------------------------------------------
 
 const R_GROUND = 6360.0;
@@ -51,7 +51,7 @@ const BETA_M_A = 0.004440;
 const BETA_O = [0.000650, 0.001881, 0.000085];
 
 /**
- * Low-saturation field green — this is a pampas-grass world, not a beach. It
+ * Low-saturation field green - this is a pampas-grass world, not a beach. It
  * feeds the ground-bounce term of the multi-scattering LUT, the below-horizon
  * band, and state.sky.groundColor, so it should read as dry grass, not lawn.
  */
@@ -75,7 +75,7 @@ const SKY_EXPOSURE = 41.0;
 
 /**
  * The sky-irradiance proxy computed in _publishColors for a clear sky with the
- * sun 60 degrees up. Measured, not guessed — it is what makes ambientIntensity
+ * sun 60 degrees up. Measured, not guessed - it is what makes ambientIntensity
  * read 1.0 at noon and fall off honestly from there.
  */
 const NOON_REFERENCE_LUMINANCE = 1.84;
@@ -99,7 +99,7 @@ const SUN_DISC_DIM_POWER = 0.55;
  * Apparent solar radius in radians.
  *
  * The true value is 0.004654 (0.2666 deg), and at that size the sun is a
- * four-pixel dot at 1080p — physically right and dramatically worthless. Every
+ * four-pixel dot at 1080p - physically right and dramatically worthless. Every
  * film and game oversizes it for the same reason a cinematographer picks a long
  * lens: the disc has to be large enough to read as a light SOURCE and to give
  * bloom something to work with. 2.4x puts it at 0.64 deg radius, which is still
@@ -119,7 +119,7 @@ const AIRGLOW_TINT = [0.52, 0.95, 0.82]; // faint, 557.7 nm dominated: green-gre
 const NIGHT_FLOOR = 0.0055;
 /**
  * Blue, not neutral. Below about 0.01 cd/m^2 the eye is scotopic and its peak
- * sensitivity slides from 555 nm to 507 nm — the Purkinje shift, which is why a
+ * sensitivity slides from 555 nm to 507 nm - the Purkinje shift, which is why a
  * moonlit night genuinely looks blue to a viewer and grey to a photometer.
  */
 const NIGHT_FLOOR_TINT = [0.45, 0.64, 1.0];
@@ -159,7 +159,7 @@ const TIERS = {
 const TR_W = 256;
 const TR_H = 64;
 
-// CPU mirror resolutions — small, because it is rebuilt on the main thread.
+// CPU mirror resolutions - small, because it is rebuilt on the main thread.
 const CPU_TR_W = 48;
 const CPU_TR_H = 12;
 const CPU_MS_W = 12;
@@ -255,7 +255,7 @@ float phaseMie(float c, float g) {
 
 // Sky-view LUT zenith warp. Half the rows land within a few degrees of the
 // horizon, where all the interesting gradient is, while the zenith still gets
-// ~3 degrees per row — warping cos(theta) instead of theta would have left 15
+// ~3 degrees per row - warping cos(theta) instead of theta would have left 15
 // degree rows up there and a visible kink in the upper sky.
 float zenithToV(float cosTheta) {
   float n = 1.0 - 2.0 * acos(clamp(cosTheta, -1.0, 1.0)) / PI;
@@ -348,7 +348,7 @@ void main() {
       vec3 scat = sR + vec3(sM);
       float mu = dot(p / rr, sunDir);
       float shadow = raySphere(p, sunDir, R_GROUND) >= 0.0 ? 0.0 : 1.0;
-      // Analytic solution of the segment with constant coefficients — far more
+      // Analytic solution of the segment with constant coefficients - far more
       // accurate than a rectangle rule, which is why 12-24 steps is enough.
       vec3 S = transmittanceTo(rr, mu) * shadow * scat * ISO_PHASE;
       L += tr * (S - S * sampleT) / safeE;
@@ -479,7 +479,7 @@ uniform mat3 uCameraRot;
 varying vec3 vRay;
 void main() {
   // The view ray is an affine function of clip xy, so interpolating it
-  // unnormalised and normalising per fragment is exact — and it inherits any
+  // unnormalised and normalising per fragment is exact - and it inherits any
   // jitter baked into the projection matrix for free.
   vec4 ray = uInvProjection * vec4(position.xy, 1.0, 1.0);
   vRay = uCameraRot * ray.xyz;
@@ -513,7 +513,7 @@ float phaseMie(float c, float g) {
   return (3.0 * (1.0 - g2) * (1.0 + c * c)) / (8.0 * PI * (2.0 + g2) * d * sqrt(d));
 }
 
-// Hash without sine — stable at large gl_FragCoord and free of the mediump
+// Hash without sine - stable at large gl_FragCoord and free of the mediump
 // artefacts the classic sin(dot(..)) hash shows on some drivers.
 float hash12(vec2 p) {
   vec3 p3 = fract(vec3(p.xyx) * 0.1031);
@@ -525,7 +525,7 @@ void main() {
   vec3 dir = normalize(vRay);
 
   // The epsilon only matters looking exactly along +-Y, where atan(0,0) is
-  // undefined and the LUT is azimuth-invariant anyway — but an undefined there is
+  // undefined and the LUT is azimuth-invariant anyway - but an undefined there is
   // a NaN pixel at the zenith on some drivers.
   float u = atan(dir.z, dir.x + 1e-9) * 0.1591549431 + 0.5;
   float n = 1.0 - 2.0 * acos(clamp(dir.y, -1.0, 1.0)) / PI;
@@ -656,7 +656,7 @@ export class Atmosphere {
     this.renderer = ctx.renderer || null;
     this.camera = ctx.camera || null;
 
-    /** @type {THREE.Texture|null} Cube env map for IBL — see contract section 6. */
+    /** @type {THREE.Texture|null} Cube env map for IBL - see contract section 6. */
     this.envTexture = null;
 
     this._ready = false;
@@ -827,7 +827,7 @@ export class Atmosphere {
     this.mesh.frustumCulled = false;
     this.mesh.matrixAutoUpdate = false;
     // Drawn after every other opaque object, so the terrain has already rejected
-    // most sky pixels through the depth test — the cheapest possible sky on a
+    // most sky pixels through the depth test - the cheapest possible sky on a
     // fill-rate-bound iGPU. Still ahead of the transparent pass, so stars, clouds
     // and petals composite over it.
     this.mesh.renderOrder = 1000;
@@ -1077,7 +1077,7 @@ export class Atmosphere {
 
   /**
    * Transmittance along the sun ray. Drives both the disc colour and the tint of
-   * the Mie aureole — the aureole's spectral shape is dominated by the sun-path
+   * the Mie aureole - the aureole's spectral shape is dominated by the sun-path
    * transmittance, which is why a scalar Mie channel in the LUT plus this tint
    * reproduces an orange sunset glow without a second LUT.
    */
@@ -1263,7 +1263,7 @@ export class Atmosphere {
   }
 
   // -------------------------------------------------------------------------
-  // CPU model — the same maths as the shader, sized to run on refresh only.
+  // CPU model - the same maths as the shader, sized to run on refresh only.
   // -------------------------------------------------------------------------
 
   _buildCpuTransmittance() {
@@ -1546,7 +1546,7 @@ export class Atmosphere {
 
   /**
    * CPU approximation of the shader, for fog colour and ambient tinting.
-   * Returns linear render-space radiance — directly comparable to what the sky
+   * Returns linear render-space radiance - directly comparable to what the sky
    * shader puts on screen. Allocation free when `out` is supplied.
    */
   getSkyColor(direction, out = new THREE.Color()) {

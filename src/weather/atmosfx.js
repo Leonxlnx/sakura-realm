@@ -1,5 +1,5 @@
 /**
- * atmosfx.js — AtmosphericFX: ground mist, height fog and aerial perspective.
+ * atmosfx.js - AtmosphericFX: ground mist, height fog and aerial perspective.
  *
  * Two things live here:
  *
@@ -7,17 +7,17 @@
  *     `FogExp2` that analytically integrates two exponentially-stratified media
  *     along the view ray:
  *       - a low, deepening, superlinear MIST layer that sits in the grass, and
- *       - a tall, saturating HAZE layer that is the real aerial perspective —
+ *       - a tall, saturating HAZE layer that is the real aerial perspective - 
  *         it is what dissolves the treeline into the sky.
  *     Both are Beer-Lambert: transmittance is exp(-tau) with tau the true
  *     analytic optical depth through the height profile, never a distance ramp.
  *     `state.weather.fogDensity` is an artistic dial, NOT a metre^-1
- *     coefficient — see the OPTICAL DEPTH AUDIT in the constructor for the
+ *     coefficient - see the OPTICAL DEPTH AUDIT in the constructor for the
  *     mapping and for the tau values it produces at 3 / 30 / 300 / 3000 m.
  *
  *     The inscattered colour is taken from the sky itself (via
- *     `atmosphere.getSkyColor`) along three probes — zenith, horizon toward the
- *     sun, horizon away from the sun — so distant geometry converges on exactly
+ *     `atmosphere.getSkyColor`) along three probes - zenith, horizon toward the
+ *     sun, horizon away from the sun - so distant geometry converges on exactly
  *     the colour of the sky behind it: warmer toward the sun, bluer away from
  *     it, and with no seam along the horizon. It is applied to the LIT colour,
  *     in linear space, immediately before tone mapping.
@@ -46,9 +46,9 @@
  *     are buried in terrain and thicken where they float clear of it, so the
  *     mist visibly pools in hollows while ridges stand out of it. Each slab
  *     carries its own analytic self-shadow term, so a bank is warm and luminous
- *     along its top and cold blue-grey in its body — that gradient is what sells
+ *     along its top and cold blue-grey in its body - that gradient is what sells
  *     a dawn field. The whole stack fades out entirely below a real density, so
- *     a clear midday costs nothing. No fullscreen raymarch — the 780M cannot
+ *     a clear midday costs nothing. No fullscreen raymarch - the 780M cannot
  *     afford one.
  *
  * ---------------------------------------------------------------------------
@@ -71,7 +71,7 @@
  *                   #include <sakura_aerial_fragment>      (last; writes gl_FragColor)
  *      and call `systems.atmosfx.applyToMaterial(material)` in your `link()`, or
  *      spread `systems.atmosfx.uniforms` into your `uniforms`. THE UNIFORMS ARE
- *      MANDATORY — a shader that includes the chunk without them throws on its
+ *      MANDATORY - a shader that includes the chunk without them throws on its
  *      first upload.
  *
  * The vertex chunk needs a world position. By default it derives one from
@@ -86,9 +86,9 @@
  * for use anywhere else in your shader.
  *
  * ---------------------------------------------------------------------------
- * GOD RAYS — read these every frame, after `atmosfx.update()`
+ * GOD RAYS - read these every frame, after `atmosfx.update()`
  * ---------------------------------------------------------------------------
- *   atmosfx.sunScreenPosition  Vector2 in UV space clamped to [-1,2] — exactly
+ *   atmosfx.sunScreenPosition  Vector2 in UV space clamped to [-1,2] - exactly
  *                              what `GodRaysMaterial.screenPosition` expects
  *   atmosfx.sunScreenNDC       Vector2 in [-1,1], pushed outside that range when
  *                              the sun is behind the camera
@@ -97,7 +97,7 @@
  *   atmosfx.sunWorldPosition   Vector3, the sun point the projection above used
  *                              (camera-relative, so it never skews as you walk)
  *   atmosfx.sunOcclusion       0..1, clouds and canopy blocking the disc
- *   atmosfx.cloudOcclusion / atmosfx.canopyOcclusion — the two components
+ *   atmosfx.cloudOcclusion / atmosfx.canopyOcclusion - the two components
  *   atmosfx.godRayIntensity    0..1.6 suggested shaft strength, already damped;
  *                              peaks when the disc grazes the canopy edge
  *   atmosfx.godRayColor        Color, unit luminance, shaft tint
@@ -108,7 +108,7 @@
  *   atmosfx.unmarkOccluder(o)  stop re-tagging a root
  *   atmosfx.occluderLayer      the layer index used for that. The tree, the
  *                              terrain and the scatter root are tagged from
- *                              link(); grass deliberately is not — a field of
+ *                              link(); grass deliberately is not - a field of
  *                              blades would occlude as a solid wall.
  *   atmosfx.mistiness          0..1 how much is actually airborne right now.
  *                              Shafts need something to scatter off; weight the
@@ -117,7 +117,7 @@
  * `godRayLight` is handed to `post.registerGodRayLight()` from `link()`, so a
  * pipeline built on postprocessing's `GodRaysEffect` needs nothing else. The
  * screen-space values above exist for a hand-rolled radial-blur pass; they are
- * all recomputed every frame in `update()` and are stable objects — hold the
+ * all recomputed every frame in `update()` and are stable objects - hold the
  * reference, do not re-read it.
  */
 
@@ -169,7 +169,7 @@ const _cTmp = new Color();
 /**
  * Sanitised copies of the three sibling-owned colours the palette is built from.
  * They exist so a NaN arriving from weather.js or celestial.js is stopped at the
- * door rather than after it has spread through eight uniforms — see `finite()`.
+ * door rather than after it has spread through eight uniforms - see `finite()`.
  */
 const _cSun = new Color();
 const _cMoon = new Color();
@@ -193,7 +193,7 @@ const NOISE_TILE = 96;
 /**
  * Linear-space dither amplitude at luminance 1. The shader scales it by
  * sqrt(luminance) so that one step of noise costs roughly the same fraction of
- * an 8-bit output LSB everywhere on the sRGB transfer curve — ~1.3/255 across
+ * an 8-bit output LSB everywhere on the sRGB transfer curve - ~1.3/255 across
  * four decades. A flat linear amplitude (what this file used to do) is
  * invisible in the highlights and obvious grain in the shadows.
  */
@@ -317,7 +317,7 @@ function buildAerialParsFragment(fogNoiseTaps) {
 	 * Optical depth through a medium whose density is
 	 *     d(h) = density * exp( -k * max( h - base, 0 ) )
 	 * along a ray. Note the max(): below the base the profile is CAPPED FLAT, not
-	 * extrapolated — an exponential continued downwards would run away to
+	 * extrapolated - an exponential continued downwards would run away to
 	 * infinity in a hollow.
 	 *
 	 * Two segments, because of that cap:
@@ -327,14 +327,14 @@ function buildAerialParsFragment(fogNoiseTaps) {
 	 *        density * ( e^-k*hStart - e^-k*hEnd ) / ( k * dirY ).
 	 *    That exact form matters: the naive  d0 * dist * (1-e^-x)/x  version
 	 *    underflows d0 to zero while (1-e^-x)/x overflows the moment the camera
-	 *    climbs a few dozen e-folding heights — 0 * inf is a NaN that latches
+	 *    climbs a few dozen e-folding heights - 0 * inf is a NaN that latches
 	 *    into every fogged material in the scene. This one is bounded everywhere.
 	 *
 	 *  - below the base the density is constant, so that stretch is a plain
 	 *    length * density and has to be ADDED. Clamping only the endpoint HEIGHT
 	 *    (what this used to do) silently deleted it, so any ray that dipped under
-	 *    the base — every long grazing ray across rolling ground, which is
-	 *    exactly the mid-ground — came back with too little fog and then jumped
+	 *    the base - every long grazing ray across rolling ground, which is
+	 *    exactly the mid-ground - came back with too little fog and then jumped
 	 *    back to full fog as soon as the ground rose again. That step is the hard
 	 *    band across the horizon.
 	 *
@@ -364,7 +364,7 @@ function buildAerialParsFragment(fogNoiseTaps) {
 	}
 
 	/**
-	 * Henyey-Greenstein, renormalised so the forward peak is exactly 1 — this is
+	 * Henyey-Greenstein, renormalised so the forward peak is exactly 1 - this is
 	 * a redistribution weight, never a gain. q * sqrt( q ) rather than
 	 * pow( q, 1.5 ): same value, and it drops the exp2/log2 pair that pow costs
 	 * on every fogged fragment in the frame.
@@ -425,8 +425,8 @@ ${noiseBody}
 		//
 		// The two weights sum to exactly 1, so the result is a convex combination
 		// and can never exceed the brighter of the two ends. maxFogOpacity is a
-		// FLOOR ON THE TRANSMITTANCE — a promise that some surface colour always
-		// survives — and NOT a gain on the in-scatter side. Those two are only
+		// FLOOR ON THE TRANSMITTANCE - a promise that some surface colour always
+		// survives - and NOT a gain on the in-scatter side. Those two are only
 		// the same thing while every other term behaves; the moment the
 		// in-scatter carries a gain of its own, an opacity applied as a
 		// multiplier stops paying for itself with a matching extinction and the
@@ -619,15 +619,15 @@ void main() {
 	// t^2.5 as t*t*sqrt(t), not pow( t, 2.6 ). The two curves differ by at most
 	// 0.0144 (at t = 0.676) and the 0.70-wide mix below scales that to 0.0101
 	// of lit, which is inside one 8-bit code after the colour mix. This
-	// is the highest-overdraw shader in the module — up to seven slabs deep over
-	// the same pixel — so a transcendental costs more fill here than the same one
+	// is the highest-overdraw shader in the module - up to seven slabs deep over
+	// the same pixel - so a transcendental costs more fill here than the same one
 	// does in the aerial chunk, where the file already refuses to pay for it.
 	float lit = vSunLight * mix( 0.30, 1.0, towardSun * towardSun * sqrt( towardSun ) );
 	vec3 col = mix( uAerialMistColor, uAerialMistSun, aerialSat( lit ) );
 	// Thin edges glow more than dense cores when looking toward the sun: less
 	// material to scatter through. Cores are marginally brighter in ambient.
 	col += uAerialSunGlow * aerialForwardLobe( cosSun, uAerialMist.w ) * vSunLight * ( 0.95 - cover * 0.45 );
-	// x^12 as three squarings — exact, and the identical form the aerial chunk
+	// x^12 as three squarings - exact, and the identical form the aerial chunk
 	// already uses for the same lobe. pow() here was evaluated day and night.
 	float mw = aerialSat( dot( dir, uAerialMoonDir ) * 0.5 + 0.5 );
 	float mw2 = mw * mw;
@@ -642,13 +642,13 @@ void main() {
 	// has ALREADY added noise from aerialDither( gl_FragCoord.xy ) a line above,
 	// so reusing that exact coordinate would draw the identical sample again and
 	// the two would reinforce into one double-amplitude pattern instead of
-	// averaging out — worst precisely where the aerial term is strongest.
+	// averaging out - worst precisely where the aerial term is strongest.
 	float ditherLum = max( dot( col, vec3( 0.2126, 0.7152, 0.0722 ) ), 1e-4 );
 	col += ( aerialDither( gl_FragCoord.xy + vec2( 19.0, 43.0 ) ) - 0.5 ) * uAerialParams.x * sqrt( ditherLum );
 
 	// Dithering colour alone under-corrects: after the blend its amplitude is
-	// scaled by alpha, so the long low-alpha ramps — the near hole, the outer
-	// roll-off, every bank edge — are exactly where it stops working. Dithering
+	// scaled by alpha, so the long low-alpha ramps - the near hole, the outer
+	// roll-off, every bank edge - are exactly where it stops working. Dithering
 	// alpha instead perturbs by |col - background|, which is the right magnitude
 	// there. Decorrelated coordinate so the two do not reinforce into a pattern.
 	alpha += ( aerialDither( gl_FragCoord.xy + vec2( 37.0, 71.0 ) ) - 0.5 ) * ( 1.5 / 255.0 );
@@ -664,7 +664,7 @@ void main() {
 /**
  * Periodic value noise. `createNoise` in core/math.js is simplex and therefore
  * cannot tile; a mist texture that does not wrap shows a hard seam every tile,
- * so this lattice variant — built on the shared `hash3` — is the right tool.
+ * so this lattice variant - built on the shared `hash3` - is the right tool.
  */
 function periodicNoise(x, y, period, seed) {
   const xi = Math.floor(x);
@@ -775,18 +775,18 @@ export class AtmosphericFX {
      * 3 / fogDensity`, which would make a nominal partly-cloudy morning a
      * 1.4 km whiteout. Consumed literally it crushed a grass field to flat
      * blue-grey thirty metres from the eye. It is mapped here onto two real,
-     * exponentially-stratified media instead — everything below is a genuine
+     * exponentially-stratified media instead - everything below is a genuine
      * per-metre extinction coefficient.
      *
-     *   HAZE — tall, SATURATING aerosol column. This is aerial perspective
+     *   HAZE - tall, SATURATING aerosol column. This is aerial perspective
      *          proper: the thing that dissolves a treeline into the sky.
-     *   MIST — low, SUPERLINEAR boundary-layer fog. This is what actually
+     *   MIST - low, SUPERLINEAR boundary-layer fog. This is what actually
      *          closes visibility during a FOG or STORM event, and it thins away
      *          within a few metres of the grass on an ordinary morning.
      *
      * Splitting it that way is not a nicety. Pushing a fog event's density into
      * a 1.1 km column would haze the zenith as hard as the horizon, which never
-     * happens in nature — fog is a boundary-layer phenomenon and the air above
+     * happens in nature - fog is a boundary-layer phenomenon and the air above
      * it stays clean.
      *
      * ------------------------------------------------------------------------
@@ -823,8 +823,8 @@ export class AtmosphericFX {
      *    added, instead of the white-out in f2-rain.jpg.
      *  - storm is denser than rain everywhere, as it must be, without collapsing:
      *    21 % of surface colour survives at 300 m.
-     *  - FOG is genuinely dense — 38 % gone by 30 m, effectively closed at 300 m
-     *    — and CANNOT go white, because the level it converges on is
+     *  - FOG is genuinely dense - 38 % gone by 30 m, effectively closed at 300 m
+     * - and CANNOT go white, because the level it converges on is
      *    weather.js's own fogColor (fogLuma 0.92 through a cloud-dimmed sky),
      *    which lands around 1.5 in render units: a luminous grey, well inside
      *    the tone curve, not a clipped 3.0.
@@ -835,7 +835,7 @@ export class AtmosphericFX {
      * capture monochrome.
      *
      * Flying at 400 m in the default weather the mist term has vanished entirely
-     * and the haze has thinned to e^(-400/1100) of its ground value — the height
+     * and the haze has thinned to e^(-400/1100) of its ground value - the height
      * falloff is real, not decorative.
      * ------------------------------------------------------------------------
      */
@@ -890,17 +890,17 @@ export class AtmosphericFX {
      *   clear midday 0.00 · partly 08:30 0.08 · clear dawn 0.13 ·
      *   partly dawn 0.48 · overcast noon 0.59 · rain / storm / fog 1.00.
      * Because the slab optical depth is (density * slant path) rather than a
-     * per-sheet constant, LOW's two layers land within 8 % of HIGH's five —
+     * per-sheet constant, LOW's two layers land within 8 % of HIGH's five - 
      * the stack halves in cost without halving in appearance.
      */
     this.mistStructure = 46;
-    /** Extra density where a slab floats well clear of the ground — hollows. */
+    /** Extra density where a slab floats well clear of the ground - hollows. */
     this.mistPooling = 0.6;
     /**
      * Floor on the transmittance: fog never fully replaces surface colour, so
      * something of every silhouette survives at any range. Applied in the shader
      * as `max( exp(-od), 1 - maxFogOpacity )`, NOT as a multiplier on the
-     * in-scatter weight — see the energy-conservation block in the chunk.
+     * in-scatter weight - see the energy-conservation block in the chunk.
      */
     this.maxFogOpacity = 0.965;
     /**
@@ -910,8 +910,8 @@ export class AtmosphericFX {
      * sunlit-mist colour, the droplet forward lobe and the moon lobe may sum
      * past it, so a fogged pixel can never come out brighter than the sky it is
      * dissolving into. 2.2 leaves real room for the forward-scatter glow of a
-     * dawn bank — mist looked into against a low sun IS brighter than the
-     * average horizon — while 4.6x, which the old constants reached at dawn, is
+     * dawn bank - mist looked into against a low sun IS brighter than the
+     * average horizon - while 4.6x, which the old constants reached at dawn, is
      * not a phenomenon, it is a bug.
      *
      * It is measured against the MEAN of the two horizon probes, and the sunward
@@ -1001,7 +1001,7 @@ export class AtmosphericFX {
     /**
      * Occluder roots, re-tagged on every scan sweep. The tree streams blossom
      * and branch meshes in after link() runs, and a one-shot traverse would
-     * leave every one of them transparent to the shaft pass — the exact
+     * leave every one of them transparent to the shaft pass - the exact
      * geometry whose silhouette makes the shafts worth having.
      *
      * An array, not a Set: this is walked from update() on every scan sweep and
@@ -1084,11 +1084,11 @@ export class AtmosphericFX {
     this.tree = systems.tree || null;
     this.post = systems.post || null;
 
-    // The tree is the scene's one interesting shaft occluder — shafts are a
+    // The tree is the scene's one interesting shaft occluder - shafts are a
     // partial-occlusion effect and a branching canopy is the ideal edge. The
     // terrain matters too: at dawn the sun sits low enough that a ridge in front
     // of the player must cut the shafts, or they leak straight through the hill.
-    // Tagging is additive — layer 0 membership is untouched.
+    // Tagging is additive - layer 0 membership is untouched.
     for (const owner of [this.tree, this.terrain, systems.scatter]) {
       if (!owner) continue;
       const root = owner.root || owner.group || owner.object3D || owner.mesh || null;
@@ -1142,7 +1142,7 @@ export class AtmosphericFX {
 
   resize(width, height) {
     // Math.max( NaN, 1 ) is NaN, and _viewport is the only scale factor behind
-    // the published sunScreenPixels — a single bad resize would leave that
+    // the published sunScreenPixels - a single bad resize would leave that
     // NaN for good. Guard, and floor at 1 px for a collapsed/minimised window.
     this._viewport.set(Math.max(finite(width, 1), 1), Math.max(finite(height, 1), 1));
   }
@@ -1299,8 +1299,8 @@ export class AtmosphericFX {
    *
    * What made it worse rather than better is that the old code went out of its
    * way to throw the correction away. `state.weather.fogColor` is built by
-   * weather.js from `state.sky.horizonColor` — which sky/atmosphere.js has
-   * ALREADY multiplied by its cloud `dim` factor — and then scaled by the
+   * weather.js from `state.sky.horizonColor` - which sky/atmosphere.js has
+   * ALREADY multiplied by its cloud `dim` factor - and then scaled by the
    * weather's own `fogLuma` (rain 0.72, storm 0.54). It is the one value in the
    * project that knows the deck is there. The old line
    *
@@ -1308,12 +1308,12 @@ export class AtmosphericFX {
    *
    * divided that value by its own luminance and re-multiplied it by the
    * clear-sky probe's, keeping the hue and discarding every last bit of the
-   * dimming — in rain, a factor of dim 0.49 x fogLuma 0.72 = 0.35, thrown out
+   * dimming - in rain, a factor of dim 0.49 x fogLuma 0.72 = 0.35, thrown out
    * and replaced by 1.0.
    *
    * So the rule now is: THE PROBES GIVE DIRECTION, THE WEATHER GIVES LEVEL. The
-   * three probes still supply the whole directional character — warm toward the
-   * sun, blue away from it, the zenith gradient, no seam at the horizon — and
+   * three probes still supply the whole directional character - warm toward the
+   * sun, blue away from it, the zenith gradient, no seam at the horizon - and
    * the absolute level is pinned to the radiance weather.js says the air has.
    * Everything downstream in this function is anchored to `horizonLum`, so
    * re-levelling the probes before it is computed fixes the mist colour, the
@@ -1329,8 +1329,8 @@ export class AtmosphericFX {
     // Everything sibling-owned that this function reads, taken once through the
     // NaN firewall. It matters more here than anywhere else in the file: these
     // feed EIGHT uniforms that every fogged material in the scene samples, and
-    // `Math.max( luminance( x ), 1e-5 )` — the guard the palette is littered
-    // with — passes a NaN through untouched.
+    // `Math.max( luminance( x ), 1e-5 )` - the guard the palette is littered
+    // with - passes a NaN through untouched.
     safeColor(sun.color, _cSun, 1, 1, 1);
     safeColor(state.moon.color, _cMoon, 0.55, 0.68, 1);
     safeColor(weather.fogColor, _cFog, 0.72, 0.78, 0.86);
@@ -1362,7 +1362,7 @@ export class AtmosphericFX {
     const units = Math.max(finite(weather.fogDensity, 0), 0) / this.fogReference;
     // How completely something other than the clear sky has become the thing the
     // eye sees: a deck overhead, or a fog bank you are standing inside of. Both
-    // ends matter — a FOG event only runs 0.60 coverage, and you still cannot see
+    // ends matter - a FOG event only runs 0.60 coverage, and you still cannot see
     // the sky through it.
     const deck = Math.max(smoothstep(0.22, 0.9, coverage), smoothstep(1.6, 4.0, units));
     this._deck = deck;
@@ -1377,7 +1377,7 @@ export class AtmosphericFX {
     );
     const airLum = luminance(_cFog);
     // Only ever darkens. The clear-sky probe is a hard upper bound on what the
-    // sky can be — a deck subtracts light, it never adds any — and letting this
+    // sky can be - a deck subtracts light, it never adds any - and letting this
     // exceed 1 would reintroduce the same failure from the other direction.
     // (If the sky probe is unavailable, _probeSky falls back to state.sky, which
     // is already dimmed; the ratio then degrades to fogLuma alone, which is the
@@ -1390,7 +1390,7 @@ export class AtmosphericFX {
     _cC.multiplyScalar(skyScale);
 
     // A deck is a diffuser. Under one the clear-sky model's directional
-    // structure — bright sunward horizon, dark zenith — is simply not what is
+    // structure - bright sunward horizon, dark zenith - is simply not what is
     // overhead any more, and leaving it in place is the second reason the
     // mid-ground grew a hard bright band: distant ground converged on a sunward
     // horizon radiance that the sky above it no longer had. Collapse the three
@@ -1400,8 +1400,8 @@ export class AtmosphericFX {
       _cTmp.copy(_cB).lerp(_cC, 0.5);
       _cB.lerp(_cTmp, flat);
       _cC.lerp(_cTmp, flat);
-      // The zenith of an overcast is brighter than its horizon — the path
-      // through the deck is shortest straight up — so it flattens less far.
+      // The zenith of an overcast is brighter than its horizon - the path
+      // through the deck is shortest straight up - so it flattens less far.
       _cA.lerp(_cTmp, flat * 0.55);
     }
 
@@ -1417,13 +1417,13 @@ export class AtmosphericFX {
     // beam: under a rain deck there is none, so the sunlit-mist colour and both
     // glow lobes have to go with it. They were previously gated only on
     // `sun.visibility`, which just asks whether the sun is above the horizon and
-    // is therefore 1.0 in the middle of a storm — that is the additive half of
+    // is therefore 1.0 in the middle of a storm - that is the additive half of
     // the white-out, and it is why rain mist glowed.
     //
     // Deliberately NOT gated on fog density: a dawn fog bank under a mostly open
     // sky is lit by a real low sun, and that glow is the single most beautiful
     // thing this module does. The coverage curve is also deliberately late and
-    // steep — half the beam survives the FOG event's 0.60 deck and four fifths
+    // steep - half the beam survives the FOG event's 0.60 deck and four fifths
     // survives partly-cloudy, while overcast 0.90 and rain 0.97 go to nothing.
     // Broken cloud lets the sun through most of the time; a stratus sheet does
     // not, and there is no smooth physical dial between them.
@@ -1436,7 +1436,7 @@ export class AtmosphericFX {
     // bluer away from the sun and warmer toward it than any single-scattering
     // approximation makes it, and with the extinction correctly dialled down
     // this directional split is now the ONLY thing distinguishing near haze from
-    // far haze — a flat grey wash in both directions is what made the old build
+    // far haze - a flat grey wash in both directions is what made the old build
     // read as monochrome even where it was not especially dense. Luminance is
     // preserved by pushHue, so this changes hue and never brightness.
     const split = (0.06 + 0.1 * lowSun * beam) * (1 - deck * 0.8);
@@ -1453,7 +1453,7 @@ export class AtmosphericFX {
 
     // Ground bounce: hue from the sky model's ground colour, magnitude from the
     // probes, so both end up in the same (unknown) exposure space. Through the
-    // firewall as well — it is divided by its own luminance one line down, and
+    // firewall as well - it is divided by its own luminance one line down, and
     // NaN / NaN is the one arithmetic that survives every clamp in this file.
     safeColor(sky.groundColor, _cTmp, 0.22, 0.24, 0.2);
     const groundLum = Math.max(luminance(_cTmp), 1e-5);
@@ -1469,12 +1469,12 @@ export class AtmosphericFX {
     // level a few dozen lines up: under a deck the ratio is ~1 and this is a
     // no-op, while under an open sky it correctly lifts the tint onto the sky
     // the fog is dissolving into. Re-levelling the probes and re-exposing the
-    // tint to them are two halves of one operation — never restore one without
+    // tint to them are two halves of one operation - never restore one without
     // the other.
     _cTmp.copy(_cFog).multiplyScalar(horizonLum / fogLum);
     // Only a third of the way toward the authored tint. weather.js has already
     // applied its own fogTintWeight, and mist is the dominant term in the whole
-    // near and middle field — pulling it 60% toward a neutral grey-blue threw
+    // near and middle field - pulling it 60% toward a neutral grey-blue threw
     // away the sky's directional character exactly where it is most visible.
     _cA.copy(_cB).lerp(_cC, 0.5).lerp(_cTmp, 0.35).multiplyScalar(0.94);
 
@@ -1485,7 +1485,7 @@ export class AtmosphericFX {
       _cA.lerp(_cTmp.setRGB(g, g, g), rain * 0.35);
     }
 
-    // Lightning lights the whole air volume, not only the surfaces in it — the
+    // Lightning lights the whole air volume, not only the surfaces in it - the
     // one moment in this file where the air is genuinely allowed to outshine the
     // sky, because for those few frames it IS the brightest thing in the world.
     // The energy ceiling below is widened by the same envelope so it does not
@@ -1509,14 +1509,14 @@ export class AtmosphericFX {
 
     // Tight forward-scatter lobe. Strongest at dawn and dusk, when the ray runs
     // the length of the mist layer toward a low sun. `beam` already carries the
-    // cloud term far more honestly than the old ( 1 - coverage * 0.55 ) did —
+    // cloud term far more honestly than the old ( 1 - coverage * 0.55 ) did - 
     // that left 45 % of a full-strength dawn glow alive under a total overcast.
     const glowGain = (0.42 + 1.85 * lowSun) * beam;
     u.uAerialSunGlow.value.copy(_cSun).multiplyScalar((horizonLum * glowGain) / sunHueLum);
     u.uAerialSunDir.value.copy(_sunDir);
 
-    // Both lobes are always evaluated. The alternative — switching the dominant
-    // light at dusk — pops exactly when the audience is looking at the sky.
+    // Both lobes are always evaluated. The alternative - switching the dominant
+    // light at dusk - pops exactly when the audience is looking at the sky.
     const moon = state.moon;
     // Same deck gate as the sun: a moon behind stratus lights nothing either,
     // and a moon-glow lobe surviving a socked-in night is the night-time version
@@ -1536,7 +1536,7 @@ export class AtmosphericFX {
     // with every weight in 0..1, so its radiance can reach
     //     lum( mistSun ) + lum( sunGlow ) + lum( moonGlow ).
     // Forward scattering genuinely does make mist brighter than the average sky
-    // when you look into a low sun — but by a BOUNDED factor. An unbounded sum of
+    // when you look into a low sun - but by a BOUNDED factor. An unbounded sum of
     // full-strength lobes on top of an already-full-strength in-scatter is the
     // classic way to make fog outshine its own light source, and at dawn the old
     // constants could reach 4.5x the horizon radiance in the sun direction.
@@ -1562,8 +1562,8 @@ export class AtmosphericFX {
 
     // Keep the fallback scene fog in the same visual family as the real thing.
     // three's own fog_fragment runs AFTER the output colour-space conversion, so
-    // it mixes in display space and a radiance value — which mist colour is, and
-    // which routinely exceeds 1 — would clip to white there. Reinhard it into
+    // it mixes in display space and a radiance value - which mist colour is, and
+    // which routinely exceeds 1 - would clip to white there. Reinhard it into
     // 0..1 first. Only unpatched materials ever see this.
     const fc = this.fog.color;
     const mc = u.uAerialMistColor.value;
@@ -1576,13 +1576,13 @@ export class AtmosphericFX {
    * The fallback is used RAW and that is deliberate. `state.sky.zenithColor` and
    * `horizonColor` are written by sky/atmosphere.js as the mean of the very same
    * `getSkyColor()` this function is trying to call, already multiplied by its
-   * cloud `dim` factor — they are scene-referred RADIANCE in exactly the units
+   * cloud `dim` factor - they are scene-referred RADIANCE in exactly the units
    * the probe returns, not a normalised tint. Scaling them by
    * `sky.ambientIntensity` (which this used to do) double-counts: that field is
    * `skyIrradiance / NOON_REFERENCE_LUMINANCE`, so it is ~1 at noon and 0.012 at
    * midnight, and the fallback came back up to eighty times too dark. That in
    * turn drove `probeLum` to a hair above zero, sent `airLum / probeLum` past 1,
-   * and the `Math.min( ..., 1 )` clamp then pinned `skyScale` at 1 — destroying
+   * and the `Math.min( ..., 1 )` clamp then pinned `skyScale` at 1 - destroying
    * precisely the "degrades to fogLuma alone" behaviour the caller documents.
    */
   _probeSky(dir, out, fallback) {
@@ -1603,7 +1603,7 @@ export class AtmosphericFX {
     out.copy(fallback);
     // Last line of defence. `out` has already been overwritten by whatever
     // getSkyColor wrote before it was rejected, and the fallback itself is a
-    // sibling-owned colour scaled by a sibling-owned float — so this is the only
+    // sibling-owned colour scaled by a sibling-owned float - so this is the only
     // point at which BOTH the probe and its fallback are known to have failed.
     // A dark neutral is the right degenerate answer: the aerial term goes quiet
     // for a frame instead of painting NaN into every fogged material at once.
@@ -1637,8 +1637,8 @@ export class AtmosphericFX {
     // beyond that belongs to the boundary layer, which is what the mist is.
     //
     // Rain is weighted heavily (1.15, was 0.35) on purpose. Falling rain and its
-    // spray are a DEEP, well-mixed column — that is why a rainy hillside two
-    // kilometres off goes grey while the field at your feet stays saturated —
+    // spray are a DEEP, well-mixed column - that is why a rainy hillside two
+    // kilometres off goes grey while the field at your feet stays saturated - 
     // and the murk has to live in the tall medium to behave that way. Loading it
     // into the 16 m mist layer instead put a savage vertical gradient right at
     // eye level, which is the other half of why the mid-ground grew a hard band:
@@ -1657,7 +1657,7 @@ export class AtmosphericFX {
     // physical cause anyway: it is insolation that lifts the inversion.
     const coolness = 1 - smoothstep(-0.02, 0.42, sunY);
     // timeOfDay is documented as 0..24 but nothing enforces the wrap, and bell()
-    // only folds a difference into +/-12 h — an unwrapped 25.5 or -0.5 would slip
+    // only folds a difference into +/-12 h - an unwrapped 25.5 or -0.5 would slip
     // the dawn peak by a whole day-length. mod() is the owner's own convention.
     const hour = ((hourRaw % 24) + 24) % 24;
     // Sharpest right at first light and again as the ground gives up its heat
@@ -1682,7 +1682,7 @@ export class AtmosphericFX {
     // Rain is the enemy of a stratified boundary layer: the drops drag air down
     // with them and the gust front stirs the rest, so a rainy afternoon has far
     // LESS structure at ankle height than a still morning does, not more. The
-    // murk is still there — it moved into the haze column above. Wetness pushes
+    // murk is still there - it moved into the haze column above. Wetness pushes
     // gently the other way: a soaked field evaporating is where ground mist
     // comes from in the first place.
     const boundary = (1 - this.mistRainMix * rain) * (1 + 0.15 * wetness);
@@ -1697,7 +1697,7 @@ export class AtmosphericFX {
     // deep and the eye sits inside it. The layer has to physically deepen with
     // the weather or a fog event just looks like a very bright floor.
     const depth = Math.pow(clamp01((units - 0.7) / 7.5), 1.2);
-    // Cool air deepens the layer as well as thickening it — the inversion sits
+    // Cool air deepens the layer as well as thickening it - the inversion sits
     // higher before dawn than it does at noon. Rain deepens it too, and for the
     // opposite reason: not a stable inversion but a stirred one, spray lifted to
     // roof height by the same turbulence that thinned it. Deepening the layer is
@@ -1738,8 +1738,8 @@ export class AtmosphericFX {
     // Read the damped values, not the targets, so everything downstream reacts
     // to exactly the density the shader is already rendering.
     this._effectiveMist = mv.x;
-    // What the mist actually contributes along a level ray at the eye. This —
-    // not the base density — is the number that decides whether the field looks
+    // What the mist actually contributes along a level ray at the eye. This - 
+    // not the base density - is the number that decides whether the field looks
     // misty, because the eye is one to two e-folding heights up when walking.
     const eyeAbove = Math.max(finite(this.camera.position.y, 0) - this._mistBase, 0);
     this._sigmaEyeMist = mv.x * Math.exp(-eyeAbove * mv.y);
@@ -1771,7 +1771,7 @@ export class AtmosphericFX {
     const wind = state.wind;
     // _driftA/_driftB are integrators: they are never recomputed, only added to.
     // One NaN increment wedges the mist noise UVs at NaN for the rest of the
-    // session, which does not look like a glitch — it looks like the mist layer
+    // session, which does not look like a glitch - it looks like the mist layer
     // silently disappearing.
     const speed = finite(wind.strength * wind.gust, 0);
     const dx = finite(wind.direction.x * speed * dt, 0);
@@ -1836,12 +1836,12 @@ export class AtmosphericFX {
       toneMapped: true,
     });
     // three keys its program cache on the UNRESOLVED shader source (a string ->
-    // id map in WebGLShaderCache), the defines, and this hook — never on the
+    // id map in WebGLShaderCache), the defines, and this hook - never on the
     // ShaderChunk entries the source `#include`s. MIST_FRAGMENT is a constant
     // string, so when onQualityChange() rewrites sakura_aerial_pars_fragment and
     // sets needsUpdate, getProgramCacheKey() returns the SAME key and
     // acquireProgram() hands back the already-compiled program: the tier switch
-    // silently does nothing here. That is not only cosmetic — dropping to LOW is
+    // silently does nothing here. That is not only cosmetic - dropping to LOW is
     // supposed to compile the two textureLod taps out of the aerial chunk, and
     // without this the slabs keep paying for them.
     this._mistMaterial.customProgramCacheKey = () => 'sakuraMist' + this._variant;
@@ -1867,7 +1867,7 @@ export class AtmosphericFX {
     const { rings, segments, radius } = this._preset;
     // Small, not zero. At ground level the near fade already blanks everything
     // inside 11 m so the hole is free, but from the air you look straight down
-    // at it — a 6 m hole reads as a puncture, a 2 m one does not.
+    // at it - a 6 m hole reads as a puncture, a 2 m one does not.
     const inner = 2;
     const vertexCount = (rings + 1) * segments;
     const positions = new Float32Array(vertexCount * 3);
@@ -1883,7 +1883,7 @@ export class AtmosphericFX {
       for (let s = 0; s < segments; s++) {
         const i = r * segments + s;
         // Deterministic jitter, so no concentric-ring pattern can survive in the
-        // terrain-emergence fade — the one term evaluated per vertex.
+        // terrain-emergence fade - the one term evaluated per vertex.
         const angle = ((s + stagger + (rand() - 0.5) * 0.35) / segments) * TAU;
         const rad = base * (1 + (rand() - 0.5) * 0.07);
         positions[i * 3] = Math.cos(angle) * rad;
@@ -1954,7 +1954,7 @@ export class AtmosphericFX {
     const heights = attr.array;
     const radial = geo.userData.radial;
     // Bound once and cached. This runs from update() whenever the camera crosses
-    // a 4 m snap cell — several times a second while sprinting — and binding per
+    // a 4 m snap cell - several times a second while sprinting - and binding per
     // call would allocate a closure inside the hot path for no reason.
     const terrain = this.terrain;
     if (terrain !== this._samplerOwner) {
@@ -2003,7 +2003,7 @@ export class AtmosphericFX {
     const stackHeight = clamp(this._mistHeight * this.mistStackScale, 5, this.mistStackHeight);
     const camAbove = finite(this.camera.position.y, 0) - this._mistBase;
 
-    // Below a real density the slabs are pure cost — the smooth fog term already
+    // Below a real density the slabs are pure cost - the smooth fog term already
     // covers what little haze there is. Biggest single win on the iGPU, and at
     // the tuned coefficients this is what makes a clear midday genuinely have no
     // mist pass at all. Faded, not switched: crossing a hard threshold as the
@@ -2039,7 +2039,7 @@ export class AtmosphericFX {
     const meanCover = clamp01(0.25 + 0.6 * this.mistiness);
 
     const fade = u.uMistFade.value;
-    // You never see fog on your own nose — but in a real fog event you very much
+    // You never see fog on your own nose - but in a real fog event you very much
     // see it at three metres, and an 11 m clear bubble around the player would
     // be the single most obvious tell in the frame.
     fade.x = lerp(11, 3.2, this.mistiness);
@@ -2057,13 +2057,13 @@ export class AtmosphericFX {
     );
     // Guard the divide. Below the horizon the sun contributes nothing anyway
     // because light.w carries its visibility, but the ratio still has to be
-    // finite — and Math.max( NaN, 0.06 ) is NaN, which would put NaN straight
+    // finite - and Math.max( NaN, 0.06 ) is NaN, which would put NaN straight
     // into vSunLight and blank every slab.
     light.y = Math.max(finite(state.sun.direction.y, 0), 0.06);
     light.z = this.mistPooling;
     // Through the firewall for exactly the reason light.y is: `clamp01` is a
     // pair of comparisons and every comparison against NaN is false, so
-    // `clamp01( NaN )` returns NaN untouched. This one is worse than most —
+    // `clamp01( NaN )` returns NaN untouched. This one is worse than most - 
     // vSunLight is `uMistLight.w * exp( ... )`, so a NaN here multiplies the
     // whole self-shadow term and every slab fragment in the stack comes out NaN.
     light.w = clamp01(finite(state.sun.visibility, 0));
@@ -2132,7 +2132,7 @@ export class AtmosphericFX {
     // NaN written into a Mesh position or a material opacity is a permanently
     // undrawn (or, on some drivers, permanently wrong) sun disc.
     //
-    // These reads used to be raw, and `clamp01` does NOT absorb NaN — it is two
+    // These reads used to be raw, and `clamp01` does NOT absorb NaN - it is two
     // comparisons and both are false against NaN. Measured: one NaN frame in
     // `sun.color`, `sun.direction`, `sun.visibility`, `clouds.coverage`,
     // `clouds.storminess` or `camera.position` latched NaN into
@@ -2207,7 +2207,7 @@ export class AtmosphericFX {
     const cc = tree && tree.canopyCenter;
     // The centre is checked component-wise, not merely for isVector3: it is
     // sibling-owned and it is subtracted from the camera and then square-rooted,
-    // so one NaN component would reach sunOcclusion via Math.max — which, like
+    // so one NaN component would reach sunOcclusion via Math.max - which, like
     // clamp01, propagates NaN rather than absorbing it.
     if (cc && cc.isVector3 && Number.isFinite(cc.x) && Number.isFinite(cc.y) && Number.isFinite(cc.z)) {
       // Ray/sphere against the canopy: cheap, and it makes the shafts flicker as
@@ -2247,7 +2247,7 @@ export class AtmosphericFX {
     // Renormalise to unit luminance, which is what the export surface promises.
     // The 1e-5 floor alone is not enough: deep at night uAerialMistSun collapses
     // toward the (dark) sky probe, and dividing a 1e-7 colour by 1e-5 yields a
-    // 0.01-luminance tint, not a unit one — or exactly black if the sky model
+    // 0.01-luminance tint, not a unit one - or exactly black if the sky model
     // hands back zeroes, which would multiply the shafts out of existence
     // instead of merely dimming them. Fall back to the authored warm neutral.
     const gc = this.godRayColor;
@@ -2386,7 +2386,7 @@ export class AtmosphericFX {
     const self = this;
     // Installed on BOTH paths, before the early return. three builds its program
     // cache key from the UNRESOLVED shader source (WebGLShaderCache maps the
-    // string to an id) plus the defines plus this hook — it never sees which
+    // string to an id) plus the defines plus this hook - it never sees which
     // ShaderChunk bodies the source `#include`s. A material that takes the chunk
     // directly therefore keeps its first-compiled program for the life of the
     // session, so onQualityChange()'s needsUpdate would re-resolve nothing and
@@ -2441,7 +2441,7 @@ export class AtmosphericFX {
       return;
     }
     // A custom shader that wired the fog chunks but left `fog` false still
-    // counts as opting in — applyToMaterial flips the flag and supplies the
+    // counts as opting in - applyToMaterial flips the flag and supplies the
     // uniforms three would otherwise crash looking for.
     const wantsFog = src.indexOf('fog_pars_fragment') !== -1 && !!material.uniforms;
     if (material.fog !== true && !wantsFog) return;
@@ -2512,14 +2512,14 @@ function patchFragmentSource(src) {
  * `clamp` is a pair of comparisons and every comparison against NaN is false, so
  * `clamp( NaN, 0, 1 )` is NaN; `smoothstep`, `lerp` and `damp` inherit that. On
  * its own that would be a one-frame blemish, but this module feeds those results
- * into DAMPED ACCUMULATORS that are read back the next frame — `_mistHeight`,
+ * into DAMPED ACCUMULATORS that are read back the next frame - `_mistHeight`,
  * `_mistBase`, `_flash`, `_driftA/_driftB`, `uAerialMist.x`, `uAerialHaze.x`,
  * `godRayIntensity`. `damp( NaN, x )` is NaN forever, so a single bad frame in
  * `state.wind`, `state.sun.direction`, `state.clouds.coverage` or the camera
  * transform LATCHES. And the failure is not local: a NaN in `uAerialMist.x`
  * makes `aerialOpticalDepth` return NaN, so `mix( color, inscatter, NaN )` is
- * NaN in every fog-adopted material in the scene — terrain, grass, tree, petals
- * — permanently, until reload. Sanitising at each accumulator is the one cheap
+ * NaN in every fog-adopted material in the scene - terrain, grass, tree, petals
+ * - permanently, until reload. Sanitising at each accumulator is the one cheap
  * place that closes all of those paths at once.
  */
 function finite(x, fallback) {
@@ -2553,7 +2553,7 @@ function safeDir(src, out, x, y, z) {
   return out.set(x, y, z);
 }
 
-/** Wrap wind drift into [0, NOISE_TILE) metres — one whole tile, so seamless. */
+/** Wrap wind drift into [0, NOISE_TILE) metres - one whole tile, so seamless. */
 function wrapTile(x) {
   return x - Math.floor(x / NOISE_TILE) * NOISE_TILE;
 }

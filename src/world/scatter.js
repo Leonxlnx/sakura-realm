@@ -1,12 +1,12 @@
 /**
- * world/scatter.js — everything growing BETWEEN the grass blades, plus horizon depth.
+ * world/scatter.js - everything growing BETWEEN the grass blades, plus horizon depth.
  *
  * `world/grass.js` renders one species: a dense sward of blades. A real meadow is
  * never one species, and a field of a single repeated silhouette is the loudest
  * remaining "this is procedural" tell in the scene. This module supplies the rest of
  * the plant community:
  *
- *   cover   low creeping ground cover — clover, plantain, vetch. Fills the gaps at
+ *   cover   low creeping ground cover - clover, plantain, vetch. Fills the gaps at
  *           blade level so the soil never reads as a bare floor.
  *   bent    fine feathery bent-grass tufts. Soft, hair-thin, breaks the hard edges
  *           of the sward.
@@ -14,7 +14,7 @@
  *           is exactly why it does so much work.
  *   stalk   seed-head stalks and grass flowers standing ABOVE the sward line. These
  *           catch backlight and are what makes a field read as *tall*.
- *   bloom   sparse wildflowers in muted colours — chalk white, pale yellow, faded
+ *   bloom   sparse wildflowers in muted colours - chalk white, pale yellow, faded
  *           lilac. Never a primary; the field is quiet, not a paint chart.
  *   reed    tall plumed reed stands, restricted to damp hollows.
  *
@@ -25,7 +25,7 @@
  * fallen sakura petals, and a two-ring procedural treeline on the horizon.
  *
  * Placement discipline (all of it load-bearing):
- *  - Pure function of world position via `cellSeed`/`makeRNG` — the world is
+ *  - Pure function of world position via `cellSeed`/`makeRNG` - the world is
  *    identical every run and stable across streaming. No `Math.random()`.
  *  - Streamed in 32 m chunks around the camera, time-budgeted, allocation-free per
  *    frame. Chunk *generation* allocates; the frame loop never does.
@@ -38,13 +38,13 @@
  *  - One InstancedMesh per visual family; chunks own contiguous slices of the
  *    instance buffers, re-packed per GROUP only when that group's chunks change.
  *  - Three materials for twelve meshes: stone, plant, petal. Twelve draw calls.
- *  - Plant silhouettes live in the atlas alpha, not in geometry — a card is 4-8
+ *  - Plant silhouettes live in the atlas alpha, not in geometry - a card is 4-8
  *    vertices whatever it is a picture of. Nineteen species tiles share one 1024²
  *    atlas, so a new plant costs a tile, not a mesh and not a draw call.
  *  - Chunk generation is resumable at row granularity, so a dense ground-cover
  *    chunk cannot blow the streaming budget the way an atomic build did.
  *  - A group's baseRadius is the reference fade reach of its largest instance,
- *    or a deliberate cap below it (rockL, branch, stalk, reed are capped — their
+ *    or a deliberate cap below it (rockL, branch, stalk, reed are capped - their
  *    biggest instances fade over a shorter window rather than being streamed a
  *    further 20-40 m to fade somewhere nobody is looking).
  *
@@ -105,8 +105,8 @@ const HORIZON_RING = (() => {
 // ---------------------------------------------------------------------------
 //
 // One 1024² atlas on a 16 x 16 grid of 64 px cells. A species claims a RECTANGLE
-// of cells sized to the aspect of the card it will be drawn on — a 1.7 m seed-head
-// stalk gets 128 x 512, a clover clump gets 128 x 128 — so no tile is ever
+// of cells sized to the aspect of the card it will be drawn on - a 1.7 m seed-head
+// stalk gets 128 x 512, a clover clump gets 128 x 128 - so no tile is ever
 // squashed onto its quad, and no texel is spent on empty margin.
 //
 // Variants of one species sit at a constant stride from the base tile, which is
@@ -123,12 +123,12 @@ const ADRAW = 7;
 
 /** [cellX, cellY, cellW, cellH] of each species' FIRST variant, canvas space (y down). */
 const TILE = {
-  stalk: [0, 0, 2, 8],    // 128 x 512 — four variants striding +2 cells in u
-  reed: [8, 0, 3, 8],     // 192 x 512 — two variants striding +3 cells in u
-  cover: [14, 0, 2, 2],   // 128 x 128 — four variants striding +2 cells in v (down)
-  bent: [0, 8, 4, 4],     // 256 x 256 — four variants striding +4 cells in u
-  bloom: [0, 12, 4, 4],   // 256 x 256 — three variants striding +4 cells in u
-  broad: [12, 12, 2, 4],  // 128 x 256 — two variants striding +2 cells in u
+  stalk: [0, 0, 2, 8],    // 128 x 512 - four variants striding +2 cells in u
+  reed: [8, 0, 3, 8],     // 192 x 512 - two variants striding +3 cells in u
+  cover: [14, 0, 2, 2],   // 128 x 128 - four variants striding +2 cells in v (down)
+  bent: [0, 8, 4, 4],     // 256 x 256 - four variants striding +4 cells in u
+  bloom: [0, 12, 4, 4],   // 256 x 256 - three variants striding +4 cells in u
+  broad: [12, 12, 2, 4],  // 128 x 256 - two variants striding +2 cells in u
 };
 
 /** Per-instance uv shift of one variant step, in uv units. */
@@ -136,7 +136,7 @@ const STEP_U = (n) => (n * ACELL) / ATLAS_SIZE;
 
 /**
  * UV rect of a tile. The canvas is authored top-down and uploaded bottom-up, so
- * uv.y = 0 — which is the *base* of every plant card — must land on the BOTTOM edge
+ * uv.y = 0 - which is the *base* of every plant card - must land on the BOTTOM edge
  * of the tile in canvas space. Getting this inverted silently plants every species
  * upside down, and upside-down foliage still looks vaguely plausible in a still.
  */
@@ -175,7 +175,7 @@ const UV_BROAD = (k) => variantUV('broad', k, STEP_U(2), 0);
 const UV_COVER = (k) => variantUV('cover', k, 0, -STEP_U(2));
 
 // ---------------------------------------------------------------------------
-// Palette — quiet, low-saturation, slightly melancholy. Nothing here is allowed
+// Palette - quiet, low-saturation, slightly melancholy. Nothing here is allowed
 // to be a primary; the pinks live in the tree, not in the meadow.
 // ---------------------------------------------------------------------------
 
@@ -204,7 +204,7 @@ const PAL = {
   pollen: '#c6b276',
 };
 
-/** Murmur3 finalizer over three integers — a pure, allocation-free cell hash. */
+/** Murmur3 finalizer over three integers - a pure, allocation-free cell hash. */
 function cellSeed(ix, iz, salt) {
   let h = Math.imul(ix | 0, 0x27d4eb2d) ^ Math.imul(iz | 0, 0x165667b1) ^ Math.imul(salt | 0, 0x9e3779b1);
   h = Math.imul(h ^ (h >>> 15), 0x85ebca6b);
@@ -239,7 +239,7 @@ function scrubColor(c, hi = 8) {
  * One reusable mulberry32, seeded per placement cell.
  *
  * `makeRNG()` builds a closure plus five method closures on every call, and
- * placement called it once per accepted instance — six objects per plant, a few
+ * placement called it once per accepted instance - six objects per plant, a few
  * thousand per chunk. That was the single largest allocation source in the
  * streaming path and the origin of the GC outliers during a walk. Reseeding
  * resets the generator's entire state, so the emitted sequence is bit-identical
@@ -270,7 +270,7 @@ const PLACE_RNG = makeSeedableRNG();
 
 /**
  * Welds a non-indexed geometry (PolyhedronGeometry is non-indexed) down to unique
- * positions. 80 flat-shaded triangles then cost 42 vertices instead of 240 — three
+ * positions. 80 flat-shaded triangles then cost 42 vertices instead of 240 - three
  * reconstructs the facets from screen-space derivatives when `flatShading` is on.
  */
 function weldPositions(geo, tol = 1e-4) {
@@ -307,7 +307,7 @@ function makeCanvas(w, h) {
 /**
  * Bleeds colour outward into fully transparent texels. Without this, mip generation
  * averages transparent black into every silhouette edge and alpha-tested foliage
- * grows a dark halo at distance — the most common "this is a game asset" tell.
+ * grows a dark halo at distance - the most common "this is a game asset" tell.
  * Works on the raw ImageData because a canvas backing store is premultiplied and
  * would throw the dilated colour away on the next read.
  *
@@ -321,8 +321,8 @@ function dilateAlpha(ctx2d, w, h, passes) {
   const px = w * h;
 
   // `known` marks texels that carry usable colour: originally opaque, OR filled by
-  // an earlier pass. Dilation only ever writes RGB — alpha must stay untouched or
-  // the silhouette grows — so without this mask every pass reads the same original
+  // an earlier pass. Dilation only ever writes RGB - alpha must stay untouched or
+  // the silhouette grows - so without this mask every pass reads the same original
   // opaque set, rewrites the same one-texel ring, and the bleed never widens no
   // matter how many passes are asked for. One texel protects mip 0 and nothing
   // beyond it, which is precisely where alpha-tested foliage starts to halo.
@@ -436,7 +436,7 @@ function textureFromImageData(img, aniso) {
 // Canvas primitive: the tapered ribbon
 // ---------------------------------------------------------------------------
 //
-// Every organic shape in the flora atlas — blade, stem, leaf, petal, awn — is this
+// Every organic shape in the flora atlas - blade, stem, leaf, petal, awn - is this
 // one primitive: a quadratic Bezier spine swept by a width profile. A round-capped
 // `stroke()` cannot taper, and a grass blade that ends in a 3 px dot instead of a
 // hairline is the single most obvious tell in hand-drawn 2D foliage.
@@ -505,7 +505,7 @@ export class Scatter {
     this.noise = createNoise(WORLD_SEED);
 
     this.chunks = new Map();
-    /** Active chunks in ascending distance order — packing consumes nearest first. */
+    /** Active chunks in ascending distance order - packing consumes nearest first. */
     this.sorted = [];
     this.queue = [];
     this._taskPool = [];
@@ -598,7 +598,7 @@ export class Scatter {
   // -------------------------------------------------------------------------
 
   _buildMaterials(floraAtlas, petalTex) {
-    // Shared uniform objects — one write per frame drives every patched material.
+    // Shared uniform objects - one write per frame drives every patched material.
     this.u = {
       time: { value: 0 },
       windDir: { value: new THREE.Vector2(1, 0) },
@@ -618,7 +618,7 @@ export class Scatter {
 
     // --- Rocks and fallen wood share one material: pure vertex colour, no texture
     //     fetch, facets from screen-space derivatives. The cheapest thing that still
-    //     reads as weathered stone at 0.1–2.7 m.
+    //     reads as weathered stone at 0.1-2.7 m.
     const ground = new THREE.MeshStandardMaterial({
       color: 0xffffff,
       vertexColors: true,
@@ -659,7 +659,7 @@ roughnessFactor = mix( roughnessFactor, 0.74, uSnow * smoothstep( 0.30, 0.74, vU
     // --- Shadow casters have to fade on the SAME curve as the visible instance.
     //     three's shared MeshDepthMaterial knows nothing about aFade, so a rock
     //     that has already scaled to zero at 97 m went on casting a full-size
-    //     shadow onto open ground for the rest of the 190 m shadow distance —
+    //     shadow onto open ground for the rest of the 190 m shadow distance - 
     //     a hard dark blob with nothing above it, at exactly the range where the
     //     field is most open. Only rockM / rockL / branch cast, and they all use
     //     matGround, so one depth material covers every caster in the module.
@@ -784,7 +784,7 @@ varying float vTrans;`)
         // Mip-loss compensation on the alpha cutoff. A seed-head culm is ~4 of
         // its tile's 128 texels wide; by mip 3 the box filter has averaged it
         // down to roughly a quarter alpha, and a fixed 0.42 cutoff then erases
-        // the stalk while the denser head survives — floating seed-heads at
+        // the stalk while the denser head survives - floating seed-heads at
         // exactly the 20-60 m the composition leans on hardest. Relaxing the
         // cutoff with the texture LOD lets the silhouette fatten slightly
         // instead of dissolving, which is also what holds the apparent density
@@ -801,8 +801,8 @@ varying float vTrans;`)
   #include <alphatest_fragment>
 #endif`)
         // Foliage cards shaded off their true plane normal flicker and go black on
-        // the far side. Keep about half the lateral variation — that is what makes
-        // one side of a tuft darker than the other — and bias the rest toward the
+        // the far side. Keep about half the lateral variation - that is what makes
+        // one side of a tuft darker than the other - and bias the rest toward the
         // sky so nothing can ever face away from all the light in the scene.
         .replace('#include <normal_fragment_begin>', `#include <normal_fragment_begin>
 normal = normalize( vec3( normal.x * 0.58, abs( normal.y ) * 0.70 + 0.58, normal.z * 0.58 ) );`)
@@ -826,8 +826,8 @@ normal = normalize( vec3( normal.x * 0.58, abs( normal.y ) * 0.70 + 0.58, normal
     //     only multiplies diffuseColor by vColor under USE_COLOR, which comes
     //     from this flag alone. Without it the vertex stage still folds
     //     instanceColor into vColor and the fragment stage never reads it, so
-    //     every per-instance tint in the group — the 22 % browned petals and the
-    //     whole value jitter — is computed, uploaded, and silently discarded.
+    //     every per-instance tint in the group - the 22 % browned petals and the
+    //     whole value jitter - is computed, uploaded, and silently discarded.
     //     The petal geometry carries a matching all-ones `color` attribute; with
     //     USE_COLOR defined and no such attribute, WebGL feeds the shader the
     //     default generic vertex attribute (0,0,0) and every petal goes black.
@@ -904,17 +904,17 @@ attribute vec2 aFade;`)
       // --- the meadow itself -------------------------------------------------
       // Radii and fade windows are staggered on purpose: the tall silhouettes
       // survive furthest, ground cover gives up first. That is both the cheapest
-      // and the most truthful LOD there is — at 20 m you genuinely cannot resolve
+      // and the most truthful LOD there is - at 20 m you genuinely cannot resolve
       // a clover leaf, but you can absolutely see a seed-head against the sky.
       // `cover` and `bent` are the two fill-rate items in this module and the
       // reason it was over budget on the 780M. Card area per square metre of
       // ground, integrated over each group's own reach, came out at roughly
       // 0.36 (cover) and 0.45 (bent) against 0.15 for the seed-heads and under
-      // 0.03 for everything else — i.e. these two alone laid very nearly one
+      // 0.03 for everything else - i.e. these two alone laid very nearly one
       // extra full-coverage alpha-tested layer over the near field, on top of
       // the sward. Neither is a silhouette the eye can resolve: cover is a
       // 20 cm mat and bent is hair-thin. So both are thinned and both give up
-      // earlier, and the tall species — the ones the brief actually leans on —
+      // earlier, and the tall species - the ones the brief actually leans on - 
       // are untouched.
       this._group({
         id: 'cover', kind: 'plant', salt: 6091, cell: 1, baseRadius: 10,
@@ -989,7 +989,7 @@ attribute vec2 aFade;`)
     // the real worst case for a lattice, pi*(span + halfDiagonal)^2, not the disc
     // area: the naive pi*span^2 + 2*span + 1 under-counts by ~15 % (59 against 70
     // for the seed-heads), and packing handles an overflow by dropping the
-    // FARTHEST chunks — which on ULTRA, where the reach is 1.57x the reference,
+    // FARTHEST chunks - which on ULTRA, where the reach is 1.57x the reference,
     // would draw a hard circular edge across the field instead of a fade.
     // The whole correction costs 0.4 MB of instance buffer.
     const chunkCount = Math.ceil(Math.PI * (span + Math.SQRT1_2) * (span + Math.SQRT1_2));
@@ -1004,7 +1004,7 @@ attribute vec2 aFade;`)
     mesh.name = `scatter.${def.id}`;
     mesh.count = 0;
     mesh.visible = false;
-    // The packed set always encircles the camera — its bounding sphere contains the
+    // The packed set always encircles the camera - its bounding sphere contains the
     // near plane by construction, so a frustum test can only ever return "visible".
     // Leaving it on would pay for a sphere transform per mesh per shadow cascade to
     // learn nothing. A REAL world-space sphere is still maintained in _pack() so
@@ -1080,7 +1080,7 @@ attribute vec2 aFade;`)
     const ox = rng.range(-40, 40), oy = rng.range(-40, 40), oz = rng.range(-40, 40);
 
     // Fracture planes, biased away from vertical so the crown stays rounded and the
-    // flanks get the flat faces — which is what frost shattering actually produces.
+    // flanks get the flat faces - which is what frost shattering actually produces.
     const cuts = [];
     for (let k = 0; k < opt.cuts; k++) {
       const a = rng() * TAU;
@@ -1184,7 +1184,7 @@ attribute vec2 aFade;`)
       // Cavity: vertices inside the mean radius are pits, and pits hold shadow.
       const r = Math.hypot(x, y - height * 0.5, z);
       _c0.multiplyScalar(lerp(0.66, 1.06, clamp01((r - rMean * 0.86) / (rMean * 0.30))));
-      // Contact darkening at the soil line — sells "sitting in" over "sitting on".
+      // Contact darkening at the soil line - sells "sitting in" over "sitting on".
       // Kept tight (a third of the height) so it reads as occlusion, not as dirt.
       _c0.multiplyScalar(lerp(0.50, 1.0, smoothstep(0, height * 0.32, y)));
 
@@ -1298,7 +1298,7 @@ attribute vec2 aFade;`)
         I.push(i0, i2, i1, i1, i2, i3);
       }
     }
-    // End caps — a hollow tube reads as a bug the moment the sun is behind it.
+    // End caps - a hollow tube reads as a bug the moment the sun is behind it.
     for (let e = 0; e < 2; e++) {
       const s = e === 0 ? 0 : SEG;
       const centre = P.length / 3;
@@ -1326,7 +1326,7 @@ attribute vec2 aFade;`)
    * Builds one plant from a list of cards.
    *
    * Local space is normalised so the plant is exactly 1 unit tall, which means the
-   * length of the instance matrix's Y column IS the plant's height in metres — the
+   * length of the instance matrix's Y column IS the plant's height in metres - the
    * wind shader reads it to keep bend proportional without a second attribute.
    *
    * Cards are plain rectangular strips. The silhouette lives entirely in the atlas
@@ -1339,14 +1339,14 @@ attribute vec2 aFade;`)
    *                   along `yaw` and whose width runs across it.
    *   yaw      radians about +Y
    *   seg      spine segments (1..4)
-   *   w        card width in local units — must match the tile aspect or the
+   *   w        card width in local units - must match the tile aspect or the
    *            drawing comes out stretched
    *   yBase    height the card starts at
    *   tipY     height the card ends at
    *   reach    horizontal displacement of the tip
    *   ctrlX/Y  quadratic control point, gives the arch
    *   atlas    uv rect [u0, v0, du, dv]
-   *   mirror   flips uv.x — two leaves from one tile
+   *   mirror   flips uv.x - two leaves from one tile
    *   ao/aoH   baked base occlusion and the height it fades over
    *   value    per-card shade multiplier; crossed cards must not match exactly
    *   trans    translucency 0..1 for the backlight term
@@ -1382,7 +1382,7 @@ attribute vec2 aFade;`)
         if (dl > 1e-6) { drx /= dl; dry /= dl; } else { drx = 0; dry = 1; }
 
         // Face normal: perpendicular to both the width axis and the spine tangent.
-        // The cross product is taken width x tangent, NOT tangent x width — the
+        // The cross product is taken width x tangent, NOT tangent x width - the
         // other handedness points a flattening leaf tip at the ground, and since
         // the up-bias below is added blind, the leaf would then be lit from under
         // the soil.
@@ -1445,7 +1445,7 @@ attribute vec2 aFade;`)
 
   /**
    * Ground cover: four small leaves splayed low and wide from a common crown.
-   * Deliberately much broader than it is tall — real cover spreads as a MAT, and
+   * Deliberately much broader than it is tall - real cover spreads as a MAT, and
    * one 50 cm mat closes far more of the gap between blades than four upright
    * 12 cm sprigs would for the same four cards.
    */
@@ -1562,7 +1562,7 @@ attribute vec2 aFade;`)
     geo.setAttribute('uv', new THREE.Float32BufferAttribute([0, 0, 1, 0, 0, 1, 1, 1], 2));
     // Identity vertex colour. matPetal needs `vertexColors` on for instanceColor
     // to reach the fragment shader at all, and USE_COLOR without a `color`
-    // attribute reads the generic attribute default (0,0,0) — black petals.
+    // attribute reads the generic attribute default (0,0,0) - black petals.
     geo.setAttribute('color', new THREE.Float32BufferAttribute(
       [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], 3));
     geo.setIndex([0, 2, 1, 1, 2, 3]);
@@ -1583,7 +1583,7 @@ attribute vec2 aFade;`)
     // Every tile is drawn inside a hard clip of its own rect. The per-species
     // extents below are tuned to fit, but a stray gaussian tail that leaked a dock
     // leaf onto the wildflower tile would be invisible in code review and glaring
-    // on screen — and there is no cheaper insurance than one clip() per tile.
+    // on screen - and there is no cheaper insurance than one clip() per tile.
     const T = TILE;
     const draw = (fn, rng, R, k) => {
       g.save();
@@ -1620,7 +1620,7 @@ attribute vec2 aFade;`)
    * A seed-head stalk. Four real inflorescence architectures, because "grass with a
    * fuzzy bit on top" repeated across a field is exactly the sameness we are here to
    * break: an open panicle, a compact spike, a nodding oat-like head, and a soft
-   * bloomed head. Each gets one or two sheath leaves low on the culm — a bare stick
+   * bloomed head. Each gets one or two sheath leaves low on the culm - a bare stick
    * with a head on it reads as a lollipop.
    */
   _drawStalkTile(g, rng, R, variant) {
@@ -1628,7 +1628,7 @@ attribute vec2 aFade;`)
     const by = R.y + R.h;
     // The head owns the top of the tile and the culm runs up into it. Splitting the
     // tile this way is what keeps every decoration inside its own rect no matter how
-    // far a gaussian tail wanders — a spikelet drawn past the tile edge lands on the
+    // far a gaussian tail wanders - a spikelet drawn past the tile edge lands on the
     // neighbouring species.
     const headFrac = variant === 0 ? 0.46 : variant === 2 ? 0.42 : 0.34;
     const headTop = R.y + R.h * rng.range(0.035, 0.075);
@@ -1680,7 +1680,7 @@ attribute vec2 aFade;`)
     const room = R.w * 0.44;
 
     if (variant === 0) {
-      // Open panicle — bent-grass / Agrostis. Whorls of hair-fine branchlets, each
+      // Open panicle - bent-grass / Agrostis. Whorls of hair-fine branchlets, each
       // ending in two or three spikelets, widest at the bottom of the head. Almost
       // transparent, which is exactly what makes a backlit meadow shimmer.
       const whorls = 7;
@@ -1715,7 +1715,7 @@ attribute vec2 aFade;`)
         }
       }
     } else if (variant === 1) {
-      // Compact spike — Timothy. A dense cylinder of tiny florets; the silhouette is
+      // Compact spike - Timothy. A dense cylinder of tiny florets; the silhouette is
       // the whole point, so build it from hundreds of short strokes rather than a
       // solid shape, or it reads as a drawn rectangle.
       const ax = tipX, ay = headBase;
@@ -1765,7 +1765,7 @@ attribute vec2 aFade;`)
         }
       }
     } else {
-      // Soft bloomed head — Yorkshire fog. A woolly ovoid with the faintest warm
+      // Soft bloomed head - Yorkshire fog. A woolly ovoid with the faintest warm
       // cast, which is the one place in the meadow allowed to answer the blossom.
       const ax = tipX, ay = headBase;
       const tx2 = tipX + rng.range(-3, 3), ty2 = headTop;
@@ -1801,7 +1801,7 @@ attribute vec2 aFade;`)
     const by = R.y + R.h;
     const dry = variant === 1;
 
-    // Leaves fan out from a common crown. The tall ones stay near vertical — a
+    // Leaves fan out from a common crown. The tall ones stay near vertical - a
     // 2 m reed leaning 45 degrees would run straight out of its own tile, and the
     // clip would shear it off mid-blade.
     const blades = dry ? 9 + rng.int(0, 3) : 12 + rng.int(0, 4);
@@ -1909,7 +1909,7 @@ attribute vec2 aFade;`)
         }
       }
     } else if (variant === 1) {
-      // Basal rosette — ribwort / plantain. Ovate leaves radiating almost flat.
+      // Basal rosette - ribwort / plantain. Ovate leaves radiating almost flat.
       const n = 5 + rng.int(0, 2);
       for (let i = 0; i < n; i++) {
         const a = -Math.PI * 0.5 + (i / n - 0.5) * 1.9 + rng.range(-0.12, 0.12);
@@ -2023,7 +2023,7 @@ attribute vec2 aFade;`)
   }
 
   /**
-   * Wildflower sprig. One muted hue per tile — chalk white, pale yellow, faded
+   * Wildflower sprig. One muted hue per tile - chalk white, pale yellow, faded
    * lilac. Colonies of one colour is how wildflowers actually grow, and it is also
    * the only way a flower stays quiet: a mixed confetti of hues would fight the
    * blossom, which is the one thing in this scene allowed to be pink.
@@ -2073,7 +2073,7 @@ attribute vec2 aFade;`)
         g.arc(hx, hy, rad * 0.30, 0, TAU);
         g.fill();
       } else if (variant === 1) {
-        // Pale yellow cup — five broad rounded petals, faintly overlapping.
+        // Pale yellow cup - five broad rounded petals, faintly overlapping.
         const rad = R.w * rng.range(0.050, 0.078);
         const a0 = rng() * TAU;
         for (let p = 0; p < 5; p++) {
@@ -2092,7 +2092,7 @@ attribute vec2 aFade;`)
         g.arc(hx, hy, rad * 0.24, 0, TAU);
         g.fill();
       } else {
-        // Faded lilac pincushion — scabious. Dozens of tiny florets, denser at the
+        // Faded lilac pincushion - scabious. Dozens of tiny florets, denser at the
         // rim, so the head has a soft edge instead of a drawn circle.
         const rad = R.w * rng.range(0.058, 0.086);
         const n = 34 + rng.int(0, 16);
@@ -2273,7 +2273,7 @@ attribute vec2 aFade;`)
     const ground = oy + TH * 0.88;
     const usable = ground - oy - gutter;
 
-    // Three depth layers. Farther layers are lighter (haze) and shorter — within a
+    // Three depth layers. Farther layers are lighter (haze) and shorter - within a
     // single card that is what turns a flat silhouette into a forest with depth.
     const layers = [
       { n: 22, hMin: 0.24, hMax: 0.40, v: 168 },
@@ -2435,7 +2435,7 @@ attribute vec2 aFade;`)
           vec4 t = texture2D( uAtlas, vUvA );
           if ( t.a < uAlphaTest ) discard;
 
-          // The atlas stores relative luminance, not colour — the tint is lit here,
+          // The atlas stores relative luminance, not colour - the tint is lit here,
           // so the treeline tracks time of day and weather for free.
           vec3 base = mix( uCanopy, uCanopyWarm, vHue ) * ( 0.34 + 1.25 * t.r ) * vVal;
           base *= mix( 0.58, 1.0, vH );                     // the forest floor is darker
@@ -2494,7 +2494,7 @@ attribute vec2 aFade;`)
 
   /**
    * One merged, pre-oriented card ring. The rings are re-centred on the camera every
-   * frame, so every card already faces the viewer — no billboard maths at all, and
+   * frame, so every card already faces the viewer - no billboard maths at all, and
    * the whole horizon costs two draw calls of ~300 triangles each.
    */
   _makeTreeRing(rng, mat, baseY, layers) {
@@ -2587,7 +2587,7 @@ attribute vec2 aFade;`)
     const q = (quality && typeof quality === 'object' && quality.tier) ? quality : this.state.quality;
     const tier = q?.tier ?? 'high';
     // Streaming distance derives from the grass distance so scatter and grass always
-    // end at the same place — a rock floating past the end of the grass is the
+    // end at the same place - a rock floating past the end of the grass is the
     // fastest way to make an endless field look like a demo.
     const scale = clamp((q?.grassDistance ?? 140) / 140, 0.45, 1.4);
     const tierRadius = tier === 'low' ? 0.70 : tier === 'medium' ? 0.86 : tier === 'ultra' ? 1.12 : 1.0;
@@ -2629,7 +2629,7 @@ attribute vec2 aFade;`)
     const cam = this.camera.position;
     // A NaN camera would make every chunk key NaN (they all collide under
     // SameValueZero), stop eviction dead, and re-queue the whole world every
-    // frame — so the streaming grid is driven off sanitised copies. The uniform
+    // frame - so the streaming grid is driven off sanitised copies. The uniform
     // and horizon paths guard their own reads.
     const camX = finite(cam.x, 0), camZ = finite(cam.z, 0);
     const cx = Math.floor(camX / CHUNK);
@@ -2643,12 +2643,12 @@ attribute vec2 aFade;`)
     this._drainQueue();
     // Per-group, not global: a streaming burst finishes one chunk of one group per
     // frame, and re-packing all twelve would re-upload every instance buffer in the
-    // module — around half a megabyte a frame — to move one chunk of one species.
+    // module - around half a megabyte a frame - to move one chunk of one species.
     //
     // Bounded per frame as well, because `_refreshChunks` marks ALL twelve stale
     // on every chunk boundary crossed (the chunk order moved, so each group's
     // nearest-first packing has to be redone). Doing all twelve at once memcpys
-    // and re-uploads every instance buffer in the module — ~2.6 MB — in the same
+    // and re-uploads every instance buffer in the module - ~2.6 MB - in the same
     // frame the generation budget has already been spent, which is the streaming
     // spike. Deferring is always SAFE: a group simply keeps the previous frame's
     // instances, and every one of those is still inside its own fade window
@@ -2745,7 +2745,7 @@ attribute vec2 aFade;`)
     // The deadline is enforced INSIDE _generate, per row of cells, not just between
     // chunks. A single dense ground-cover chunk is ~1000 cells and costs more than
     // the whole steady-state budget on its own, so a between-chunks-only check gave
-    // a measured 4 ms hitch on every chunk boundary crossed — once every 32 m of
+    // a measured 4 ms hitch on every chunk boundary crossed - once every 32 m of
     // walking, which is exactly often enough to feel.
     const budget = this._firstFill ? 6.0 : 1.1;
     const deadline = performance.now() + budget;
@@ -2797,7 +2797,7 @@ attribute vec2 aFade;`)
   /**
    * Height AND normal in three height taps instead of five, by forward-differencing
    * off the sample we already had to take. `terrain.getNormal` is a central
-   * difference, so the accurate version costs four extra taps per plant — at ~0.7 us
+   * difference, so the accurate version costs four extra taps per plant - at ~0.7 us
    * each, over a few hundred plants a chunk, that is most of the streaming budget
    * for a 35 cm bias in where the slope is measured. Rocks and fallen wood, which
    * visibly lie against the ground, still get the exact normal.
@@ -2832,7 +2832,7 @@ attribute vec2 aFade;`)
       + nz.noise2D(x * 0.0190 - 12, z * 0.0190 + 43) * 0.17);
   }
 
-  /** Two-octave patch field — the thing that turns a sprinkle into a drift. */
+  /** Two-octave patch field - the thing that turns a sprinkle into a drift. */
   _patchAt(x, z, f, ox, oz) {
     const nz = this.noise;
     return clamp01(
@@ -2851,8 +2851,8 @@ attribute vec2 aFade;`)
    *
    * Every species gets its own field, and the fields are deliberately correlated
    * through `stony` and `moist` rather than being six independent noises. That is
-   * what makes the meadow read as terrain-driven — a damp hollow full of reeds and
-   * dock, a dry stony rise with seed-heads and nothing underfoot — instead of six
+   * what makes the meadow read as terrain-driven - a damp hollow full of reeds and
+   * dock, a dry stony rise with seed-heads and nothing underfoot - instead of six
    * unrelated confetti layers stacked on the same ground.
    */
   _densityAt(group, x, z) {
@@ -3102,8 +3102,8 @@ attribute vec2 aFade;`)
     // --- per-instance fade window: big props survive to the group radius, small ones
     //     give up long before they turn into sub-pixel shimmer.
     //
-    //     Scaled by radiusK — how far this tier streams relative to the reference
-    //     tier — so the fade tracks the quality dial instead of being a constant.
+    //     Scaled by radiusK - how far this tier streams relative to the reference
+    //     tier - so the fade tracks the quality dial instead of being a constant.
     //     Without it LOW streams chunks it then fades to nothing inside, and ULTRA
     //     pays to stream chunks whose contents died at the HIGH distance. Most
     //     groups set baseRadius to the reference fade reach of their largest
@@ -3135,7 +3135,7 @@ attribute vec2 aFade;`)
 
   /**
    * Per-instance plant tint. Every species carries a slow regional term so a drift
-   * shares a cast, exactly like the rocks — a meadow where each plant is
+   * shares a cast, exactly like the rocks - a meadow where each plant is
    * independently randomised reads as static, not as variety.
    */
   _plantTint(group, rng, x, z, out) {
@@ -3311,7 +3311,7 @@ attribute vec2 aFade;`)
       hu.uFogColor.value.copy(state.weather.fogColor);
     }
     density = clamp(finite(density, 0.0022), 0, 0.5);
-    // At the skyline, fog and sky are the same thing — and `sky.horizonColor` is the
+    // At the skyline, fog and sky are the same thing - and `sky.horizonColor` is the
     // only one of the two guaranteed to track time of day, so let it dominate.
     // Without this the treeline sits as a dark band against a stale bright haze at
     // night, which is the single most obvious way to break a horizon.
@@ -3332,7 +3332,7 @@ attribute vec2 aFade;`)
     if (!(_axis.lengthSq() > 1e-6)) _axis.set(1, 0, 0); else _axis.normalize();
     hu.uSunDir.value.copy(_axis);
 
-    // Forward-scattered haze on the sun side — the reason a distant treeline looks
+    // Forward-scattered haze on the sun side - the reason a distant treeline looks
     // washed out toward the sun and inky away from it.
     hu.uHazeColor.value.copy(hu.uFogColor.value)
       .lerp(_c1.copy(hu.uSunColor.value).multiplyScalar(Math.max(0.2, sunPower)), 0.34 * vis)
@@ -3376,7 +3376,7 @@ attribute vec2 aFade;`)
     // Height: average the ground over a 1 km ring, which is exactly the far-field
     // level the treeline should be standing on. Eight cheap height samples, and
     // because the terrain's big octave has a ~1.5 km wavelength the average drifts
-    // smoothly as the player walks — it reads as real landform, not as bobbing.
+    // smoothly as the player walks - it reads as real landform, not as bobbing.
     if (this.terrain) {
       let sum = 0;
       for (let i = 0; i < 8; i++) {

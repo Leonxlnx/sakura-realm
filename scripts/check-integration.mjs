@@ -38,7 +38,7 @@ for (const m of mainSrc.matchAll(importRe)) {
 
 for (const mod of modules) {
   if (!existsSync(mod.path)) {
-    err(mod.rel, 'FILE MISSING — main.js imports it');
+    err(mod.rel, 'FILE MISSING - main.js imports it');
     continue;
   }
   const code = readFileSync(mod.path, 'utf8');
@@ -47,17 +47,17 @@ for (const mod of modules) {
     const exported =
       new RegExp(`export\\s+(class|function|const|let)\\s+${name}\\b`).test(code) ||
       new RegExp(`export\\s*\\{[^}]*\\b${name}\\b`).test(code);
-    if (!exported) err(mod.rel, `does not export "${name}" — main.js import will be undefined`);
+    if (!exported) err(mod.rel, `does not export "${name}" - main.js import will be undefined`);
   }
 
-  if (code.includes('@generated-stub')) err(mod.rel, 'STILL A STUB — no real implementation');
+  if (code.includes('@generated-stub')) err(mod.rel, 'STILL A STUB - no real implementation');
 
   // Placeholder markers the contract forbids.
   for (const marker of ['TODO', 'FIXME', 'not implemented', 'placeholder for', 'simplified for now']) {
     if (new RegExp(marker, 'i').test(code)) warn(mod.rel, `contains "${marker}"`);
   }
 
-  if (code.length < 1200) warn(mod.rel, `suspiciously short (${code.length} bytes) — likely under-built`);
+  if (code.length < 1200) warn(mod.rel, `suspiciously short (${code.length} bytes) - likely under-built`);
 }
 
 // ---------------------------------------------------------------------------

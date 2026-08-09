@@ -1,5 +1,5 @@
 /**
- * daynight.js — the clock and the lighting curves of Sakura Realm.
+ * daynight.js - the clock and the lighting curves of Sakura Realm.
  *
  * Two responsibilities, nothing else:
  *
@@ -10,7 +10,7 @@
  *
  *  2. THE LIGHTING CURVES. A set of keyframed tracks over the 24h cycle giving
  *     sun colour temperature, sun intensity, moon intensity/colour, ambient
- *     intensity and a target camera exposure — published on `this.lighting`
+ *     intensity and a target camera exposure - published on `this.lighting`
  *     for the engine / celestial / atmosphere / post to consume.
  *
  * Design notes that matter:
@@ -20,13 +20,13 @@
  *    are themselves derived from a real solar-position model (latitude +
  *    declination). Change the latitude or the day of year and every keyframe,
  *    every preset and every twilight window slides with the sun instead of
- *    silently desynchronising. Default location is Kyoto in early April — the
+ *    silently desynchronising. Default location is Kyoto in early April - the
  *    sun this scene was art-directed under.
  *
- *  - Interpolation is monotone cubic Hermite (Fritsch–Carlson), cyclic over 24h.
+ *  - Interpolation is monotone cubic Hermite (Fritsch-Carlson), cyclic over 24h.
  *    Catmull-Rom was the obvious choice and is wrong here: golden-hour and
  *    blue-hour keys sit 0.2h apart between keys 3h apart, and Catmull-Rom rings
- *    badly across that spacing — negative sun intensity just after sunset,
+ *    badly across that spacing - negative sun intensity just after sunset,
  *    colour-temperature overshoot into magenta. Monotone Hermite is C1, never
  *    overshoots a key, and flattens naturally at extrema (noon peak, night
  *    plateau). That is exactly the behaviour these curves need.
@@ -87,7 +87,7 @@ const MOON_SATURATION = 0.6;
 /**
  * Purkinje shift: at scotopic levels rod vision peaks ~507nm, so night reads
  * blue-silver even though moonlight is physically ~4100K reflected sunlight.
- * Gated by moon colour temperature — a moon sitting on the horizon is genuinely
+ * Gated by moon colour temperature - a moon sitting on the horizon is genuinely
  * amber, and pushing that toward blue at the same time just makes mud.
  */
 const PURKINJE_COLOR = { r: 0.62, g: 0.78, b: 1.0 };
@@ -146,7 +146,7 @@ const SUN_INTENSITY_KEYS = [
   ['S', 0.30, 0.000],
 ];
 
-/** Sun colour temperature in Kelvin. Interpolated in mired — see notes above. */
+/** Sun colour temperature in Kelvin. Interpolated in mired - see notes above. */
 const SUN_KELVIN_KEYS = [
   // Night value only exists to keep the curve from bulging between the two
   // horizon keys; the sun contributes nothing here.
@@ -173,8 +173,8 @@ const SUN_KELVIN_KEYS = [
 /**
  * Chroma strength: 1 keeps the raw blackbody, 0 collapses to white. The
  * blackbody curve below ~2200K is a fully saturated orange that reads as a
- * lava lamp on a landscape. Pulling saturation down at the horizon — where the
- * blackbody is most extreme — gives the soft amber the art direction asks for
+ * lava lamp on a landscape. Pulling saturation down at the horizon - where the
+ * blackbody is most extreme - gives the soft amber the art direction asks for
  * while keeping midday honest.
  */
 const SUN_SATURATION_KEYS = [
@@ -266,7 +266,7 @@ const EXPOSURE_KEYS = [
 
 /**
  * Named moments, anchored the same way the curves are. `dawn` sits just below
- * the horizon because that is when the sky is lit and the land is not — the
+ * the horizon because that is when the sky is lit and the land is not - the
  * single best-looking minute of the cycle.
  */
 const PRESET_SPECS = {
@@ -317,7 +317,7 @@ const PRESET_LABELS = Object.freeze({
 /**
  * A cyclic, monotone cubic Hermite curve over an arbitrary period.
  *
- * Tangents use the Fritsch–Carlson filter: zero at every local extremum, and
+ * Tangents use the Fritsch-Carlson filter: zero at every local extremum, and
  * clamped to 3x the smaller neighbouring secant elsewhere. That is the standard
  * proof-backed condition for "this spline never leaves the interval spanned by
  * its keys", which is what stops sun intensity from dipping negative between a
@@ -406,7 +406,7 @@ export class CyclicHermiteTrack {
         continue;
       }
       let m = (dPrev + dNext) * 0.5;
-      // Fritsch–Carlson monotonicity bound.
+      // Fritsch-Carlson monotonicity bound.
       const limit = 3 * Math.min(Math.abs(dPrev), Math.abs(dNext));
       if (Math.abs(m) > limit) m = Math.sign(m) * limit;
       M[i] = m;
@@ -489,7 +489,7 @@ export class DayNightCycle {
     this.dayOfYear = 96;
     /**
      * Clock hour of solar noon. Slightly past 12 because the site sits east of
-     * its timezone meridian — a free half-degree of realism that also keeps
+     * its timezone meridian - a free half-degree of realism that also keeps
      * "midnight" from landing exactly on the 0/24 wrap seam.
      */
     this.solarNoonHour = 12.15;
@@ -522,7 +522,7 @@ export class DayNightCycle {
       sunColor: new Color(1, 1, 1),
       /** DirectionalLight intensity after weather occlusion. */
       sunIntensity: 0,
-      /** Same, ignoring weather — for consumers doing their own cloud occlusion. */
+      /** Same, ignoring weather - for consumers doing their own cloud occlusion. */
       sunIntensityClear: 0,
       sunKelvin: 5900,
 
@@ -540,7 +540,7 @@ export class DayNightCycle {
        */
       keyColor: new Color(1, 1, 1),
       keyIntensity: 0,
-      /** Which body the key currently is — aim the light at that one. */
+      /** Which body the key currently is - aim the light at that one. */
       keyIsMoon: false,
 
       /** Tone-mapping multiplier actually in use this frame (smoothed). */
@@ -549,7 +549,7 @@ export class DayNightCycle {
       exposureTarget: 1,
       /** Same, straight off the curve with no weather term. */
       exposureTargetClear: 1,
-      /** log2 of the live exposure — the space adaptation is integrated in. */
+      /** log2 of the live exposure - the space adaptation is integrated in. */
       exposureEV: 0,
     };
 
@@ -630,7 +630,7 @@ export class DayNightCycle {
     this._presetCache = null;
 
     this._listeners = new Set();
-    /** Reused notification payload — listeners must not retain it. */
+    /** Reused notification payload - listeners must not retain it. */
     this._changePayload = { hour: 0, reason: 'init' };
 
     this._rebuild();
@@ -1130,7 +1130,7 @@ export class DayNightCycle {
     this._composeLightColor(L.sunColor, L.sunKelvin, clamp01(t.sunSaturation.eval(hour)), 0);
 
     // Moon: phase-weighted. Illumination fraction is the classic half-cosine;
-    // the exponent is the opposition surge — a half moon gives far less than
+    // the exponent is the opposition surge - a half moon gives far less than
     // half the light of a full one, because the lunar surface backscatters.
     const phase = state.moon ? state.moon.phase : 0.5;
     const illum = clamp01((1 - Math.cos(2 * Math.PI * phase)) * 0.5);
@@ -1156,8 +1156,8 @@ export class DayNightCycle {
    * A one-directional-light rig (which is what the LOW tier will want, and what
    * a single shadow cascade set can afford) needs to know which body is lighting
    * the scene and with what colour. Crossfading by relative intensity rather
-   * than switching on a threshold means the handover through twilight — where
-   * both are near zero — is continuous instead of a pop.
+   * than switching on a threshold means the handover through twilight - where
+   * both are near zero - is continuous instead of a pop.
    */
   _updateKeyLight() {
     const L = this.lighting;
@@ -1217,7 +1217,7 @@ export class DayNightCycle {
 
     const coverage = c ? clamp01(c.coverage) : 0;
     const storminess = c ? clamp01(c.storminess) : 0;
-    // Falling rain is itself an extinction medium — a downpour under thin cloud
+    // Falling rain is itself an extinction medium - a downpour under thin cloud
     // is still noticeably darker than the same cloud dry.
     const rain = w ? clamp01(w.rainIntensity) : 0;
 
@@ -1232,7 +1232,7 @@ export class DayNightCycle {
     // so ambient falls much less than the direct term does.
     L.ambientIntensity = L.ambientIntensityClear * (1 - 0.3 * occl) * (1 - 0.35 * gloom);
 
-    // Partial compensation only — overcast must still read as a darker day.
+    // Partial compensation only - overcast must still read as a darker day.
     L.exposureTarget = L.exposureTargetClear * (1 + 0.5 * occl + 0.35 * gloom);
 
     this._updateKeyLight();
@@ -1242,8 +1242,8 @@ export class DayNightCycle {
     const L = this.lighting;
 
     // Lightning: attack fast, release slow, and never more than a third of a
-    // stop. A real camera cannot track a 100ms flash — the flash is supposed to
-    // blow out — but the operator's iris does register a sustained storm.
+    // stop. A real camera cannot track a 100ms flash - the flash is supposed to
+    // blow out - but the operator's iris does register a sustained storm.
     if (this.reactToLightning && state.weather) {
       const strike = clamp01(state.weather.lightning);
       this._flashAdapt =
@@ -1290,7 +1290,7 @@ export class DayNightCycle {
   _applyAdaptMode(mode) {
     if (mode === 'snap') {
       // Snap needs a target, and the tracks have not been re-evaluated yet at
-      // the new hour — do it now so the snap lands on the right value.
+      // the new hour - do it now so the snap lands on the right value.
       if (this.state) {
         const h = mod(this.state.time.timeOfDay, HOURS);
         this._updateFactors(h);
@@ -1316,7 +1316,7 @@ export class DayNightCycle {
   // Readouts for the HUD
   // -------------------------------------------------------------------------
 
-  /** "18:24". Rebuilt only when the displayed minute changes — no per-frame GC. */
+  /** "18:24". Rebuilt only when the displayed minute changes - no per-frame GC. */
   getClockString() {
     const h = mod(this.getTimeOfDay(), HOURS);
     const totalMinutes = Math.floor(h * 60);
@@ -1355,7 +1355,7 @@ export class DayNightCycle {
   }
 
   /**
-   * Sample every curve at an arbitrary hour without disturbing the live state —
+   * Sample every curve at an arbitrary hour without disturbing the live state - 
    * for HUD curve previews and offline tuning. Pass `out` to avoid allocating.
    */
   sampleAt(hour, out) {
@@ -1414,7 +1414,7 @@ export class DayNightCycle {
   // -------------------------------------------------------------------------
 
   onQualityChange(quality) {
-    // The only real cost here is track evaluation, and it is small — but the
+    // The only real cost here is track evaluation, and it is small - but the
     // contract is that LOW does less work, and this genuinely does less work.
     switch (quality && quality.tier) {
       case 'low':

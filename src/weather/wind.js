@@ -1,5 +1,5 @@
 /**
- * weather/wind.js — WindField
+ * weather/wind.js - WindField
  *
  * Owns `state.wind` and installs the real `state.wind.sample()` that grass,
  * petals, the tree, precipitation and the cloud advection all call.
@@ -10,7 +10,7 @@
  * 1. DIVERGENCE-FREE BY CONSTRUCTION, NOT BY FINITE DIFFERENCES.
  *    The naive "curl noise" is `curl2D()` on a simplex field: four noise taps
  *    per octave, twelve for three octaves. At ~100 ns a tap that is 1.2 us per
- *    sample — 3.6 ms/frame for 3000 petals. Unshippable on a 780M.
+ *    sample - 3.6 ms/frame for 3000 petals. Unshippable on a 780M.
  *
  *    Instead each octave is a *band-limited spectral field* baked once into a
  *    small periodic lookup table. Every Fourier mode is written as
@@ -30,7 +30,7 @@
  *    through the world at (a multiple of) the mean wind velocity rather than
  *    animated on a time axis. That is both cheaper and more correct, and it is
  *    what makes a gust actually *arrive* instead of materialising in place.
- *    The scroll offset is INTEGRATED (`off += U * dt`), never `U * t` — the
+ *    The scroll offset is INTEGRATED (`off += U * dt`), never `U * t` - the
  *    latter teleports the entire field whenever wind speed changes.
  *
  * 3. GUST COHERENCE IS THE WHOLE POINT.
@@ -46,7 +46,7 @@
  *    swap-compacted, every loop is bounded by a quality-derived constant, and
  *    all per-sample intermediates are locals. The one residue JavaScript will
  *    not let us remove is the boxing of a double return value when V8 declines
- *    to inline `getGustAt` — 16 bytes a call, measured at ~50 KB/frame with
+ *    to inline `getGustAt` - 16 bytes a call, measured at ~50 KB/frame with
  *    3000 petals, which is a zero-survivor scavenge every few seconds. `update()`
  *    itself measures at zero GC events over 20 000 frames.
  *
@@ -70,28 +70,28 @@ import {
 import { EVENTS, WEATHER } from '../core/state.js';
 
 // ---------------------------------------------------------------------------
-// Tuning constants — all in world metres / seconds. Nothing here is arbitrary;
+// Tuning constants - all in world metres / seconds. Nothing here is arbitrary;
 // each value is annotated with what it buys.
 // ---------------------------------------------------------------------------
 
 /**
  * The three turbulence octaves.
- *   tile  – spatial period of the baked field. Chosen mutually non-commensurate
+ *   tile  - spatial period of the baked field. Chosen mutually non-commensurate
  *           (224 / 62 / 17) so the combined pattern never visibly repeats.
- *   n     – LUT resolution, power of two so wrapping is a bitwise AND.
- *   kMin/kMax – integer wavenumber annulus in cycles-per-tile. tile/kMax is the
+ *   n     - LUT resolution, power of two so wrapping is a bitwise AND.
+ *   kMin/kMax - integer wavenumber annulus in cycles-per-tile. tile/kMax is the
  *           shortest wavelength; keep it >= 9 * (tile/n) or bilinear reconstruction
  *           starts to show the grid.
- *   gain  – RMS speed this octave contributes, as a fraction of the mean speed.
- *   turbA/turbB – gain multiplier = turbA + turbB * state.wind.turbulence. The
+ *   gain  - RMS speed this octave contributes, as a fraction of the mean speed.
+ *   turbA/turbB - gain multiplier = turbA + turbB * state.wind.turbulence. The
  *           flutter octave is almost entirely turbulence-driven, the large-scale
  *           meander is not (a calm day still has lazy directional wander).
- *   adv   – advection speed as a multiple of the mean wind. Slightly different
+ *   adv   - advection speed as a multiple of the mean wind. Slightly different
  *           per octave so the layers slide against each other and decorrelate.
- *   perp  – cross-wind drift, same units. Breaks the "conveyor belt" read.
- *   drift – absolute minimum drift speed (m/s) on a slowly rotating heading, so
+ *   perp  - cross-wind drift, same units. Breaks the "conveyor belt" read.
+ *   drift - absolute minimum drift speed (m/s) on a slowly rotating heading, so
  *           the field still breathes when the mean wind is nearly zero (fog).
- *   wScale– vertical fluctuation as a fraction of this octave's horizontal gain.
+ *   wScale- vertical fluctuation as a fraction of this octave's horizontal gain.
  *           Real surface-layer sigma_w is about half sigma_u.
  */
 const OCTAVES = [
@@ -115,7 +115,7 @@ const MAX_FRONTS = 8;
 /**
  * Per-weather wind character. strength is m/s-ish, gustiness is the swing of
  * the gust envelope, turbulence drives the flutter octave.
- * Fog is deliberately the *calmest* setting — radiation fog only forms in still
+ * Fog is deliberately the *calmest* setting - radiation fog only forms in still
  * air, and a fog bank in a gale reads as broken.
  */
 const PROFILES = {
@@ -137,7 +137,7 @@ const INV_LOG_REF = 1 / Math.log((2.0 + ROUGHNESS_Z0) / ROUGHNESS_Z0);
 const SHARED_OUT = { x: 0, y: 0, z: 0 };
 
 // ---------------------------------------------------------------------------
-// Bake helpers (init-time only — allocation here is fine)
+// Bake helpers (init-time only - allocation here is fine)
 // ---------------------------------------------------------------------------
 
 /**
@@ -200,7 +200,7 @@ function bakeOctave(spec, seed) {
     const cW = Math.cos(phW), sW = Math.sin(phW);
 
     // Walking a row of the grid advances theta by a constant, so the row is a
-    // repeated 2D rotation of (cos, sin) — two trig calls per row instead of
+    // repeated 2D rotation of (cos, sin) - two trig calls per row instead of
     // two per texel. Cuts the whole bake from ~40 ms to ~4 ms; float64 drift
     // over 64 steps is ~1e-15 and irrelevant.
     const stepX = kx * angFreq * cell;
@@ -394,7 +394,7 @@ export class WindField {
       });
     }
     this._frontCount = 0;
-    /** Exponential inter-arrival counter — a proper Poisson process, not a metronome. */
+    /** Exponential inter-arrival counter - a proper Poisson process, not a metronome. */
     this._nextSpawn = -Math.log(1 - this._rand());
     this._maxFronts = 6;
 
@@ -409,7 +409,7 @@ export class WindField {
     //
     // Deliberately NOT `Function.prototype.bind`. Measured: a bound function
     // invoked through a property load is not reduced by TurboFan and allocates
-    // an argument list on every call — 4M samples produced 280 scavenges bound
+    // an argument list on every call - 4M samples produced 280 scavenges bound
     // versus 2 unbound. At 3000 petals a frame that is a GC hitch every few
     // seconds, which is the exact failure the no-allocation rule exists to stop.
     // The real work stays in prototype methods so the internal calls
@@ -468,7 +468,7 @@ export class WindField {
     }
     // Before the first frame there is nothing on screen to pop, so snap.
     if (!this._ready) this._flutterMix = this._flutterTarget;
-    // Existing fronts are never culled on the spot — that would make the wind
+    // Existing fronts are never culled on the spot - that would make the wind
     // visibly jump. `_maxFronts` gates spawning; the pool drains naturally and
     // the cost falls within a few seconds.
   }
@@ -582,7 +582,7 @@ export class WindField {
     this._updateFronts(dt, w, px, pz);
 
     // Everything above is integrated to the END of this frame, which is what
-    // state.time.elapsed already reflects — so a caller passing `elapsed` gets
+    // state.time.elapsed already reflects - so a caller passing `elapsed` gets
     // an exact zero time-delta correction inside sample()/getGustAt().
     this._time = state.time.elapsed;
 
@@ -604,7 +604,7 @@ export class WindField {
     for (let guard = 0; guard < 4 && this._nextSpawn <= 0; guard++) {
       this._nextSpawn += -Math.log(1 - this._rand()) + 1e-4;
       // One slot is held back so a lightning downburst always has somewhere to
-      // go — a strike that produces no gust is a wasted dramatic beat.
+      // go - a strike that produces no gust is a wasted dramatic beat.
       if (this._frontCount < this._maxFronts - 1) this._spawnFront(w.strength, px, pz, 1);
     }
     if (this._nextSpawn <= 0) this._nextSpawn = 0.5;
@@ -621,7 +621,7 @@ export class WindField {
       const behind = f.pos - (px * f.dx + pz * f.dz);
       // Retire once fully past the listener, or once the listener has flown far
       // upwind of it. The age cap is a last-resort leak guard and is gated on
-      // the front being out of sight — culling one mid-sweep would snap the
+      // the front being out of sight - culling one mid-sweep would snap the
       // gust, which is precisely the discontinuity this system exists to avoid.
       const stale = f.age > 300 && (behind > f.cutoff || behind < -260);
       if (behind > f.cutoff + 90 || behind < -900 || stale) {
@@ -650,7 +650,7 @@ export class WindField {
     f.invFall = 1 / fall;
     f.cutoff = f.rise + fall;
 
-    // A downburst is not just a scaled ordinary gust — it is reliably strong,
+    // A downburst is not just a scaled ordinary gust - it is reliably strong,
     // so the whole draw range shifts up with `boost` rather than only stretching.
     const shift = 0.45 * (boost - 1);
     f.peak = r.range(0.30 + shift, 0.90 + shift) * boost;
@@ -671,7 +671,7 @@ export class WindField {
     const p = this._state.player.position;
     if (this._frontCount >= MAX_FRONTS) {
       // Pool physically full (only reachable on ULTRA). Steal the slot from
-      // whichever front is contributing least here — either fully passed, or
+      // whichever front is contributing least here - either fully passed, or
       // still so far upwind that nothing on screen is touched by it.
       let victim = -1;
       let bestScore = 0;
@@ -696,7 +696,7 @@ export class WindField {
   }
 
   // -------------------------------------------------------------------------
-  // Field queries — hot path, zero allocation
+  // Field queries - hot path, zero allocation
   // -------------------------------------------------------------------------
 
   /**
@@ -719,7 +719,7 @@ export class WindField {
     // Turbulence intensity is a *ratio*, so scaling the fluctuations by `speed`
     // already makes a gust chop harder. Real gust fronts are additionally more
     // turbulent than the flow they displace, hence the mild super-proportional
-    // term — the moment a front lands, the motion also gets rougher, not just
+    // term - the moment a front lands, the motion also gets rougher, not just
     // bigger, which is most of what sells it on grass and blossom.
     const chop = 0.75 + 0.25 * gust;
 
@@ -792,7 +792,7 @@ export class WindField {
 
   /**
    * Same as sample(), with the boundary-layer shear profile applied. Use this
-   * for anything whose height matters — canopy branches, airborne petals, rain.
+   * for anything whose height matters - canopy branches, airborne petals, rain.
    */
   _sample3Impl(x, y, z, t, out) {
     const o = this._sampleImpl(x, z, t, out);
@@ -809,7 +809,7 @@ export class WindField {
    * Log-law wind profile, normalised to 1.0 at 2 m: 0.63 at knee height, ~1.5 at
    * canopy height, saturating at 2.5 so cloud advection stays sane.
    *
-   * It returns exactly 0 at y = 0 because that is the no-slip condition — pass a
+   * It returns exactly 0 at y = 0 because that is the no-slip condition - pass a
    * grass blade's mid-height or tip, not the height of its root, or the blade
    * will sit perfectly still.
    */
@@ -824,7 +824,7 @@ export class WindField {
    *
    * This is the function that has to be shared. Grass, tree sway and petal
    * spawn all read it, so a front sweeping the field bends the grass, then the
-   * branches, then releases blossom — in that order, in the right places.
+   * branches, then releases blossom - in that order, in the right places.
    */
   _gustImpl(x, z, t) {
     const dtc = clamp(t - this._time, -0.5, 0.5);
@@ -896,7 +896,7 @@ export class WindField {
     // Soft saturation instead of clamp(). Both branches are C1-continuous with
     // the identity at the seam (value and slope match at 0.5 and 1.5), so a
     // violent gust compresses smoothly toward the 0..2 contract instead of
-    // flat-topping — hard clipping is visible as grass "sticking" at full bend.
+    // flat-topping - hard clipping is visible as grass "sticking" at full bend.
     if (g > 1.5) return 2 - 0.25 / (g - 1);
     if (g < 0.5) return 0.25 / (1 - g);
     return g;

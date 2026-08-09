@@ -1,5 +1,5 @@
 /**
- * engine.js — renderer, scene graph, camera, lighting rig and cascaded shadows.
+ * engine.js - renderer, scene graph, camera, lighting rig and cascaded shadows.
  *
  * This module owns the four things every other system depends on and nobody
  * else is allowed to touch:
@@ -63,7 +63,7 @@ export const LAYERS = Object.freeze({
   DEBUG: 9,
 });
 
-/** Engine-local bus events — `EVENTS` in state.js has no slot for these. */
+/** Engine-local bus events - `EVENTS` in state.js has no slot for these. */
 export const ENGINE_EVENTS = Object.freeze({
   CONTEXT_LOST: 'engine:contextlost',
   CONTEXT_RESTORED: 'engine:contextrestored',
@@ -77,8 +77,8 @@ export const ENGINE_EVENTS = Object.freeze({
 /**
  * Near/far. We deliberately do NOT use `logarithmicDepthBuffer`: on WebGL2
  * three implements it by writing `gl_FragDepth` from every fragment shader,
- * which disables early-Z rejection. On a 780M — where fill rate is the entire
- * budget — losing early-Z across a grass field costs far more than z-fighting
+ * which disables early-Z rejection. On a 780M - where fill rate is the entire
+ * budget - losing early-Z across a grass field costs far more than z-fighting
  * ever would, and it also fights the postprocessing depth buffer.
  *
  * A tuned near plane is enough. Depth resolution for a standard projection is
@@ -113,7 +113,7 @@ const CASCADE_BLEND = 0.1;
  *  wander off the map at the frustum corners. */
 const CASCADE_MARGIN = 1.02;
 /**
- * Tallest thing that can cast into a cascade from outside it — the sakura tree
+ * Tallest thing that can cast into a cascade from outside it - the sakura tree
  * is ~18 m, terrain ridges are the real ceiling. The distance the shadow camera
  * has to be pulled back is this height divided by the sun's elevation, so a low
  * sun automatically buys the long stand-off its long shadows need while noon
@@ -220,7 +220,7 @@ export class Engine {
         preserveDrawingBuffer: false,
         powerPreference: 'high-performance',
         failIfMajorPerformanceCaveat: false,
-        // Skips a compositor sync per present — a real latency win on Windows,
+        // Skips a compositor sync per present - a real latency win on Windows,
         // and nothing here ever reads the drawing buffer back.
         desynchronized: true,
       });
@@ -258,8 +258,8 @@ export class Engine {
     renderer.setClearColor(0x0a0d13, 1);
     renderer.info.autoReset = true;
 
-    // BasicShadowMap on purpose: we never call three's `getShadow()` — the CSM
-    // runs its own rotated-disc PCF — so the cheapest variant keeps three's
+    // BasicShadowMap on purpose: we never call three's `getShadow()` - the CSM
+    // runs its own rotated-disc PCF - so the cheapest variant keeps three's
     // unused 17-tap kernel out of every compiled shader.
     renderer.shadowMap.enabled = !!state.quality.shadows;
     renderer.shadowMap.type = THREE.BasicShadowMap;
@@ -387,7 +387,7 @@ export class Engine {
     // -- Frame hook ---------------------------------------------------------
     // main.js does not put the Engine in its system list, so the per-frame hook
     // has to come from the renderer. `scene.onBeforeRender` fires once per
-    // `renderer.render(scene, camera)` — after `scene.updateMatrixWorld()` and,
+    // `renderer.render(scene, camera)` - after `scene.updateMatrixWorld()` and,
     // crucially, *before* `shadowMap.render()`, which is exactly the window the
     // cascades must be placed in. The frame guard keeps it to one update even
     // when the post stack renders the scene more than once.
@@ -404,7 +404,7 @@ export class Engine {
     };
     this._onContextRestored = () => {
       this.contextLost = false;
-      console.warn('[Engine] WebGL context restored — rebuilding GPU state.');
+      console.warn('[Engine] WebGL context restored - rebuilding GPU state.');
       this._reapplyRendererState();
       this.bus.emit(ENGINE_EVENTS.CONTEXT_RESTORED, null);
     };
@@ -492,7 +492,7 @@ export class Engine {
         c.shadow.needsUpdate = false;
         continue;
       }
-      // Round to a multiple of 128 — some drivers are noticeably happier with
+      // Round to a multiple of 128 - some drivers are noticeably happier with
       // aligned render-target dimensions, and it keeps the derived sizes tidy
       // (2048 -> 1536, 1024 -> 640/768) instead of landing on 614.
       const size = clamp(Math.round((base * tier.maps[i]) / 128) * 128, 256, 4096);
@@ -512,7 +512,7 @@ export class Engine {
     this._csmUniforms.uCsmSplits.value.w = count;
     this._forceRefit = true;
 
-    // Always rebuilt — this is also the path that produces them for the very
+    // Always rebuilt - this is also the path that produces them for the very
     // first time, when nothing has "changed" yet. String building only.
     this._csmDefines = buildCsmDefines(count, tier.taps);
     this._csmPars = buildCsmPars(count, tier.taps);
@@ -615,7 +615,7 @@ export class Engine {
    * Called after a context restore. Deliberately touches ONLY the things that
    * actually die with the GL context. Renderer settings such as `toneMapping`
    * and `outputColorSpace` are plain JS properties that survive context loss,
-   * and post/pipeline.js may own them by now — resetting them here would
+   * and post/pipeline.js may own them by now - resetting them here would
    * silently break the post stack after every driver hiccup.
    */
   _reapplyRendererState() {
@@ -628,7 +628,7 @@ export class Engine {
   }
 
   // =========================================================================
-  // LEAF 3 — the light rig
+  // LEAF 3 - the light rig
   // =========================================================================
 
   _updateLights(dt, state) {
@@ -714,7 +714,7 @@ export class Engine {
 
     // --- sky ambient -------------------------------------------------------
     // Upper-hemisphere irradiance is dominated by the whole band from zenith to
-    // horizon, so weight the two rather than taking the zenith alone — a pure
+    // horizon, so weight the two rather than taking the zenith alone - a pure
     // zenith term makes golden hour far too blue.
     _colSky.copy(sky.zenithColor).multiplyScalar(0.55);
     _colA.copy(sky.horizonColor).multiplyScalar(0.45);
@@ -766,7 +766,7 @@ export class Engine {
     target = clamp01(target);
     if (handover) target = 0; // fade out before rotating the whole shadow world
 
-    // Short temporal filter (~0.1 s). Not for looks — the inputs come from four
+    // Short temporal filter (~0.1 s). Not for looks - the inputs come from four
     // other systems and any of them can step discontinuously (a weather state
     // change, an intensity clipped at the horizon). This turns a one-frame step
     // into a fade short enough that shadows never visibly outlive the light
@@ -828,7 +828,7 @@ export class Engine {
     // PARTIAL adaptation. Full auto-exposure would make midnight look like
     // noon; the fractional exponent keeps roughly three of the eight stops
     // between them, which is what "your eyes adjusted" actually looks like.
-    // Lightning is deliberately excluded from the metering — the eye does not
+    // Lightning is deliberately excluded from the metering - the eye does not
     // adapt in 200 ms, and letting a flash blow out is the entire point.
     const target = clamp(
       Math.pow(EXPOSURE_REF_LUMINANCE / sceneLum, EXPOSURE_ADAPT),
@@ -846,7 +846,7 @@ export class Engine {
   }
 
   // =========================================================================
-  // LEAF 4 — cascaded shadow maps
+  // LEAF 4 - cascaded shadow maps
   // =========================================================================
 
   _updateShadows(camera) {
@@ -923,7 +923,7 @@ export class Engine {
 
       // Tightest sphere around the slice's eight corners. A sphere is invariant
       // under camera rotation, so the cascade's *size* never changes as the
-      // player looks around — only its centre moves, and that we snap.
+      // player looks around - only its centre moves, and that we snap.
       let cz = ((sliceNear + sliceFar) * (a2 + 1)) / 2;
       let radius;
       if (cz >= sliceFar) {
@@ -947,7 +947,7 @@ export class Engine {
       const due = this._forceRefit || !c.shadow.map || (frameIndex + i) % cadence === 0;
 
       if (!due) {
-        // Leave the light — and therefore `shadow.matrix` — exactly where it
+        // Leave the light - and therefore `shadow.matrix` - exactly where it
         // was, so the stale map stays consistent with the coordinates the
         // vertex shader generates. Freezing the transform is what makes
         // reduced-rate cascades *correct* rather than merely cheap.
@@ -1004,7 +1004,7 @@ export class Engine {
         // Depth bias is in NDC units. Depth is linear across an orthographic
         // range, so a world offset converts by dividing through that range.
         // three's shadow maps are 32-bit RGBA-packed, so quantisation
-        // contributes nothing here — this term only mops up slope aliasing the
+        // contributes nothing here - this term only mops up slope aliasing the
         // normal offset misses.
         c.shadow.bias = -(texel * 0.8 + 0.008) / (cam.far - cam.near);
       }
@@ -1080,7 +1080,7 @@ export class Engine {
         '[Engine] Another system added a shadow-casting DirectionalLight. three ' +
           'indexes its shadow uniform arrays by LIGHT order but truncates them to ' +
           'the SHADOW count, so the CSM cascades must stay the first directional ' +
-          'lights — that light will corrupt the shadow arrays. Set castShadow = false.'
+          'lights - that light will corrupt the shadow arrays. Set castShadow = false.'
       );
     }
   }
@@ -1346,8 +1346,8 @@ function buildLightsChunk() {
   );
 
   // 3. Replace three's per-light shadow lookup with our cascade result. The
-  //    original block only exists for indices < NUM_DIR_LIGHT_SHADOWS — exactly
-  //    the carriers, which no longer emit code — so this both removes the
+  //    original block only exists for indices < NUM_DIR_LIGHT_SHADOWS - exactly
+  //    the carriers, which no longer emit code - so this both removes the
   //    redundant taps and re-targets the shadow onto the sun and moon.
   const shadowBlock =
     /#if defined\( USE_SHADOWMAP \) && \( UNROLLED_LOOP_INDEX < NUM_DIR_LIGHT_SHADOWS \)[\s\S]*?#endif/;

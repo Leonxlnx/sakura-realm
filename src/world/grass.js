@@ -1,5 +1,5 @@
 /**
- * grass.js — dense instanced meadow.
+ * grass.js - dense instanced meadow.
  *
  * Rewritten from scratch. The previous implementation submitted ~90k instances and
  * 320k triangles per frame that produced zero visible pixels: forcing every bend
@@ -15,7 +15,7 @@
  *
  *   The world is a grid of chunks that follows the camera. Each chunk owns one
  *   instance buffer filled deterministically from its integer cell coordinates, so
- *   a chunk that scrolls out and back is bit-identical — no popping, no reshuffle.
+ *   a chunk that scrolls out and back is bit-identical - no popping, no reshuffle.
  *   Instances are generated in Halton order, which makes ANY PREFIX of the buffer
  *   an evenly distributed subset. Distance LOD is therefore just a smaller
  *   `instanceCount`: no second geometry, no second buffer, no transition seam.
@@ -63,7 +63,7 @@ const CHUNK_BASE = 15;
 
 /**
  * Altitude clipmap. From the air you cannot resolve individual blades, but you
- * CAN see the edge of the field — so above each of these heights the chunk grid
+ * CAN see the edge of the field - so above each of these heights the chunk grid
  * is scaled up by the matching factor, trading blade density for reach at a
  * constant chunk count and therefore a constant draw-call cost.
  *
@@ -79,7 +79,7 @@ const ALTITUDE_BANDS = [
 ];
 /**
  * Grid is GRID x GRID chunks, centred on the camera; must be odd. Reach is
- * ((GRID-1)/2) * CHUNK metres, and that — not the fade distance — is the real
+ * ((GRID-1)/2) * CHUNK metres, and that - not the fade distance - is the real
  * limit on how far the field extends. Every extra ring costs draw calls, so the
  * field ends at 72 m and the fade is deliberately long so it dissolves into the
  * terrain colour instead of ending on a visible edge.
@@ -106,19 +106,19 @@ const MAX_PER_CHUNK = 26000;
  * Dropped from 5 once the density went up: at 450k blades the vertex and
  * triangle load is the dominant cost, and 7 tris instead of 9 is a flat 22 %
  * saving across the whole field. The arc these approximate is smooth and the
- * blade is only a few pixels wide, so the lost segment is not visible — whereas
+ * blade is only a few pixels wide, so the lost segment is not visible - whereas
  * the frame time it buys is what keeps the field this dense at all.
  */
 const SEGMENTS = 4;
 
 /**
- * Sward modes — how the field is cut.
+ * Sward modes - how the field is cut.
  *
  * `densityMul` is deliberately INVERSE to height. A blade hides ground roughly
  * in proportion to its own projected area, so halving the height halves the
  * cover each blade gives; keeping the count constant would open the soil right
  * up, which is exactly what a naive "short grass" setting looks like. Short
- * modes therefore get many more, slightly wider blades — which is also what a
+ * modes therefore get many more, slightly wider blades - which is also what a
  * real mown lawn is: a much denser stand of much smaller leaves.
  *
  * `hMin`/`hMax` are metres before per-clump scaling.
@@ -132,12 +132,12 @@ export const SWARD_MODES = {
   // which is also what mown grass actually does.
   // `chunkScale` is the real density dial, not `densityMul`. Per-chunk instance
   // count is capped at MAX_PER_CHUNK, and the near chunks already sit AT that
-  // cap — so multiplying density there does exactly nothing, which is why the
+  // cap - so multiplying density there does exactly nothing, which is why the
   // first lawn attempt drew the same blade count as tall grass, only shorter,
   // and read as sparse spikes on bare ground. Shrinking the chunk puts the same
   // capped budget over less area, which is a real increase in blades per m2:
   // 26 000 over a 15 m chunk is 115/m2, over 8.2 m it is 385/m2.
-  // The cost is reach — ((GRID-1)/2) * chunk — and that is the right trade,
+  // The cost is reach - ((GRID-1)/2) * chunk - and that is the right trade,
   // because a mown lawn is read close up and terrain's meadow blend carries the
   // distance.
   lawn:   { label: 'Lawn',   hMin: 0.060, hMax: 0.185, chunkScale: 0.55, densityMul: 1.0, widthMul: 1.85, droopMul: 1.35, meadowNear: 0.04 },
@@ -179,7 +179,7 @@ const QUALITY_PRESETS = {
   ultra: { density: 1.25, radius: 90, falloff: 16 },
 };
 
-// Scratch — module scope so update() never allocates.
+// Scratch - module scope so update() never allocates.
 const _v3 = new Vector3();
 
 /**
@@ -194,7 +194,7 @@ const GRID_SAMPLES = 17;
  *
  * The fill needs a stream seeded from the instance INDEX so that slicing the
  * work across frames cannot change a byte. Calling makeRNG() per instance does
- * that correctly but allocates a closure and five helper methods each time —
+ * that correctly but allocates a closure and five helper methods each time - 
  * 156 000 allocations per chunk, which turned a 22 ms fill into an 874 ms
  * garbage-collection storm. This is the same mulberry32 stream over one
  * module-scope word instead.
@@ -301,7 +301,7 @@ varying vec4 vShade;           // s, ao, dryness, valueMix
  *
  * As A -> 0 these tend to H*s and 0. The small-angle branch below uses the
  * leading Taylor terms so the transition is smooth and the A == 0 case is EXACTLY
- * vertical — which is the entire resting pose of the field.
+ * vertical - which is the entire resting pose of the field.
  */
 void arc(float A, float s, float H, out float along, out float lateral, out float ang) {
   ang = A * s;
@@ -445,7 +445,7 @@ void main() {
 
   vec3 color = albedo * (diffuse * 0.85 + ambient * ao + wrap * 0.12) + albedo * transmission;
 
-  // Specular sheen along the blade — sharp when wet, soft when dry.
+  // Specular sheen along the blade - sharp when wet, soft when dry.
   vec3 Hv = normalize(L + V);
   float sheen = pow(max(dot(N, Hv), 0.0), mix(28.0, 90.0, uWetness));
   color += uSunColor * sheen * mix(0.05, 0.30, uWetness) * uSunIntensity * ao;
@@ -603,7 +603,7 @@ export class GrassField {
   }
 
   resize(width, height) {
-    // Radians of vertical view angle per pixel — used for the sub-pixel width floor.
+    // Radians of vertical view angle per pixel - used for the sub-pixel width floor.
     const fov = (this.camera.fov * Math.PI) / 180;
     this.material.uniforms.uPixelScale.value = fov / Math.max(1, height);
   }
@@ -618,7 +618,7 @@ export class GrassField {
    * Measured on the reference machine: a whole 26 000-instance chunk costs
    * 21.9 ms of CPU plus ~18 ms to upload its 1.19 MB of instance data. One chunk
    * is far too much to do inside a frame, and it cannot be split by chunk
-   * because a chunk is atomic — which is why walking across a cell boundary
+   * because a chunk is atomic - which is why walking across a cell boundary
    * still dropped a frame even after the per-blade field sampling was made
    * cheap. Slicing it internally is the only fix that keeps both the density and
    * the draw-call count.
@@ -642,8 +642,8 @@ export class GrassField {
     const seed = (cellX * 73856093) ^ (cellZ * 19349663);
 
     // ---- coarse field pre-pass ----------------------------------------------
-    // Terrain height and both clump fields are LOW FREQUENCY — the shortest
-    // wavelength in play is the clump field's ~22 m — so sampling them per blade
+    // Terrain height and both clump fields are LOW FREQUENCY - the shortest
+    // wavelength in play is the clump field's ~22 m - so sampling them per blade
     // was paying 26 000 terrain queries and 52 000 fbm evaluations to reproduce
     // a surface that a 9x9 lattice captures to within a millimetre. That cost
     // ~50 ms per chunk, and one chunk fill is atomic, so no amount of spreading
@@ -752,7 +752,7 @@ export class GrassField {
 
     if (minY === Infinity) { minY = 0; maxY = 1; }
 
-    // One upload per chunk, at completion — uploading each slice would multiply
+    // One upload per chunk, at completion - uploading each slice would multiply
     // the 1.19 MB transfer by the number of slices.
     record.iPosAttr.needsUpdate = true;
     record.iShapeAttr.needsUpdate = true;
@@ -844,7 +844,7 @@ export class GrassField {
     // _fillChunk walks MAX_PER_CHUNK instances, each doing a terrain.getHeight
     // and three fbm samples. At 26 000 blades that is several milliseconds per
     // chunk, and crossing a cell boundary while walking retires and re-fills a
-    // whole row at once — tens of chunks, hundreds of milliseconds, inside one
+    // whole row at once - tens of chunks, hundreds of milliseconds, inside one
     // frame. That is the "fps is fine, then suddenly 0, then fine again" stall,
     // and it also drags the adaptive-resolution controller down and back up,
     // which is the flashing and blurring that comes with it.
@@ -943,7 +943,7 @@ export class GrassField {
       this._rebuildGrid(cellX, cellZ);
     }
 
-    // 12 ms on the very first build — the loading screen is still up and an
+    // 12 ms on the very first build - the loading screen is still up and an
     // empty field would be worse than a slow one. 1.6 ms afterwards, which is
     // roughly one chunk per frame: the field fills in over a few frames as you
     // walk, and no single frame ever pays for a whole row.

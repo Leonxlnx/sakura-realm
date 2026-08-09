@@ -1,12 +1,12 @@
 /**
- * capture.js — dev-only rendering harness.
+ * capture.js - dev-only rendering harness.
  *
  * The scene can only be judged by looking at it, and a hidden/headless tab never
  * composites, so ordinary screenshots are unavailable. This drives the frame loop
  * manually and POSTs the canvas to the dev server's /__shot endpoint (see
  * vite.config.js), which writes it to captures/<name>.jpg.
  *
- * Loaded only when import.meta.env.DEV is true — never part of a production build.
+ * Loaded only when import.meta.env.DEV is true - never part of a production build.
  *
  *   await SAKURA_CAPTURE.shoot('dawn', { tod: 5.4, pos: [0, 2, 24], look: [0, 8, 0] })
  *   await SAKURA_CAPTURE.sequence()        // the standard review set
@@ -33,7 +33,7 @@ export function installCapture(sakura) {
    * Render one configured frame and write it to captures/<name>.jpg.
    *
    * The player controller owns the camera and rewrites it every tick, so it is
-   * temporarily neutered — otherwise any camera override is undone before the draw.
+   * temporarily neutered - otherwise any camera override is undone before the draw.
    */
   async function shoot(name, opts = {}) {
     const player = systems.player;

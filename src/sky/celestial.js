@@ -1,5 +1,5 @@
 /**
- * celestial.js — sun, moon, stars.
+ * celestial.js - sun, moon, stars.
  *
  * Everything here is driven by one number: `state.time.timeOfDay`. From it we
  * derive a real ephemeris (days since J2000) and run a genuine low-precision
@@ -10,7 +10,7 @@
  *   - the sun rises north-of-east in summer and south-of-east in winter,
  *   - the day lengthens as the in-game date advances,
  *   - the moon runs ~50 minutes late every day and its phase evolves,
- *   - the terminator on the moon is the real sun–moon–viewer geometry,
+ *   - the terminator on the moon is the real sun-moon-viewer geometry,
  *   - the star field turns about the celestial pole at the sidereal rate,
  *     with the Milky Way locked to it.
  *
@@ -37,14 +37,14 @@ const SITE_LAT = 35.0 * DEG2RAD;
 const SITE_LON_DEG = 135.77;
 const SITE_TZ = 9;
 
-/** Days from J2000.0 (2000-01-01 12:00 TT) to 2025-04-05 00:00 UT — peak sakura.
+/** Days from J2000.0 (2000-01-01 12:00 TT) to 2025-04-05 00:00 UT - peak sakura.
  *  Day 0 of the sim is that date; each in-game midnight advances it by one. */
 const SIM_EPOCH_DAYS = 9225.5;
 /** TT − UT ≈ 69 s. Small, but it is the difference between solar noon landing
  *  at 11:57 and at 11:59, and it costs one addition. */
 const DELTA_T_DAYS = 69 / 86400;
 
-/** Angular diameters. Both are enlarged from the true 0.53° — the real disc is
+/** Angular diameters. Both are enlarged from the true 0.53° - the real disc is
  *  a pinhead on a 62° fov and reads as a bloom artefact rather than a sun. */
 const SUN_DISC_ANG = 0.021;   // rad, ~1.2° (2.3× true)
 const SUN_QUAD_ANG = 0.30;    // rad, aureole extent
@@ -57,7 +57,7 @@ const MOON_TEX_SIZE = 256;
 const MW_TEX_W = 384;
 const MW_TEX_H = 192;
 
-/** sRGB encode LUT — the band bake would otherwise call Math.pow 3× per pixel. */
+/** sRGB encode LUT - the band bake would otherwise call Math.pow 3× per pixel. */
 const SRGB_LUT = (() => {
   const t = new Uint8Array(1025);
   for (let i = 0; i <= 1024; i++) {
@@ -73,7 +73,7 @@ const STAR_MAG_MIN = -1.5;
 const STAR_MAG_MAX = 6.4;
 const MAX_METEORS = 4;
 
-/** Star counts per tier. LOW keeps only the brightest — the list is flux-sorted,
+/** Star counts per tier. LOW keeps only the brightest - the list is flux-sorted,
  *  so this is a drawRange change with zero re-upload. */
 const STAR_COUNT_BY_TIER = { low: 1600, medium: 3200, high: 6000, ultra: MAX_STARS };
 
@@ -84,7 +84,7 @@ const GC_RA = 266.40510 * DEG2RAD;
 const GC_DEC = -28.93617 * DEG2RAD;
 
 /** North ecliptic pole in equatorial coordinates. The moon's rotation axis is
- *  within 1.5° of this, so it is what the disc's "up" should track — not the
+ *  within 1.5° of this, so it is what the disc's "up" should track - not the
  *  celestial pole, which would tilt the maria by a fixed 23° error. */
 const OBLIQUITY = 23.4393 * DEG2RAD;
 const ECL_POLE_EQ_Y = -Math.sin(OBLIQUITY);
@@ -115,7 +115,7 @@ const TAU_AEROSOL = { r: 0.0810, g: 0.1000, b: 0.1280 };
 const TAU_OZONE = { r: 0.0090, g: 0.0250, b: 0.0040 };
 
 // ---------------------------------------------------------------------------
-// Ephemeris — low-precision series, accurate to a few arcminutes.
+// Ephemeris - low-precision series, accurate to a few arcminutes.
 // Sun: Astronomical Almanac §C. Moon: Meeus, Astronomical Algorithms ch. 47
 // truncated to the six largest longitude terms and four latitude terms.
 // ---------------------------------------------------------------------------
@@ -169,7 +169,7 @@ function gmstDeg(dUT) {
 
 /**
  * Bennett's refraction formula (1982), arcminutes, for apparent altitude.
- * At the horizon this lifts a body by ~34' — a bit more than its own diameter,
+ * At the horizon this lifts a body by ~34' - a bit more than its own diameter,
  * which is why the sun is geometrically already set when you watch it touch
  * the sea. Without this, sunset lands two minutes early and looks wrong.
  */
@@ -321,7 +321,7 @@ void main() {
   float lit = smoothstep(-0.03, 0.05, mu0) * max(mu0, 0.0);
 
   // Lunar-Lambert (McEwen 1991): I/F = A[ 2L·mu0/(mu0+mu) + (1-L)·mu0 ].
-  // The Lommel-Seeliger half carries no extra cos(view) — that is precisely why
+  // The Lommel-Seeliger half carries no extra cos(view) - that is precisely why
   // a full moon reads as a flat disc lit to the limb rather than a shaded ball.
   float ls = 2.0 * lit / max(mu0 + mu, 0.05);
   float refl = uLunarL * ls + (1.0 - uLunarL) * lit;
@@ -331,7 +331,7 @@ void main() {
 
   vec3 col = albedo * (refl * uExposure * uTint + uEarthshine * ashen) * mask;
 
-  // Aureole around the disc — scattering in the air column, not a lens flare.
+  // Aureole around the disc - scattering in the air column, not a lens flare.
   float rq = length(vP);
   float g = uDiscR / max(rq, uDiscR * 0.98);
   float halo = uHalo * (pow(g, 3.2) * 0.55 + pow(g, 1.35) * 0.10);
@@ -390,7 +390,7 @@ void main() {
 
   // Constant angular PSF, but never smaller than ~1.6 px: below that a point
   // sprite aliases into a strobe every time the camera turns. Shrink the
-  // energy instead of the footprint — the correct way to band-limit a star.
+  // energy instead of the footprint - the correct way to band-limit a star.
   float sizePx = uPixPerRad * uAngularSize * (0.62 + 0.95 * pow(max(aFlux, 1e-4), 0.30));
   float shrink = min(1.0, sizePx / 1.62);
   gl_PointSize = clamp(max(sizePx, 1.62), 1.62, 22.0);
@@ -676,7 +676,7 @@ export class Celestial {
   /**
    * Route texture creation through the shared factory when it is available and
    * fall back to a local build when it is not. The memo guard means a factory
-   * that calls the generator and then throws cannot make us bake twice — these
+   * that calls the generator and then throws cannot make us bake twice - these
    * two textures cost tens of milliseconds each.
    */
   _acquireTexture(name, generate) {
@@ -753,7 +753,7 @@ export class Celestial {
     }
 
     // Sort brightest-first so a lower tier is a drawRange change, not a rebuild
-    // — and so the stars LOW throws away are the ones nobody would miss.
+    // - and so the stars LOW throws away are the ones nobody would miss.
     const sorted = new Array(N);
     for (let i = 0; i < N; i++) sorted[i] = i;
     sorted.sort((a, b) => mags[a] - mags[b]);
@@ -899,7 +899,7 @@ export class Celestial {
   /**
    * Near-side lunar map. RGB is albedo (authored sRGB), A is a height field the
    * shader differentiates for terminator relief. Mare are placed at their real
-   * selenographic coordinates — a randomly-blobbed moon reads as fake instantly
+   * selenographic coordinates - a randomly-blobbed moon reads as fake instantly
    * because everyone has seen the real one.
    */
   _buildMoonTexture(size) {
@@ -977,7 +977,7 @@ export class Celestial {
       }
       if (inMare && rng() < 0.82) continue;
 
-      // Crater diameters follow a steep power law. The floor is one texel —
+      // Crater diameters follow a steep power law. The floor is one texel - 
       // anything finer is a waste of fill and turns into grey mush under the
       // mip chain. The equirect x-stretch is corrected by cos(lat).
       const u = rng();
@@ -1046,7 +1046,7 @@ export class Celestial {
       const gy = y * inv * 26, fy = y * inv * 120;
       for (let x = 0; x < S; x++) {
         const o = (y * S + x) * 4;
-        // Regolith grain at two scales — breaks the smooth gradient look.
+        // Regolith grain at two scales - breaks the smooth gradient look.
         const g = n.fbm2D(x * inv * 26, gy, 3) * 0.055
           + n.noise2D(x * inv * 120, fy) * 0.030;
         const m = 1 + g;
@@ -1211,7 +1211,7 @@ export class Celestial {
     const sunAz = mod(Math.atan2(_v3a.x, -_v3a.z), TAU);
     const moonAz = mod(Math.atan2(_v3b.x, -_v3b.z), TAU);
 
-    // Elongation from the actual 3D directions — the same quantity the moon
+    // Elongation from the actual 3D directions - the same quantity the moon
     // shader uses for its terminator, so disc and phase can never disagree.
     const cosElong = clamp(_v3a.dot(_v3b), -1, 1);
     const elong = Math.acos(cosElong);
@@ -1234,7 +1234,7 @@ export class Celestial {
 
     // `visibility` is the broad day/night crossfade other systems read; it is
     // deliberately soft and reaches 1 only once the body is comfortably up.
-    // Direct light needs a much tighter gate — the *extinction* term below is
+    // Direct light needs a much tighter gate - the *extinction* term below is
     // what dims a low sun, and multiplying the two would leave sunset pitch black.
     const sunVis = smoothstep(-0.022, 0.115, sunAlt);
     const moonVis = smoothstep(-0.022, 0.115, moonAlt);
@@ -1253,7 +1253,7 @@ export class Celestial {
     // Pure transmittance at 40 air masses is a monochromatic red, which lights
     // the world like a darkroom lamp. The floors stand in for the multiply
     // scattered light that always arrives with the direct beam, and keep the
-    // key light a deep orange — closer to the truth and far closer to the mood.
+    // key light a deep orange - closer to the truth and far closer to the mood.
     sun.color.setRGB(
       _trans.r / peak,
       Math.max(_trans.g / peak, 0.17),
@@ -1278,7 +1278,7 @@ export class Celestial {
     const mPeak = Math.max(_rgb.r, _rgb.g, _rgb.b, 1e-5);
     // Moonlight is warm sunlight in truth; it reads cool because rod vision is
     // blue-shifted (Purkinje). Push toward blue, then let extinction redden it
-    // back as the moon sets — which is exactly what a low moon looks like.
+    // back as the moon sets - which is exactly what a low moon looks like.
     const mr = lerp(_rgb.r / mPeak, 0.62, 0.62);
     const mg = lerp(_rgb.g / mPeak, 0.74, 0.55);
     const mb = lerp(_rgb.b / mPeak, 1.00, 0.50);
@@ -1697,7 +1697,7 @@ export class Celestial {
     this.starMat?.dispose();
     this.mwMat?.dispose();
     this.meteorMat?.dispose();
-    // Only dispose textures we made ourselves — the factory owns its cache.
+    // Only dispose textures we made ourselves - the factory owns its cache.
     if (this._ownedTextures) for (const t of this._ownedTextures) t.dispose();
     this._ownedTextures = null;
   }

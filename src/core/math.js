@@ -1,5 +1,5 @@
 /**
- * math.js — dependency-free noise + numeric helpers shared by every system.
+ * math.js - dependency-free noise + numeric helpers shared by every system.
  *
  * Everything here is deterministic: same seed in, same world out. Systems that
  * need matching randomness across modules (grass placement vs. scatter placement,
@@ -96,7 +96,7 @@ export function hash3(x, y, z) {
 }
 
 /**
- * mulberry32 — small, fast, well-distributed seeded PRNG.
+ * mulberry32 - small, fast, well-distributed seeded PRNG.
  * `const rand = makeRNG(1337); rand();`
  */
 export function makeRNG(seed = 1) {
@@ -112,7 +112,7 @@ export function makeRNG(seed = 1) {
   rand.int = (min, max) => Math.floor(min + rand() * (max - min + 1));
   rand.sign = () => (rand() < 0.5 ? -1 : 1);
   rand.pick = (arr) => arr[Math.floor(rand() * arr.length)];
-  /** Box–Muller normal distribution. */
+  /** Box-Muller normal distribution. */
   rand.gaussian = (mean = 0, stdev = 1) => {
     const u = 1 - rand();
     const v = rand();
@@ -138,14 +138,14 @@ const G3 = 1 / 6;
 
 /**
  * Creates an independent simplex noise instance with its own permutation table.
- * Two instances with different seeds produce uncorrelated fields — use separate
+ * Two instances with different seeds produce uncorrelated fields - use separate
  * instances for terrain vs. clouds vs. wind so tweaking one never shifts another.
  */
 export function createNoise(seed = 0) {
   const rand = makeRNG(seed + 1);
   const p = new Uint8Array(256);
   for (let i = 0; i < 256; i++) p[i] = i;
-  // Fisher–Yates with the seeded RNG.
+  // Fisher-Yates with the seeded RNG.
   for (let i = 255; i > 0; i--) {
     const j = Math.floor(rand() * (i + 1));
     const t = p[i];
@@ -280,7 +280,7 @@ export function createNoise(seed = 0) {
     return sum / norm;
   }
 
-  /** Ridged multifractal — good for mountain silhouettes and cloud wisps. */
+  /** Ridged multifractal - good for mountain silhouettes and cloud wisps. */
   function ridged2D(x, y, octaves = 4, lacunarity = 2, gain = 0.5) {
     let sum = 0, amp = 0.5, freq = 1, norm = 0;
     for (let i = 0; i < octaves; i++) {
@@ -293,7 +293,7 @@ export function createNoise(seed = 0) {
     return sum / norm;
   }
 
-  /** Billowy noise — puffy, cumulus-like. */
+  /** Billowy noise - puffy, cumulus-like. */
   function billow2D(x, y, octaves = 4, lacunarity = 2, gain = 0.5) {
     let sum = 0, amp = 0.5, freq = 1, norm = 0;
     for (let i = 0; i < octaves; i++) {
@@ -306,7 +306,7 @@ export function createNoise(seed = 0) {
   }
 
   /**
-   * 2D curl of the noise field — divergence-free, so particles advected by it
+   * 2D curl of the noise field - divergence-free, so particles advected by it
    * swirl instead of clumping. This is what drives gusts and petal drift.
    */
   function curl2D(x, y, eps = 0.0001, out = { x: 0, y: 0 }) {
@@ -340,7 +340,7 @@ export function createNoise(seed = 0) {
 export const noise = createNoise(1337);
 
 // ---------------------------------------------------------------------------
-// Worley / cellular noise — cloud shape detail and grass clumping
+// Worley / cellular noise - cloud shape detail and grass clumping
 // ---------------------------------------------------------------------------
 
 /** Returns distance to nearest feature point, roughly 0..1. */
@@ -390,7 +390,7 @@ export function worley3D(x, y, z, seed = 0) {
 
 /**
  * Low-discrepancy 2D sequence. Far more even than Math.random() for scattering
- * grass and props — no visible clumps or bald patches.
+ * grass and props - no visible clumps or bald patches.
  */
 export function halton(index, base) {
   let result = 0;
@@ -404,7 +404,7 @@ export function halton(index, base) {
   return result;
 }
 
-/** Golden-ratio spiral point set — the most even disc distribution for the cost. */
+/** Golden-ratio spiral point set - the most even disc distribution for the cost. */
 export function fibonacciDisc(i, count, out = { x: 0, y: 0 }) {
   const golden = Math.PI * (3 - Math.sqrt(5));
   const r = Math.sqrt(i / count);
@@ -414,7 +414,7 @@ export function fibonacciDisc(i, count, out = { x: 0, y: 0 }) {
   return out;
 }
 
-/** Even points on a sphere — used for star placement and probe directions. */
+/** Even points on a sphere - used for star placement and probe directions. */
 export function fibonacciSphere(i, count, out = { x: 0, y: 0, z: 0 }) {
   const golden = Math.PI * (3 - Math.sqrt(5));
   const y = 1 - (i / (count - 1)) * 2;
@@ -427,7 +427,7 @@ export function fibonacciSphere(i, count, out = { x: 0, y: 0, z: 0 }) {
 }
 
 // ---------------------------------------------------------------------------
-// Colour helpers (plain numbers — no three.js dependency in this file)
+// Colour helpers (plain numbers - no three.js dependency in this file)
 // ---------------------------------------------------------------------------
 
 /** Kelvin -> linear RGB. Physically-ish; good enough for sun/moon tinting. */
