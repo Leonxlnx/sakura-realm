@@ -1,0 +1,18 @@
+node_modules/
+dist/
+dist-ssr/
+
+# Renders written by the dev-only capture harness (src/dev/capture.js).
+captures/
+
+# Editor / tooling
+.vscode/
+.idea/
+.claude/
+*.local
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db

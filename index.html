@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0b0d12" />
+    <title>Sakura Realm</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="stylesheet" href="/src/ui/styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="viewport"></canvas>
+      <div id="ui-root"></div>
+    </div>
+    <noscript>
+      <p style="color:#fff;font:16px system-ui;padding:2rem">
+        Sakura Realm needs JavaScript and WebGL2.
+      </p>
+    </noscript>
+    <script>
+      // Early error capture — installed before any module runs so nothing is missed.
+      // window.__ERRORS is read by the integration harness.
+      window.__ERRORS = [];
+      window.addEventListener('error', (e) => {
+        window.__ERRORS.push({
+          type: 'error',
+          message: e.message,
+          source: e.filename + ':' + e.lineno + ':' + e.colno,
+          stack: e.error && e.error.stack ? String(e.error.stack).split('\n').slice(0, 8).join('\n') : null,
+        });
+      });
+      window.addEventListener('unhandledrejection', (e) => {
+        window.__ERRORS.push({
+          type: 'rejection',
+          message: String(e.reason && e.reason.message ? e.reason.message : e.reason),
+          stack: e.reason && e.reason.stack ? String(e.reason.stack).split('\n').slice(0, 8).join('\n') : null,
+        });
+      });
+    </script>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

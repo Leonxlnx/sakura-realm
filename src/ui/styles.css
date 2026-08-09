@@ -1,0 +1,2146 @@
+/* ==========================================================================
+   Sakura Realm — stylesheet
+   ==========================================================================
+
+   One file, three surfaces: the loading title card (ui/loading.js), the in-world
+   HUD and settings panel (ui/hud.js), and the boot failure block (main.js).
+
+   ART DIRECTION
+   Quiet, cinematic, slightly melancholy. Deep ink, a warm off-white, one pale
+   desaturated sakura accent, and nothing else. Type does the work: a serif for
+   the two moments that deserve one, a system sans at small sizes with generous
+   tracking for everything else, tabular figures wherever a number changes while
+   you are looking at it. No decorative borders, no coloured status pills, no
+   drop shadows used as decoration — only as legibility insurance over a sky that
+   can be anywhere from near-black to near-white.
+
+   PERFORMANCE
+   The renderer has the whole frame budget and this runs on an integrated GPU:
+     · Nothing that is always on screen uses backdrop-filter. A full-screen blur
+       of the framebuffer every frame is the single most expensive thing a HUD
+       can ask for. Only the settings panel gets glass, only while it is open,
+       and .hud.is-cheap (quality tier LOW) drops even that.
+     · Everything that animates continuously animates transform or opacity only,
+       so it stays on the compositor and never triggers layout.
+     · will-change is applied to exactly four elements — the loading bar's fill
+       and head, the time-lapse fill, and the panel sheet — because a promoted
+       layer costs memory bandwidth. Three of the four are gone or display:none
+       for almost the whole session; none of them is a full-screen surface.
+
+   --------------------------------------------------------------------------
+   MARKUP CONTRACT — ui/loading.js
+   --------------------------------------------------------------------------
+   .loading[role=dialog]                     states: .is-ready .is-hiding
+                                                     .is-leaving .is-failed
+                                             inline custom property: --loading-grain
+     .loading__backdrop                      ink field + grain, blended
+     canvas.loading__petals                  sized in device pixels by JS
+     .loading__halo                          slow radial breath behind the card
+     .loading__card
+       .loading__mark > svg                  five-petal mark, stroke=currentColor
+       h1.loading__title                     "Sakura Realm"
+       p.loading__subtitle[lang=ja]          桜 の 国
+       .loading__rule                        hairline
+       .loading__progress[role=progressbar]  state: .is-complete
+         .loading__rail                      MUST have a measurable width; JS
+                                             reads it to place the head
+           .loading__fill                    transform: scaleX(0..1), origin left
+           .loading__head                    transform: translate3d(Xpx,0,0)
+         .loading__meta
+           .loading__label                   state: .is-swap (restarted keyframe)
+           .loading__percent
+       .loading__error[hidden][tabindex=-1]
+         h2.loading__error-title
+         p.loading__error-message
+         ul.loading__error-hints > li > code
+     p.loading__footnote
+   The .is-leaving fade MUST last 900ms — loading.js self-destructs on that timer.
+
+   --------------------------------------------------------------------------
+   MARKUP CONTRACT — ui/hud.js
+   --------------------------------------------------------------------------
+   .hud    states: .is-booting .is-hidden .is-photo .is-panel .is-cheap .is-tight
+     .hud__readout
+       .readout__clock > .readout__time, .readout__phase
+       .readout__rule
+       .readout__facts
+         .fact > .fact__key, .fact__val[.fact__val--wind]
+                 .fact__val--wind > svg.wind__vane (rotated), .wind__value
+         .wind__meter > i.wind__bar            transform: scaleX(0..1)
+     .hud__perf
+       .perf__line > .perf__fps[data-band=good|fair|poor|none], .perf__unit,
+                     .perf__dot, .perf__tier, .perf__scale
+                     (data-band=none is deliberate: no rule matches it, so an
+                      unreadable counter falls back to the neutral colour)
+       .perf__detail[hidden]
+         .perf__row > .perf__label, .perf__num
+         .perf__costs > .cost > .cost__name, .cost__track > i.cost__bar, .cost__ms
+     .hud__lapse[.is-on] > i.lapse__fill       transform: scaleX(0..1)
+     .hud__hint[.is-gone] > .hint__row[.hint__row--dim] > kbd, .hint__word
+     .hud__photo[.is-on] > i.photo__tick--tl|tr|bl|br, .photo__note[.is-gone]
+     .hud__toast[.is-on]                       exempt from .is-hidden by design
+     aside.panel[hidden][.is-open]
+       .panel__head
+         .panel__heading > h2.panel__title, .panel__kicker[lang=ja]
+         button.panel__close
+       .panel__body
+         .group > .group__title
+           .row[.row--block][.row--slider][.is-unavailable]
+             .row__label > .row__name, .row__hint,
+                           output.slider__value[aria-hidden=true]
+                           (aria-hidden because <output> is an implicit
+                            role=status live region and these numbers move on
+                            their own; the input's aria-valuetext announces)
+             .row__control > controls
+           dl.keys > dt.keys__key > kbd, dd.keys__desc
+       .panel__foot > .panel__note[.panel__note--dim]
+   Controls:
+     .opts[.opts--wrap][.opts--actions] > button.opt[role=radio][aria-checked]
+                                          button.opt[data-on]
+                                          (roving tabindex: one stop per group)
+     button.switch[role=switch][aria-checked][disabled]
+       > i.switch__track > i.switch__knob
+     input.slider[type=range]              custom property: --fill (0%..100%)
+   .row.is-unavailable marks a control the world will refuse (a tier that will
+   not run the effect, or an effect the post stack has withdrawn). It is styled
+   as "held elsewhere", never as broken — the caption says which.
+   ========================================================================== */
+
+/* ==========================================================================
+   1. Tokens
+   ========================================================================== */
+
+:root {
+  /* -- ink ---------------------------------------------------------------
+     The reference surface ramp, near-black to a cool slate. --ink-0 and
+     --ink-1 are the two that get painted; 2..4 exist because the glass tints
+     below are sampled from this ramp and a tint with no named source is a tint
+     nobody can match later. Keep them in step if the palette ever moves. */
+  --ink-0: #05060a;
+  --ink-1: #0b0d12;
+  --ink-2: #10131a;
+  --ink-3: #171b24;
+  --ink-4: #1f2532;
+
+  /* -- paper: one warm off-white, stepped down in opacity rather than in
+        lightness, so every tint sits on the same hue over any backdrop ----- */
+  --paper: #ece7e3;
+  --paper-80: rgba(236, 231, 227, 0.8);
+  --paper-60: rgba(236, 231, 227, 0.6);
+  --paper-42: rgba(236, 231, 227, 0.42);
+  --paper-26: rgba(236, 231, 227, 0.26);
+  --paper-14: rgba(236, 231, 227, 0.14);
+  --paper-08: rgba(236, 231, 227, 0.08);
+
+  /* -- accent: pale, desaturated. Mirrors PETAL_TINTS in loading.js -------- */
+  --sakura: #e7ced3;
+  --sakura-deep: #c2929f;
+  --sakura-glow: rgba(231, 206, 211, 0.3);
+
+  /* -- signal: used only by the fps band and nowhere else ------------------ */
+  --moss: #9db09c;
+  --amber: #d5a86e;
+  --rust: #c98079;
+
+  --hairline: rgba(236, 231, 227, 0.11);
+  --hairline-strong: rgba(236, 231, 227, 0.2);
+
+  /* -- glass -------------------------------------------------------------
+     One panel, one recipe. The tint is deliberately BLUE-cold and the
+     saturate() deliberately mild: a warm or heavily saturated glass turns the
+     sky behind it into a colour cast that swings from teal at noon to orange at
+     sunset, and the panel stops looking like the same object hour to hour.
+     The specular line is a single inset hairline along the top edge — the one
+     cue that reads as "pane of glass" rather than "translucent rectangle". */
+  --glass-top: rgba(23, 27, 36, 0.72);
+  --glass-bottom: rgba(8, 10, 15, 0.8);
+  --glass-top-opaque: rgba(24, 28, 37, 0.95);
+  --glass-bottom-opaque: rgba(9, 11, 16, 0.97);
+  /* 18px, not 20+: a backdrop blur is a separable pass over the panel's whole
+     footprint and its cost scales with the radius. On the reference iGPU the
+     difference between 18 and 22 is measurable and invisible. */
+  --glass-blur: blur(18px) saturate(118%);
+  --glass-specular: inset 0 1px 0 rgba(236, 231, 227, 0.07);
+  --shadow-panel:
+    0 1px 2px rgba(0, 0, 0, 0.5),
+    0 18px 44px -20px rgba(0, 0, 0, 0.72),
+    0 42px 90px -50px rgba(0, 0, 0, 0.9);
+
+  /* -- type --------------------------------------------------------------- */
+  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', 'Hiragino Sans',
+    'Yu Gothic UI', 'Noto Sans JP', Roboto, Helvetica, Arial, sans-serif;
+  --font-serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Hiragino Mincho ProN',
+    'Yu Mincho', 'Songti SC', 'Times New Roman', Georgia, serif;
+  --font-mono: ui-monospace, 'SF Mono', 'Cascadia Mono', 'Segoe UI Mono', 'Roboto Mono', Menlo,
+    Consolas, monospace;
+
+  --step--2: 0.6875rem; /* 11 — micro labels, always uppercase + tracked */
+  --step--1: 0.75rem; /*    12 — secondary text */
+  --step-0: 0.8125rem; /*   13 — body of the panel */
+  --step-1: 0.9375rem; /*   15 — row names */
+  --step-2: 1.375rem; /*    22 — the clock */
+  --step-3: clamp(1.75rem, 1.2rem + 2.4vw, 2.75rem); /* the title */
+
+  --track-label: 0.16em;
+  --track-title: 0.06em;
+
+  /* -- motion ---------------------------------------------------------------
+     Three curves, used for three jobs and never mixed:
+       --ease      general easing; slight overshoot-free settle
+       --ease-out  arrivals — a sheet or a knob coming to rest, decelerating
+                   hard so the last 20% of the travel is almost free
+       --ease-soft symmetrical, for a value that changes under you rather than
+                   because you moved it (the gust meter, a colour shift)
+     Durations are short on purpose. A settings panel is a tool; anything over
+     ~260ms starts to feel like it is deciding whether to obey. */
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-soft: cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-fast: 140ms;
+  --dur: 240ms;
+  --dur-slow: 460ms;
+
+  /* -- geometry ----------------------------------------------------------- */
+  --gap: clamp(14px, 2.2vmin, 24px);
+  --radius: 10px;
+  --radius-lg: 14px;
+
+  /* Legibility insurance: the sky behind this UI ranges from near-black at
+     midnight to near-white under overcast, so every text surface carries a
+     shadow rather than a box. */
+  --text-shade: 0 1px 2px rgba(4, 6, 10, 0.55), 0 0 14px rgba(4, 6, 10, 0.35);
+
+  color-scheme: dark;
+}
+
+/* ==========================================================================
+   2. Reset and page frame
+   ========================================================================== */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--ink-1);
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--paper);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+#app {
+  position: fixed;
+  inset: 0;
+}
+
+canvas#viewport {
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* The renderer owns the backing-store size; CSS only stretches it. */
+  touch-action: none;
+  outline: none;
+}
+
+/* The overlay plane. Transparent to the pointer by default — every interactive
+   descendant opts back in — so the canvas keeps receiving clicks for pointer
+   lock even while the HUD is on screen. */
+#ui-root {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+  margin: 0;
+}
+
+button:disabled {
+  cursor: default;
+}
+
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* One focus treatment for the whole app: a 2px sakura ring, held off the
+   control by 2px so it never touches the shape it is describing.
+   Deliberately NOT setting border-radius here — the outline follows the
+   element's own radius, and forcing 3px onto a pill-shaped switch or a round
+   slider thumb squares the ring off and makes the focused state look like a
+   different control from the unfocused one. */
+:focus-visible {
+  outline: 2px solid var(--sakura);
+  outline-offset: 2px;
+}
+
+kbd {
+  display: inline-block;
+  min-width: 1.55em;
+  padding: 0.16em 0.42em;
+  border: 1px solid var(--paper-14);
+  border-bottom-color: var(--paper-08);
+  border-radius: 4px;
+  background: rgba(236, 231, 227, 0.06);
+  font-family: var(--font-sans);
+  font-size: 0.86em;
+  font-weight: 500;
+  line-height: 1.3;
+  text-align: center;
+  letter-spacing: 0.02em;
+  color: var(--paper-80);
+}
+
+/* ==========================================================================
+   3. Loading screen
+   ========================================================================== */
+
+/* No padding on this element, deliberately: it is the containing block for the
+   three absolutely-positioned layers below, and an abspos child resolves
+   `inset: 0` against the PADDING box — padding here would inset the backdrop and
+   the petal canvas by 64px. Breathing room lives on the card and the footnote. */
+.loading {
+  --loading-grain: none;
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  /* minmax(0, 1fr) so the card can cap itself at the row height and scroll
+     internally when fail() adds the error block to a short window. */
+  grid-template-rows: minmax(0, 1fr) auto;
+  justify-items: center;
+  align-items: center;
+  pointer-events: auto;
+  background: var(--ink-0);
+  opacity: 1;
+  transition: opacity 900ms var(--ease);
+}
+
+/* Stop swallowing clicks the moment hide() is called — the player may want
+   pointer lock while this is still fading. */
+.loading.is-hiding {
+  pointer-events: none;
+}
+
+.loading.is-leaving {
+  opacity: 0;
+}
+
+/* Ink field. Two soft off-centre pools rather than one centred vignette, so the
+   frame does not read as a symmetrical target, plus the TPDF grain tile blended
+   in to dither the ramp — 8-bit gradients band visibly this close to black. */
+.loading__backdrop {
+  position: absolute;
+  inset: 0;
+  background-image: var(--loading-grain),
+    radial-gradient(120% 90% at 62% 18%, #1a2029 0%, rgba(26, 32, 41, 0) 62%),
+    radial-gradient(90% 70% at 22% 88%, #131a22 0%, rgba(19, 26, 34, 0) 58%),
+    linear-gradient(180deg, #080a0f 0%, #05060a 100%);
+  background-size: 96px 96px, cover, cover, cover;
+  background-repeat: repeat, no-repeat, no-repeat, no-repeat;
+  background-blend-mode: overlay, normal, normal, normal;
+  opacity: 1;
+  transition: opacity 700ms var(--ease);
+}
+
+.loading.is-leaving .loading__backdrop {
+  opacity: 0;
+}
+
+.loading__petals {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 1400ms var(--ease);
+}
+
+.loading.is-ready .loading__petals {
+  opacity: 1;
+}
+
+.loading.is-leaving .loading__petals {
+  opacity: 0;
+  transition-duration: 600ms;
+}
+
+/* A very slow breath behind the card. Pure opacity/transform, one element. */
+.loading__halo {
+  position: absolute;
+  top: 44%;
+  left: 50%;
+  width: min(760px, 90vw);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, var(--sakura-glow) 0%, rgba(231, 206, 211, 0) 62%);
+  opacity: 0;
+  animation: loading-breath 11s var(--ease) infinite;
+  pointer-events: none;
+}
+
+@keyframes loading-breath {
+  0%,
+  100% {
+    opacity: 0.16;
+    transform: translate(-50%, -50%) scale(0.94);
+  }
+  50% {
+    opacity: 0.3;
+    transform: translate(-50%, -50%) scale(1.04);
+  }
+}
+
+.loading__card {
+  position: relative;
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: min(420px, calc(100% - 44px));
+  max-height: 100%;
+  overflow-y: auto;
+  padding: clamp(18px, 4vmin, 40px) 0;
+  text-align: center;
+  scrollbar-width: thin;
+  scrollbar-color: var(--paper-14) transparent;
+  opacity: 0;
+  transform: translateY(10px);
+  transition:
+    opacity 900ms var(--ease-out),
+    transform 900ms var(--ease-out),
+    filter 700ms var(--ease);
+}
+
+.loading.is-ready .loading__card {
+  opacity: 1;
+  transform: none;
+}
+
+/* The reveal is a crossfade into a live scene: the card defocuses as it goes,
+   which is what makes the world behind it feel like it was always there. */
+.loading.is-leaving .loading__card {
+  opacity: 0;
+  transform: translateY(-6px) scale(1.03);
+  filter: blur(7px);
+}
+
+.loading__mark {
+  color: var(--sakura-deep);
+  opacity: 0.9;
+  margin-bottom: 1.4rem;
+}
+
+.loading__mark svg {
+  display: block;
+}
+
+.loading__title {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: var(--step-3);
+  font-weight: 400;
+  line-height: 1.05;
+  letter-spacing: var(--track-title);
+  color: var(--paper);
+}
+
+.loading__subtitle {
+  margin: 0.55rem 0 0;
+  font-family: var(--font-serif);
+  font-size: var(--step-1);
+  font-weight: 400;
+  letter-spacing: 0.34em;
+  /* Tracking pushes the visual centre right; pull it back by half a step. */
+  text-indent: 0.34em;
+  color: var(--sakura);
+  opacity: 0.72;
+}
+
+.loading__rule {
+  width: 44px;
+  height: 1px;
+  margin: 1.6rem 0 1.7rem;
+  background: linear-gradient(90deg, transparent, var(--hairline-strong), transparent);
+}
+
+/* -- progress -------------------------------------------------------------- */
+
+.loading__progress {
+  width: 100%;
+  max-width: 320px;
+}
+
+.loading__rail {
+  position: relative;
+  width: 100%;
+  height: 2px;
+  background: var(--paper-08);
+  border-radius: 2px;
+  overflow: visible;
+}
+
+.loading__fill {
+  position: absolute;
+  inset: 0;
+  transform-origin: 0 50%;
+  transform: scaleX(0);
+  border-radius: inherit;
+  /* Horizontal ramp on purpose: scaling it keeps the brightest part of the
+     gradient pinned to the leading edge. */
+  background: linear-gradient(90deg, var(--sakura-deep) 0%, var(--sakura) 100%);
+  will-change: transform;
+}
+
+.loading__head {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 5px;
+  height: 5px;
+  margin: -2.5px 0 0 -2.5px;
+  border-radius: 50%;
+  background: var(--sakura);
+  box-shadow: 0 0 10px 1px var(--sakura-glow);
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+  transition: opacity 500ms var(--ease);
+}
+
+.loading__progress.is-complete .loading__head {
+  opacity: 0;
+}
+
+.loading__meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  margin-top: 0.85rem;
+  font-size: var(--step--2);
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+}
+
+.loading__label {
+  color: var(--paper-42);
+  text-align: left;
+  min-height: 1.2em;
+}
+
+.loading__label.is-swap {
+  animation: loading-swap 420ms var(--ease-out);
+}
+
+@keyframes loading-swap {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.loading__percent {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.06em;
+  color: var(--paper-60);
+}
+
+.loading__footnote {
+  grid-row: 2;
+  margin: 0 0 clamp(18px, 5vmin, 46px);
+  padding: 0 20px;
+  text-align: center;
+  font-size: var(--step--2);
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--paper-26);
+  opacity: 0;
+  transition: opacity 1200ms var(--ease) 400ms;
+}
+
+.loading.is-ready .loading__footnote {
+  opacity: 1;
+}
+
+.loading.is-leaving .loading__footnote,
+.loading.is-failed .loading__footnote {
+  opacity: 0;
+  transition-delay: 0ms;
+}
+
+/* -- terminal failure ------------------------------------------------------ */
+
+.loading__error {
+  width: 100%;
+  margin-top: 1.9rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--hairline);
+  text-align: left;
+  color: var(--paper-60);
+}
+
+.loading__error[hidden] {
+  display: none;
+}
+
+.loading__error-title {
+  margin: 0 0 0.6rem;
+  font-family: var(--font-serif);
+  font-size: var(--step-1);
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  color: var(--sakura);
+}
+
+.loading__error-message {
+  margin: 0 0 0.9rem;
+  font-size: var(--step-0);
+  line-height: 1.55;
+  color: var(--paper-80);
+  overflow-wrap: anywhere;
+}
+
+.loading__error-hints {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: var(--step--1);
+  line-height: 1.7;
+  color: var(--paper-42);
+}
+
+.loading__error-hints code {
+  font-family: var(--font-mono);
+  font-size: 0.94em;
+  color: var(--paper-60);
+}
+
+.loading.is-failed .loading__fill {
+  filter: grayscale(1);
+  opacity: 0.35;
+}
+
+.loading.is-failed .loading__halo {
+  animation: none;
+  opacity: 0.06;
+}
+
+/* ==========================================================================
+   4. HUD — shared behaviour
+   ========================================================================== */
+
+.hud {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  font-size: var(--step-0);
+  pointer-events: none;
+}
+
+/* Every top-level surface fades and lifts on the same curve, so the HUD arrives
+   as one object rather than as five independent widgets. */
+.hud__readout,
+.hud__perf,
+.hud__hint,
+.hud__lapse {
+  transition:
+    opacity var(--dur-slow) var(--ease),
+    transform var(--dur-slow) var(--ease),
+    visibility 0s linear;
+}
+
+/* The hint is left out here on purpose: its entrance is a keyframe (below), and
+   an animation outranks declarative styles, so listing it would do nothing. */
+/* ORDER IS LOAD-BEARING for the three state rules below. They all set `opacity`
+   on the same elements at the same specificity (0,2,0), so the cascade decides
+   by source order and the LAST one wins. Weakest claim first:
+     is-panel  (dimmed)  <  is-booting  (not arrived yet)  <  is-hidden (gone).
+   Written the other way round, pressing Tab during the 0.7 s boot reveal would
+   pop the readout to 45%, and a frame where hideUI and the panel were both set
+   would leave the "hidden" HUD visible at 45%. */
+
+/* The panel dims the readout slightly rather than hiding it — you often want to
+   watch the clock while you drag the clock. */
+.hud.is-panel .hud__readout,
+.hud.is-panel .hud__perf {
+  opacity: 0.45;
+}
+
+.hud.is-booting .hud__readout,
+.hud.is-booting .hud__perf {
+  opacity: 0;
+  transform: translateY(7px);
+}
+
+.hud.is-hidden .hud__readout,
+.hud.is-hidden .hud__perf,
+.hud.is-hidden .hud__hint {
+  opacity: 0;
+  visibility: hidden;
+  /* Fade first, then leave the accessibility tree and the hit-testing pass. */
+  transition-delay: 0s, 0s, var(--dur-slow);
+}
+
+/* .hud__lapse is handled in §7 instead: it needs to beat .hud__lapse.is-on,
+   which is declared later than this block and at the same specificity. */
+
+/* Hiding must beat the entrance keyframe if H is pressed during the first
+   second of the session. */
+.hud.is-hidden .hud__hint {
+  animation: none;
+}
+
+/* ==========================================================================
+   5. Readout
+   ========================================================================== */
+
+.hud__readout {
+  position: absolute;
+  top: var(--gap);
+  left: var(--gap);
+  isolation: isolate;
+  text-shadow: var(--text-shade);
+}
+
+/* A corner scrim, not a panel. The sky behind this can be almost white; without
+   it the readout disappears under overcast, and with a box it would look like a
+   debug overlay. A soft radial gradient does the job and reads as vignette. */
+.hud__readout::before,
+.hud__perf::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.hud__readout::before {
+  inset: -26px -90px -46px -34px;
+  background: radial-gradient(
+    120% 100% at 0% 0%,
+    rgba(5, 6, 10, 0.62) 0%,
+    rgba(5, 6, 10, 0.28) 42%,
+    rgba(5, 6, 10, 0) 74%
+  );
+}
+
+.readout__clock {
+  display: flex;
+  align-items: baseline;
+  gap: 0.62em;
+}
+
+.readout__time {
+  font-family: var(--font-mono);
+  font-size: var(--step-2);
+  font-weight: 300;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  color: var(--paper);
+}
+
+/* .readout__clock is a flex row with a gap, so an empty phase span still costs
+   0.62em of space after the clock. hud.js writes '' whenever sky/daynight.js is
+   absent, and the clock would sit visibly off-centre for it. */
+.readout__phase:empty,
+.fact__val:empty {
+  display: none;
+}
+
+.readout__phase {
+  font-size: var(--step--2);
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--sakura);
+  opacity: 0.82;
+  white-space: nowrap;
+}
+
+.readout__rule {
+  width: 32px;
+  height: 1px;
+  margin: 0.72rem 0 0.68rem;
+  background: var(--hairline-strong);
+}
+
+.readout__facts {
+  /* The key column is a fixed px width rather than an em one: .fact__key sets
+     its own smaller font-size, so an em width there would not line up with the
+     meter's indent below, which is measured in the parent's em. */
+  --fact-key: 34px;
+  display: grid;
+  gap: 0.28rem;
+  font-size: var(--step--1);
+}
+
+.fact {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75em;
+}
+
+.fact__key {
+  width: var(--fact-key);
+  flex: none;
+  font-size: var(--step--2);
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--paper-42);
+}
+
+.fact__val {
+  color: var(--paper-80);
+  white-space: nowrap;
+}
+
+.fact__val--wind {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  color: var(--paper-80);
+}
+
+/* Rotated by hud.js in whole degrees; transform only, so it never relayouts. */
+.wind__vane {
+  display: block;
+  flex: none;
+  color: var(--sakura);
+  opacity: 0.85;
+  transform-origin: 50% 50%;
+  transition: transform var(--dur) linear;
+}
+
+.wind__value {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.94em;
+  letter-spacing: 0.02em;
+}
+
+/* The gust meter. Moves every frame, so it is a scaled element and nothing
+   else — no width animation, no box-shadow, no filter. */
+.wind__meter {
+  position: relative;
+  width: 92px;
+  height: 2px;
+  margin-top: 0.34rem;
+  margin-left: calc(var(--fact-key) + 0.75em);
+  background: var(--paper-08);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.wind__bar {
+  position: absolute;
+  inset: 0;
+  transform-origin: 0 50%;
+  transform: scaleX(0);
+  background: linear-gradient(90deg, var(--sakura-deep), var(--sakura));
+  transition: transform var(--dur) linear;
+}
+
+/* ==========================================================================
+   6. Perf
+   ========================================================================== */
+
+.hud__perf {
+  position: absolute;
+  top: var(--gap);
+  right: var(--gap);
+  isolation: isolate;
+  text-align: right;
+  text-shadow: var(--text-shade);
+}
+
+.hud__perf::before {
+  inset: -26px -30px -40px -70px;
+  background: radial-gradient(
+    120% 100% at 100% 0%,
+    rgba(5, 6, 10, 0.5) 0%,
+    rgba(5, 6, 10, 0.2) 44%,
+    rgba(5, 6, 10, 0) 76%
+  );
+}
+
+.perf__line {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 0.36em;
+  font-size: var(--step--1);
+  color: var(--paper-42);
+}
+
+.perf__fps {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--step-0);
+  color: var(--paper-60);
+  /* Slow and symmetrical. The band flips on a threshold, and a fast snap from
+     moss to rust turns an information display into an alarm. */
+  transition: color var(--dur-slow) var(--ease-soft);
+}
+
+.perf__fps[data-band='good'] {
+  color: var(--moss);
+}
+.perf__fps[data-band='fair'] {
+  color: var(--amber);
+}
+.perf__fps[data-band='poor'] {
+  color: var(--rust);
+}
+
+.perf__unit,
+.perf__dot,
+.perf__scale {
+  font-size: var(--step--2);
+  letter-spacing: 0.05em;
+}
+
+.perf__dot {
+  opacity: 0.5;
+}
+
+.perf__tier {
+  font-size: var(--step--2);
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--paper-42);
+}
+
+.perf__scale {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--amber);
+  opacity: 0.75;
+}
+
+/* hud.js clears this span at 100% render scale rather than naming the obvious.
+   Without this it would still claim a 0.36em flex gap, so the tier label would
+   sit 0.36em off the right edge only while the scale happened to be full. */
+.perf__scale:empty {
+  display: none;
+}
+
+/* -- expanded stats -------------------------------------------------------- */
+
+.perf__detail {
+  margin-top: 0.6rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--hairline);
+  min-width: 170px;
+  font-size: var(--step--2);
+  color: var(--paper-42);
+}
+
+.perf__detail[hidden] {
+  display: none;
+}
+
+.perf__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1.2em;
+  line-height: 1.7;
+}
+
+.perf__label {
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+
+.perf__num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--paper-60);
+}
+
+.perf__costs {
+  margin-top: 0.45rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid var(--hairline);
+  display: grid;
+  gap: 0.16rem;
+}
+
+.cost {
+  display: grid;
+  grid-template-columns: 1fr 44px 2.4em;
+  align-items: center;
+  gap: 0.5em;
+  line-height: 1.55;
+}
+
+.cost[hidden] {
+  display: none;
+}
+
+.cost__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+  opacity: 0.8;
+}
+
+.cost__track {
+  position: relative;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--paper-08);
+  overflow: hidden;
+}
+
+.cost__bar {
+  position: absolute;
+  inset: 0;
+  transform-origin: 0 50%;
+  transform: scaleX(0);
+  background: var(--sakura-deep);
+  transition: transform var(--dur) linear;
+}
+
+.cost__ms {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--paper-60);
+}
+
+/* ==========================================================================
+   7. Time-lapse hairline
+   ========================================================================== */
+
+.hud__lapse {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: rgba(5, 6, 10, 0.35);
+  opacity: 0;
+  visibility: hidden;
+  /* Own transition, so the rail fades out rather than being cut by visibility
+     the instant the run finishes. */
+  transition:
+    opacity var(--dur-slow) var(--ease),
+    visibility 0s linear var(--dur-slow);
+}
+
+.hud__lapse.is-on {
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 0s, 0s;
+}
+
+/* Hiding the HUD (H) and photo mode must both take the rail with them. This has
+   to live AFTER .is-on and outrank it — the §4 block is declared earlier at the
+   same specificity, so putting it there would lose and leave a 2px progress bar
+   burnt across the top of every photo taken during a time-lapse. Two delays,
+   not three: .hud__lapse declares its own two-property transition above. */
+.hud.is-hidden .hud__lapse.is-on,
+.hud.is-hidden .hud__lapse {
+  opacity: 0;
+  visibility: hidden;
+  transition-delay: 0s, var(--dur-slow);
+}
+
+.lapse__fill {
+  display: block;
+  height: 100%;
+  transform-origin: 0 50%;
+  transform: scaleX(0);
+  background: linear-gradient(90deg, var(--sakura-deep), var(--sakura));
+  will-change: transform;
+}
+
+/* ==========================================================================
+   8. First-run hint
+   ========================================================================== */
+
+.hud__hint {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--gap) + 6px);
+  transform: translateX(-50%);
+  display: grid;
+  justify-items: center;
+  gap: 0.42rem;
+  padding: 0 1rem;
+  text-align: center;
+  font-size: var(--step--1);
+  color: var(--paper-60);
+  text-shadow: var(--text-shade);
+  /* Delayed past the HUD reveal (0.7 s in hud.js) so the hint is the last thing
+     to arrive rather than the first. */
+  animation: hint-in 900ms var(--ease-out) 1100ms both;
+}
+
+@keyframes hint-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.hud__hint.is-gone {
+  opacity: 0;
+  visibility: hidden;
+  transform: translate(-50%, 6px);
+  transition:
+    opacity var(--dur-slow) var(--ease),
+    transform var(--dur-slow) var(--ease),
+    visibility 0s linear var(--dur-slow);
+  animation: none;
+}
+
+.hint__row {
+  display: flex;
+  align-items: center;
+  gap: 0.34em;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.hint__row--dim {
+  font-size: var(--step--2);
+  letter-spacing: 0.03em;
+  color: var(--paper-26);
+}
+
+.hint__word {
+  opacity: 0.85;
+}
+
+/* Short or narrow: shed the secondary line and the cost table rather than
+   letting either wrap into the frame. */
+.hud.is-tight .hint__row--dim,
+.hud.is-tight .perf__detail {
+  display: none;
+}
+
+/* ==========================================================================
+   9. Photo mode
+   ========================================================================== */
+
+.hud__photo {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity var(--dur-slow) var(--ease),
+    visibility 0s linear var(--dur-slow);
+}
+
+.hud__photo.is-on {
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 0s, 0s;
+}
+
+/* Framing ticks: two hairlines each, at the thirds-adjacent corners. Barely
+   there, but they turn "the UI vanished" into "you are composing a shot". */
+.photo__tick {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  border: 0 solid var(--paper-26);
+}
+
+.photo__tick--tl {
+  top: 22px;
+  left: 22px;
+  border-top-width: 1px;
+  border-left-width: 1px;
+}
+.photo__tick--tr {
+  top: 22px;
+  right: 22px;
+  border-top-width: 1px;
+  border-right-width: 1px;
+}
+.photo__tick--bl {
+  bottom: 22px;
+  left: 22px;
+  border-bottom-width: 1px;
+  border-left-width: 1px;
+}
+.photo__tick--br {
+  bottom: 22px;
+  right: 22px;
+  border-bottom-width: 1px;
+  border-right-width: 1px;
+}
+
+.photo__note {
+  position: absolute;
+  left: 50%;
+  bottom: 30px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.36em;
+  white-space: nowrap;
+  font-size: var(--step--2);
+  letter-spacing: 0.04em;
+  color: var(--paper-42);
+  text-shadow: var(--text-shade);
+  transition: opacity 900ms var(--ease);
+}
+
+.photo__note.is-gone {
+  opacity: 0;
+}
+
+/* ==========================================================================
+   10. Toast
+   ========================================================================== */
+
+.hud__toast {
+  position: absolute;
+  top: calc(var(--gap) + 4px);
+  left: 50%;
+  padding: 0.5rem 0.95rem;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  background: rgba(8, 10, 15, 0.82);
+  font-size: var(--step--1);
+  letter-spacing: 0.04em;
+  color: var(--paper-80);
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transform: translate(-50%, -8px);
+  transition:
+    opacity var(--dur) var(--ease),
+    transform var(--dur) var(--ease-out),
+    visibility 0s linear var(--dur);
+}
+
+.hud__toast.is-on {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(-50%, 0);
+  transition-delay: 0s, 0s, 0s;
+}
+
+/* Photo mode keeps the toast — an explicit capture still deserves an
+   acknowledgement — but drops it to a whisper so it never competes with the
+   frame the viewer is composing. */
+.hud.is-photo .hud__toast {
+  border-color: transparent;
+  background: rgba(8, 10, 15, 0.55);
+  color: var(--paper-42);
+  font-size: var(--step--2);
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+}
+
+/* ==========================================================================
+   11. Settings panel
+   ========================================================================== */
+
+.panel {
+  --panel-pad: 1.05rem;
+  position: absolute;
+  top: var(--gap);
+  right: var(--gap);
+  bottom: var(--gap);
+  width: min(370px, calc(100vw - var(--gap) * 2));
+  display: flex;
+  flex-direction: column;
+  pointer-events: auto;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+  /* Fallback for a browser with no backdrop-filter: the same recipe, opaque
+     enough to stand on its own over a bright overcast sky. */
+  background: linear-gradient(180deg, var(--glass-top-opaque) 0%, var(--glass-bottom-opaque) 100%);
+  box-shadow: var(--shadow-panel), var(--glass-specular);
+  color: var(--paper-80);
+  opacity: 0;
+  /* Enters from just off its own right edge and a hair small — the two
+     together read as the sheet coming forward, not sliding sideways. */
+  transform: translateX(12px) scale(0.985);
+  transform-origin: 100% 22%;
+  transition:
+    opacity var(--dur) var(--ease),
+    transform var(--dur) var(--ease-out);
+  will-change: transform, opacity;
+  overflow: hidden;
+}
+
+.panel[hidden] {
+  display: none;
+}
+
+/* The sheet lingers for the length of its close animation so the slide-out can
+   run. During those 260ms it must stop swallowing clicks, or a player closing
+   the panel to grab pointer lock has their first click eaten by a ghost. */
+.panel:not(.is-open) {
+  pointer-events: none;
+}
+
+.panel.is-open {
+  opacity: 1;
+  transform: none;
+}
+
+/* Glass, but only here and only while it is open. Applied through @supports so
+   a browser without it gets the flat translucent panel above rather than a
+   transparent one. LOW drops the blur entirely — see .hud.is-cheap. */
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .panel {
+    background: linear-gradient(180deg, var(--glass-top) 0%, var(--glass-bottom) 100%);
+    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
+  }
+  /* LOW tier: a full-screen blur of the framebuffer is the single most
+     expensive thing a HUD can ask an integrated GPU for, and on LOW that
+     budget is already spent. Fall back to the opaque recipe. */
+  .hud.is-cheap .panel {
+    background: linear-gradient(
+      180deg,
+      var(--glass-top-opaque) 0%,
+      var(--glass-bottom-opaque) 100%
+    );
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+.panel__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.95rem var(--panel-pad) 0.78rem;
+  border-bottom: 1px solid var(--hairline);
+  flex: none;
+}
+
+.panel__heading {
+  display: flex;
+  align-items: baseline;
+  gap: 0.7em;
+  min-width: 0;
+}
+
+.panel__title {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: var(--step-1);
+  font-weight: 400;
+  letter-spacing: var(--track-title);
+  color: var(--paper);
+  white-space: nowrap;
+}
+
+/* The same tracked kana as the title card's 桜 の 国, at a whisper. It is the
+   one piece of decoration in the panel and it earns its place by tying this
+   surface to the one the viewer saw first. */
+.panel__kicker {
+  font-family: var(--font-serif);
+  font-size: var(--step--2);
+  letter-spacing: 0.3em;
+  text-indent: 0.3em;
+  color: var(--sakura);
+  opacity: 0.45;
+  white-space: nowrap;
+}
+
+.panel__close {
+  flex: none;
+  align-self: center;
+  padding: 0.26rem 0.58rem;
+  border: 1px solid var(--paper-14);
+  border-radius: 6px;
+  background: transparent;
+  font-size: var(--step--2);
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--paper-42);
+  cursor: pointer;
+  transition:
+    color var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease),
+    background-color var(--dur-fast) var(--ease);
+}
+
+.panel__close:hover {
+  color: var(--paper);
+  border-color: var(--paper-26);
+  background: var(--paper-08);
+}
+
+.panel__close:active {
+  background: var(--paper-14);
+}
+
+.panel__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0.4rem var(--panel-pad) 1.1rem;
+  /* Tab-ing into a control near an edge must not park it flush against the
+     head or the foot hairline. */
+  scroll-padding: 14px 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--paper-14) transparent;
+}
+
+.panel__body::-webkit-scrollbar {
+  width: 8px;
+}
+.panel__body::-webkit-scrollbar-thumb {
+  background: var(--paper-14);
+  border-radius: 4px;
+}
+.panel__body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.panel__foot {
+  flex: none;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.8rem;
+  padding: 0.6rem var(--panel-pad) 0.7rem;
+  border-top: 1px solid var(--hairline);
+  font-size: var(--step--2);
+  letter-spacing: 0.03em;
+  color: var(--paper-26);
+}
+
+.panel__note {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.panel__note--dim {
+  flex: none;
+  opacity: 0.62;
+}
+
+/* -- groups ---------------------------------------------------------------- */
+
+.group {
+  padding: 0.9rem 0 0.2rem;
+}
+
+.group + .group {
+  border-top: 1px solid var(--hairline);
+}
+
+/* Eight of these run down the sheet, so they are held back to roughly half
+   strength: enough to mark a section at a glance, not enough to turn a quiet
+   panel into eight pink headlines. The accent is carried by the one selected
+   chip and the kicker in the head; everything else defers to it. */
+.group__title {
+  margin: 0 0 0.55rem;
+  font-size: var(--step--2);
+  font-weight: 500;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--sakura);
+  opacity: 0.58;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.34rem 0;
+  min-height: 30px;
+}
+
+.row--block {
+  display: block;
+}
+
+.row--block .row__label {
+  margin-bottom: 0.42rem;
+}
+
+.row__label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 0.55em;
+  min-width: 0;
+}
+
+.row__name {
+  font-size: var(--step-0);
+  color: var(--paper-80);
+  transition: color var(--dur-fast) var(--ease);
+}
+
+.row:hover .row__name {
+  color: var(--paper);
+}
+
+.row__hint {
+  flex-basis: 100%;
+  font-size: var(--step--2);
+  letter-spacing: 0.02em;
+  line-height: 1.45;
+  color: var(--paper-26);
+  /* Symmetrical curve: this text changes because the world changed, not
+     because the reader did anything, so it should not accelerate away. */
+  transition: color var(--dur) var(--ease-soft);
+}
+
+/* hud.js keeps the caption node alive on rows whose text can change (the effect
+   switches rewrite theirs to say why they are unavailable). An empty one must
+   not claim a line box. */
+.row__hint:empty {
+  display: none;
+}
+
+/* "Another part of the world will not honour this right now." The control goes
+   quiet, the caption stays perfectly legible — the caption is the whole point,
+   because it is the thing that says why. */
+.row.is-unavailable .row__name {
+  color: var(--paper-42);
+}
+
+.row.is-unavailable:hover .row__name {
+  color: var(--paper-42);
+}
+
+.row.is-unavailable .row__hint {
+  color: var(--paper-42);
+  font-style: italic;
+}
+
+.row__control {
+  flex: none;
+  display: flex;
+  align-items: center;
+}
+
+.row--block .row__control {
+  display: block;
+}
+
+/* -- option chips ---------------------------------------------------------- */
+
+.opts {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid var(--hairline);
+  border-radius: 9px;
+  background: rgba(5, 6, 10, 0.35);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.28);
+}
+
+.opts--wrap {
+  flex-wrap: wrap;
+}
+
+/* Momentary actions are not a segmented control — they get the chip geometry
+   and none of the container. The inset shadow has to go with it: an inset
+   shadow still paints over a transparent background, so leaving it here would
+   put a dark smudge behind every action button. */
+.opts--actions {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+}
+
+.opt {
+  flex: 1 1 auto;
+  padding: 0.38rem 0.55rem;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  font-size: var(--step--1);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  color: var(--paper-42);
+  cursor: pointer;
+  transition:
+    color var(--dur-fast) var(--ease),
+    background-color var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease),
+    box-shadow var(--dur-fast) var(--ease);
+}
+
+.opts--wrap .opt {
+  flex: 0 1 auto;
+}
+
+.opt:hover {
+  color: var(--paper);
+  background: var(--paper-08);
+}
+
+/* The selected chip is the brightest object in the whole interface, which is
+   exactly why it is a pale near-white rather than a saturated pink: it has to
+   win a legibility contest against a sky that can be nearly white itself,
+   without ever reading as "candy". The 1px inset keeps the fill from looking
+   like a flat sticker. */
+.opt[aria-checked='true'] {
+  color: var(--ink-0);
+  background: var(--sakura);
+  font-weight: 500;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+.opt[aria-checked='true']:hover {
+  background: #f1dde1;
+}
+
+.opt:active {
+  transform: translateY(0.5px);
+}
+
+.opts--actions .opt {
+  border-color: var(--paper-14);
+  padding: 0.42rem 0.8rem;
+  color: var(--paper-60);
+}
+
+.opts--actions .opt:hover {
+  border-color: var(--sakura);
+  color: var(--paper);
+  background: var(--paper-08);
+}
+
+/* A momentary action that is currently running (the time-lapse). Bordered in
+   the accent rather than filled, so it never competes with a real selection. */
+.opt[data-on='1'] {
+  border-color: var(--sakura-deep);
+  color: var(--sakura);
+  background: rgba(194, 146, 159, 0.1);
+}
+
+/* -- switch ---------------------------------------------------------------- */
+
+/* The 4px padding / -4px margin pair grows the hit target to 42x26 without
+   moving anything in the layout — the visible track stays 34x18. */
+.switch {
+  display: block;
+  padding: 4px;
+  margin: -4px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-radius: 999px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.switch__track {
+  display: block;
+  position: relative;
+  width: 34px;
+  height: 18px;
+  border-radius: 999px;
+  border: 1px solid var(--paper-14);
+  background: rgba(5, 6, 10, 0.5);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35);
+  transition:
+    background-color var(--dur) var(--ease),
+    border-color var(--dur) var(--ease),
+    box-shadow var(--dur) var(--ease);
+}
+
+.switch__knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--paper-42);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+  transform: translateX(0);
+  /* --ease-out on the travel and nothing else: the knob decelerating into its
+     stop is the entire reason a toggle feels mechanical rather than digital. */
+  transition:
+    transform var(--dur) var(--ease-out),
+    background-color var(--dur) var(--ease);
+}
+
+.switch:hover .switch__track {
+  border-color: var(--paper-26);
+}
+
+.switch[aria-checked='true'] .switch__track {
+  background: var(--sakura-deep);
+  border-color: var(--sakura-deep);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.22);
+}
+
+.switch[aria-checked='true'] .switch__knob {
+  transform: translateX(16px);
+  background: var(--paper);
+}
+
+/* Press: the knob leans a fraction toward where it is going. Transform only. */
+.switch:active .switch__knob {
+  transform: translateX(1.5px);
+}
+
+.switch[aria-checked='true']:active .switch__knob {
+  transform: translateX(14.5px);
+}
+
+/* Disabled means an owner elsewhere has withdrawn the setting — see
+   .row.is-unavailable. Muted, not struck out, and the pointer says "nothing
+   here" rather than "forbidden". */
+.switch:disabled {
+  cursor: default;
+  opacity: 0.38;
+}
+
+.switch:disabled .switch__track,
+.switch:disabled:hover .switch__track {
+  border-color: var(--paper-08);
+  background: rgba(5, 6, 10, 0.5);
+  box-shadow: none;
+}
+
+.switch:disabled .switch__knob {
+  background: var(--paper-26);
+  box-shadow: none;
+}
+
+/* -- slider ---------------------------------------------------------------- */
+
+.row--slider .row__label {
+  justify-content: space-between;
+}
+
+.slider__value {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--step--1);
+  letter-spacing: 0.02em;
+  color: var(--sakura);
+  opacity: 0.85;
+}
+
+/* The track is painted by the ELEMENT's own background, not by the vendor
+   pseudo-track: one gradient, one custom property (--fill, written by hud.js
+   only when the filled fraction has actually moved), identical in Chromium and
+   Gecko. Both native tracks are then made transparent so they contribute
+   nothing but hit area. `background-size: 100% 3px` + `position: 0 50%` gives a
+   3px rule centred in a 20px pointer target. */
+.slider {
+  --fill: 0%;
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 20px;
+  margin: 0;
+  background-image: linear-gradient(
+    90deg,
+    var(--sakura-deep) 0%,
+    var(--sakura) var(--fill),
+    var(--paper-08) var(--fill),
+    var(--paper-08) 100%
+  );
+  background-size: 100% 3px;
+  background-position: 0 50%;
+  background-repeat: no-repeat;
+  border-radius: 3px;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.slider::-webkit-slider-runnable-track {
+  height: 20px;
+  background: transparent;
+  border: none;
+}
+
+.slider::-moz-range-track {
+  height: 3px;
+  background: transparent;
+  border: none;
+}
+
+/* Gecko fills the low side of the track for free; we already paint it, so this
+   has to be neutralised or the fill is drawn twice with different geometry. */
+.slider::-moz-range-progress {
+  height: 3px;
+  background: transparent;
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  box-sizing: border-box;
+  width: 13px;
+  height: 13px;
+  /* Centres a 13px thumb in the 20px runnable track. Chromium does not centre
+     it for you the way Gecko does. */
+  margin-top: 3.5px;
+  border-radius: 50%;
+  border: none;
+  background: var(--paper);
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.5),
+    0 0 0 0 var(--sakura-glow);
+  transition: box-shadow var(--dur-fast) var(--ease);
+}
+
+.slider::-moz-range-thumb {
+  box-sizing: border-box;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: none;
+  background: var(--paper);
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.5),
+    0 0 0 0 var(--sakura-glow);
+  transition: box-shadow var(--dur-fast) var(--ease);
+}
+
+/* Hover and focus grow a halo rather than the thumb itself: changing the
+   thumb's size mid-drag shifts the point the value is read from and the number
+   twitches under the cursor. */
+.slider:hover::-webkit-slider-thumb,
+.slider:focus-visible::-webkit-slider-thumb {
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.5),
+    0 0 0 5px var(--sakura-glow);
+}
+
+.slider:hover::-moz-range-thumb,
+.slider:focus-visible::-moz-range-thumb {
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.5),
+    0 0 0 5px var(--sakura-glow);
+}
+
+.slider:active::-webkit-slider-thumb {
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.5),
+    0 0 0 7px var(--sakura-glow);
+}
+
+.slider:active::-moz-range-thumb {
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.5),
+    0 0 0 7px var(--sakura-glow);
+}
+
+.slider:focus-visible {
+  outline: 2px solid var(--sakura);
+  outline-offset: 4px;
+}
+
+/* Disabled means "another system owns this right now" (the adaptive resolution
+   controller, or weather-driven wind) — not "broken", so it stays readable. */
+.slider:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+.slider:disabled::-webkit-slider-thumb {
+  background: var(--paper-42);
+}
+
+.slider:disabled::-moz-range-thumb {
+  background: var(--paper-42);
+}
+
+.row--slider:has(.slider:disabled) .slider__value {
+  opacity: 0.4;
+}
+
+/* -- key list -------------------------------------------------------------- */
+
+.keys {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  gap: 0.4rem 0.9rem;
+  margin: 0;
+  font-size: var(--step--1);
+}
+
+.keys__key {
+  display: flex;
+  gap: 3px;
+  white-space: nowrap;
+}
+
+.keys__desc {
+  margin: 0;
+  color: var(--paper-42);
+  line-height: 1.45;
+}
+
+/* ==========================================================================
+   12. Fatal boot error (main.js writes this into #ui-root)
+   ========================================================================== */
+
+.fatal-error {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1rem;
+  padding: clamp(24px, 6vmin, 64px);
+  background: var(--ink-0);
+  pointer-events: auto;
+  overflow: auto;
+}
+
+.fatal-error h1 {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: var(--step-2);
+  font-weight: 400;
+  letter-spacing: var(--track-title);
+  color: var(--sakura);
+}
+
+.fatal-error pre {
+  margin: 0;
+  max-width: 80ch;
+  padding: 1rem;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  background: rgba(5, 6, 10, 0.6);
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  line-height: 1.6;
+  color: var(--paper-60);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* ==========================================================================
+   13. Responsive
+   ========================================================================== */
+
+/* index.html asks for viewport-fit=cover, so on a notched or gesture-bar device
+   the four corners of the viewport are not all usable. Everything anchored to an
+   edge pays the inset; nothing else has to know. */
+.panel,
+.hud__readout,
+.hud__perf {
+  margin: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+    env(safe-area-inset-left);
+}
+
+/* Short viewports: the panel is the only thing that cannot simply shrink. */
+@media (max-height: 620px) {
+  .panel {
+    top: 8px;
+    bottom: 8px;
+    --panel-pad: 0.9rem;
+  }
+  .group {
+    padding-top: 0.7rem;
+  }
+  .row {
+    min-height: 26px;
+    padding: 0.26rem 0;
+  }
+  .panel__head {
+    padding-top: 0.72rem;
+    padding-bottom: 0.6rem;
+  }
+}
+
+/* Really short — a 500px-tall browser window, or a phone in landscape. The key
+   list is the first thing to go: it is reference material, and the panel is
+   worth more as a set of working controls than as a manual. */
+@media (max-height: 460px) {
+  .keys,
+  .panel__foot {
+    display: none;
+  }
+}
+
+/* Narrow viewports: the side sheet becomes a bottom sheet. Anchoring it to the
+   bottom keeps the scene visible above it, which is the point of the panel. */
+@media (max-width: 720px) {
+  .panel {
+    top: auto;
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    width: auto;
+    /* dvh, not vh: on mobile the URL bar collapses and vh does not follow it,
+       which leaves the sheet's own footer under the browser chrome. */
+    max-height: min(74dvh, 560px);
+    transform: translateY(14px) scale(0.99);
+    transform-origin: 50% 100%;
+  }
+  .panel.is-open {
+    transform: none;
+  }
+  .hud__perf .perf__detail {
+    display: none;
+  }
+  .hud__hint {
+    font-size: var(--step--2);
+  }
+  .loading__card {
+    width: 100%;
+  }
+}
+
+/* Very small: drop the readout to essentials rather than letting it wrap, and
+   give the controls the room they need to stay tappable. */
+@media (max-width: 420px) {
+  .readout__phase,
+  .wind__meter {
+    display: none;
+  }
+  .photo__tick {
+    width: 18px;
+    height: 18px;
+  }
+  .panel {
+    --panel-pad: 0.85rem;
+  }
+  .opt {
+    padding: 0.44rem 0.5rem;
+  }
+  .row {
+    min-height: 34px;
+  }
+}
+
+/* ==========================================================================
+   14. Reduced motion
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* The one exception. loading.js removes the overlay from the DOM on a timer
+     it starts when .is-leaving is applied, and under reduced motion that timer
+     is 140ms, NOT the 900ms FADE_MS it uses otherwise. Holding a 900ms fade
+     here would have the element deleted at 140ms while it was still ~85%
+     opaque — a hard cut to the scene, which is the exact thing the fade exists
+     to prevent. 140ms is short enough to be a crossfade rather than motion, so
+     it satisfies the preference and still matches the JS. Keep the two numbers
+     in step: this value is loading.js's reduced-motion fade window. */
+  .loading {
+    transition-duration: 140ms !important;
+  }
+
+  .loading__halo {
+    animation: none !important;
+    opacity: 0.2;
+  }
+
+  .hud__hint {
+    animation: none !important;
+  }
+
+  /* Movement is the thing being opted out of, so the entrance offsets go too —
+     with a 0.01ms transition they would otherwise be a one-frame pop rather
+     than a fade. The panel keeps its fade; only the travel is dropped. */
+  .loading__card,
+  .panel,
+  .hud.is-booting .hud__readout,
+  .hud.is-booting .hud__perf,
+  .hud.is-booting .hud__hint {
+    transform: none !important;
+  }
+
+  .opt:active,
+  .switch:active .switch__knob,
+  .switch[aria-checked='true']:active .switch__knob {
+    transform: none !important;
+  }
+
+  /* The knob still has to travel — it is the only thing that says which way the
+     switch is set — but it arrives in one step rather than sliding. */
+  .switch[aria-checked='true'] .switch__knob {
+    transform: translateX(16px) !important;
+  }
+}
+
+/* Windows/macOS high-contrast: keep the hairlines visible. */
+@media (forced-colors: active) {
+  .panel,
+  .opts,
+  .switch__track,
+  .panel__close,
+  kbd {
+    border-color: CanvasText;
+  }
+  .readout__rule,
+  .wind__meter,
+  .cost__track,
+  .slider {
+    forced-color-adjust: none;
+  }
+  .opt[aria-checked='true'] {
+    background: Highlight;
+    color: HighlightText;
+  }
+  /* GrayText is the system's own "this control is unavailable" colour. Our 38%
+     opacity is discarded in forced-colors mode, so without this a disabled
+     switch is indistinguishable from a live one. */
+  .switch:disabled .switch__track {
+    border-color: GrayText;
+  }
+  .switch:disabled .switch__knob {
+    forced-color-adjust: none;
+    background: GrayText;
+  }
+  .row.is-unavailable .row__name,
+  .row.is-unavailable .row__hint {
+    color: GrayText;
+  }
+}
