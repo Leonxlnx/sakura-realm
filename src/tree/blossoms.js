@@ -101,7 +101,7 @@ export const BLOSSOM_STRIDE = 22;
  * CLUSTER_RATE. Do not answer a bare-looking crown by raising this - read the
  * note on CLUSTER_RATE first, and then the one on TWIG_SPACING in sakura.js.
  */
-const HARD_MAX = 520000;
+const HARD_MAX = 850000;
 /** Petal spawn sites handed to tree/petals.js. */
 const SPAWN_MAX = 1600;
 
@@ -155,15 +155,15 @@ const SPAWN_MAX = 1600;
  * instance stream is what keeps that tier from shading dead flat.
  */
 const TIERS = {
-  low: { fraction: 0.13, boost: 1.30, shadow: false, receive: false },
-  medium: { fraction: 0.28, boost: 1.12, shadow: true, receive: true },
+  low: { fraction: 0.09, boost: 1.30, shadow: false, receive: false },
+  medium: { fraction: 0.19, boost: 1.12, shadow: true, receive: true },
   // Coverage was never short of instances - it was short of PLACES. 41 461
   // flowers stacked fourteen deep on 2 947 twig points read as pom-poms on bare
   // wire; the same crown spread over 145 000 sites at less than one umbel each
   // is continuous. See CLUSTER_RATE, and SIZE_MIN for why card AREA is the
   // other half of it.
-  high: { fraction: 0.98, boost: 1.06, shadow: true, receive: true },
-  ultra: { fraction: 1.0, boost: 1.08, shadow: true, receive: true },
+  high: { fraction: 0.66, boost: 1.06, shadow: true, receive: true },
+  ultra: { fraction: 0.84, boost: 1.08, shadow: true, receive: true },
 };
 
 /** Card rim lift, in card half-widths. A cherry corolla is a shallow bowl. */
