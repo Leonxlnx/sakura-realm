@@ -16,6 +16,8 @@
  * moving anything: several systems consume state written earlier in the same frame.
  */
 
+import { inject as injectAnalytics } from '@vercel/analytics';
+
 import { createWorldState, EventBus, EVENTS } from './core/state.js';
 import { Input } from './core/input.js';
 import { Engine } from './core/engine.js';
@@ -44,6 +46,13 @@ import { PlayerController } from './player/controller.js';
 import { PostPipeline } from './post/pipeline.js';
 import { HUD } from './ui/hud.js';
 import { LoadingScreen } from './ui/loading.js';
+
+// Vercel Web Analytics. Called once, at module scope, so a failure inside boot()
+// cannot take the page view with it. The endpoint it posts to only exists on a
+// Vercel deployment, so running this repo locally or self-hosting it elsewhere
+// sends nothing anywhere: in dev the call only logs to the console, and in a
+// self-hosted production build the request has no route to hit.
+injectAnalytics({ mode: import.meta.env.DEV ? 'development' : 'production' });
 
 async function boot() {
   const canvas = document.getElementById('viewport');

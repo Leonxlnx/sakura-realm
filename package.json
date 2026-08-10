@@ -10,9 +10,10 @@
     "preview": "vite preview --port 4173"
   },
   "dependencies": {
-    "three": "^0.180.0",
+    "@vercel/analytics": "^2.0.1",
+    "n8ao": "^1.9.9",
     "postprocessing": "^6.37.8",
-    "n8ao": "^1.9.9"
+    "three": "^0.180.0"
   },
   "devDependencies": {
     "vite": "^6.3.5"

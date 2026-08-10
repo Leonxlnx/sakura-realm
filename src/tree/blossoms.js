@@ -675,7 +675,17 @@ export function generateBlossomInstances(skel, sites, opts = {}) {
   // the high bits and the index the low 17, so ordering by the packed value is
   // exactly ordering by the key.
   const krng = makeRNG(seed ^ 0x51de);
-  const IDX_BITS = 131072;   // 2^17 > any plausible instance count
+  // 2^20. This MUST exceed the instance count: the sort key and the source
+  // index share one number, and the index is recovered with % IDX_BITS, so any
+  // index at or above it wraps and resolves to the wrong flower. It was 2^17
+  // (131 072) with a comment claiming that cleared "any plausible instance
+  // count", while the canopy has carried half a million instances for a long
+  // time. Every index past 131 072 therefore aliased onto a lower one, so the
+  // shuffled order duplicated some flowers and silently dropped others, which
+  // is what made the thinned tiers uneven around the crown.
+  // Packing stays inside Number.MAX_SAFE_INTEGER: key quantised to 2^20 times
+  // IDX_BITS is about 1.1e12, against a 9.0e15 ceiling.
+  const IDX_BITS = 1048576;
   const packed = new Float64Array(n);
   for (let i = 0; i < n; i++) {
     const size = scratch[i * BLOSSOM_STRIDE + 17];
